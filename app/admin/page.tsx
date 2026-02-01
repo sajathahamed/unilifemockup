@@ -34,16 +34,38 @@ import {
   Home,
   FileText,
   MessageSquare,
+  Store,
+  Truck,
+  Package,
+  DollarSign,
+  Star,
+  MapPin,
 } from 'lucide-react';
 import { Modal } from '@/components';
+import { allStudents, shopOwners, deliveryRiders, allOrders, allRideBookings, allLaundryOrders, adminAnalytics } from '@/mock-data';
 
 // Admin Stats Data
 const adminStats = [
-  { label: 'Total Students', value: '12,847', change: '+12%', trend: 'up', icon: Users, color: 'bg-blue-500' },
-  { label: 'Active Courses', value: '486', change: '+8%', trend: 'up', icon: BookOpen, color: 'bg-green-500' },
-  { label: 'Assignments', value: '2,341', change: '+24%', trend: 'up', icon: FileText, color: 'bg-purple-500' },
-  { label: 'Events Today', value: '18', change: '-2', trend: 'down', icon: Calendar, color: 'bg-amber-500' },
+  { label: 'Total Students', value: '12,847', change: '+12%', trend: 'up', icon: GraduationCap, color: 'bg-blue-500' },
+  { label: 'Active Shops', value: '24', change: '+3', trend: 'up', icon: Store, color: 'bg-green-500' },
+  { label: 'Delivery Riders', value: '18', change: '+5', trend: 'up', icon: Truck, color: 'bg-purple-500' },
+  { label: 'Total Revenue', value: 'Rs. 12.4M', change: '+18%', trend: 'up', icon: DollarSign, color: 'bg-amber-500' },
 ];
+
+// Order Status Colors
+const orderStatusColors: { [key: string]: string } = {
+  'Pending': 'bg-amber-100 text-amber-700',
+  'Preparing': 'bg-blue-100 text-blue-700',
+  'Out for Delivery': 'bg-purple-100 text-purple-700',
+  'Delivered': 'bg-green-100 text-green-700',
+  'Completed': 'bg-green-100 text-green-700',
+  'Cancelled': 'bg-red-100 text-red-700',
+  'In Progress': 'bg-indigo-100 text-indigo-700',
+  'Confirmed': 'bg-blue-100 text-blue-700',
+  'Processing': 'bg-blue-100 text-blue-700',
+  'Ready for Pickup': 'bg-purple-100 text-purple-700',
+  'Picked Up': 'bg-indigo-100 text-indigo-700',
+};
 
 // Recent Activities
 const recentActivities = [
@@ -74,16 +96,15 @@ const sampleCourses = [
 // Admin Sidebar Items
 const sidebarItems = [
   { name: 'Dashboard', icon: Home, href: '#dashboard', active: true },
-  { name: 'Users', icon: Users, href: '#users' },
+  { name: 'Students', icon: GraduationCap, href: '#students' },
+  { name: 'Shop Owners', icon: Store, href: '#shops' },
+  { name: 'Delivery Riders', icon: Truck, href: '#riders' },
+  { name: 'All Orders', icon: Package, href: '#orders' },
+  { name: 'Ride Bookings', icon: Car, href: '#rides' },
+  { name: 'Laundry Orders', icon: Shirt, href: '#laundry' },
   { name: 'Courses', icon: BookOpen, href: '#courses' },
-  { name: 'Timetable', icon: Calendar, href: '#timetable' },
   { name: 'Announcements', icon: Bell, href: '#announcements' },
   { name: 'Marketplace', icon: ShoppingBag, href: '#marketplace' },
-  { name: 'Jobs', icon: Briefcase, href: '#jobs' },
-  { name: 'Food Services', icon: UtensilsCrossed, href: '#food' },
-  { name: 'Laundry', icon: Shirt, href: '#laundry' },
-  { name: 'Rides', icon: Car, href: '#rides' },
-  { name: 'Trip Planner', icon: Plane, href: '#trips' },
   { name: 'Reports', icon: BarChart3, href: '#reports' },
 ];
 
@@ -284,8 +305,8 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Users Section */}
-        {activeSection === 'users' && (
+        {/* Students Section */}
+        {activeSection === 'students' && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -294,9 +315,9 @@ export default function AdminPage() {
                   Filter
                 </button>
               </div>
-              <button onClick={() => openAddModal('user')} className="btn btn-primary gap-2">
+              <button onClick={() => openAddModal('student')} className="btn btn-primary gap-2">
                 <Plus className="w-4 h-4" />
-                Add User
+                Add Student
               </button>
             </div>
 
@@ -304,44 +325,44 @@ export default function AdminPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Name</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Email</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Role</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Student</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Department</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Year</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">GPA</th>
                     <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Status</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Joined</th>
                     <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {sampleUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  {allStudents.map((student) => (
+                    <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-medium">
-                            {user.name.split(' ').map(n => n[0]).join('')}
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium">
+                            {student.name.split(' ').map(n => n[0]).join('')}
                           </div>
-                          <span className="font-medium text-gray-900">{user.name}</span>
+                          <div>
+                            <p className="font-medium text-gray-900">{student.name}</p>
+                            <p className="text-xs text-gray-500">{student.email}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{user.email}</td>
+                      <td className="px-6 py-4 text-gray-600">{student.department}</td>
+                      <td className="px-6 py-4 text-gray-600">{student.year}</td>
+                      <td className="px-6 py-4">
+                        <span className={`font-medium ${student.gpa >= 3.5 ? 'text-green-600' : student.gpa >= 3.0 ? 'text-blue-600' : 'text-amber-600'}`}>
+                          {student.gpa}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'Professor' ? 'bg-purple-100 text-purple-700' :
-                          user.role === 'Staff' ? 'bg-amber-100 text-amber-700' :
-                          'bg-blue-100 text-blue-700'
+                          student.status === 'Active' ? 'bg-green-100 text-green-700' :
+                          student.status === 'Suspended' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-600'
                         }`}>
-                          {user.role}
+                          {student.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`flex items-center gap-1 text-sm ${
-                          user.status === 'Active' ? 'text-green-600' : 'text-gray-400'
-                        }`}>
-                          {user.status === 'Active' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{user.joined}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -359,6 +380,461 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Shop Owners Section */}
+        {activeSection === 'shops' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button className="btn btn-secondary gap-2">
+                  <Filter className="w-4 h-4" />
+                  Filter
+                </button>
+              </div>
+              <button onClick={() => openAddModal('shop')} className="btn btn-primary gap-2">
+                <Plus className="w-4 h-4" />
+                Add Shop
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {shopOwners.map((shop) => (
+                <div key={shop.id} className="bg-white rounded-2xl p-6 border border-gray-100 card-hover">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center">
+                        <Store className="w-7 h-7 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{shop.name}</h3>
+                        <p className="text-sm text-gray-500">{shop.owner}</p>
+                      </div>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      shop.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {shop.status}
+                    </span>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Type</span>
+                      <span className="font-medium text-gray-900">{shop.type}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Total Orders</span>
+                      <span className="font-medium text-gray-900">{shop.totalOrders.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Revenue</span>
+                      <span className="font-medium text-green-600">Rs. {shop.revenue.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="flex items-center gap-1 text-amber-500">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span className="font-medium">{shop.rating}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Edit className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Delivery Riders Section */}
+        {activeSection === 'riders' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button className="btn btn-secondary gap-2">
+                  <Filter className="w-4 h-4" />
+                  Filter
+                </button>
+              </div>
+              <button onClick={() => openAddModal('rider')} className="btn btn-primary gap-2">
+                <Plus className="w-4 h-4" />
+                Add Rider
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Rider</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Vehicle</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Deliveries</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Earnings</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Rating</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {deliveryRiders.map((rider) => (
+                    <tr key={rider.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-medium">
+                            {rider.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{rider.name}</p>
+                            <p className="text-xs text-gray-500">{rider.phone}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{rider.vehicle}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">{rider.totalDeliveries}</td>
+                      <td className="px-6 py-4 font-medium text-green-600">Rs. {rider.earnings.toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1 text-amber-500">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span className="font-medium">{rider.rating}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          rider.status === 'Active' ? 'bg-green-100 text-green-700' :
+                          rider.status === 'On Delivery' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {rider.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Edit className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* All Orders Section */}
+        {activeSection === 'orders' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {['All', 'Pending', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'].map((status) => (
+                <button
+                  key={status}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                    status === 'All' 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Order ID</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Customer</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Shop</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Items</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Total</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Rider</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {allOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900">{order.id}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.customer}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.shop}</td>
+                      <td className="px-6 py-4 text-gray-600 text-sm max-w-xs truncate">{order.items}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">Rs. {order.total}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{order.rider || '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Edit className="w-4 h-4 text-gray-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Ride Bookings Section */}
+        {activeSection === 'rides' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {['All', 'Confirmed', 'In Progress', 'Completed', 'Cancelled'].map((status) => (
+                <button
+                  key={status}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                    status === 'All' 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Ride ID</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Passenger</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Route</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Vehicle</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Fare</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Rider</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {allRideBookings.map((ride) => (
+                    <tr key={ride.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900">{ride.id}</td>
+                      <td className="px-6 py-4 text-gray-600">{ride.passenger}</td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <p className="text-gray-900">{ride.pickup}</p>
+                          <p className="text-gray-500">→ {ride.dropoff}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{ride.vehicle}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">Rs. {ride.fare}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[ride.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {ride.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{ride.rider || '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Edit className="w-4 h-4 text-gray-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Laundry Orders Section */}
+        {activeSection === 'laundry' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {['All', 'Processing', 'Ready for Pickup', 'Out for Delivery', 'Delivered'].map((status) => (
+                <button
+                  key={status}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                    status === 'All' 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Order ID</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Customer</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Service</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Items</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Total</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Status</th>
+                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Rider</th>
+                    <th className="text-right px-6 py-4 text-sm font-medium text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {allLaundryOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-gray-900">{order.id}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.customer}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.service}</td>
+                      <td className="px-6 py-4 text-gray-600 text-sm">{order.items}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">Rs. {order.total}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${orderStatusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{order.rider || '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Eye className="w-4 h-4 text-gray-500" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Edit className="w-4 h-4 text-gray-500" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Reports Section */}
+        {activeSection === 'reports' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Revenue Overview */}
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <DollarSign className="w-10 h-10 text-white/80" />
+                  <span className="text-sm bg-white/20 px-2 py-1 rounded-full">Total Revenue</span>
+                </div>
+                <p className="text-3xl font-bold">Rs. {adminAnalytics.platformStats.totalRevenue.toLocaleString()}</p>
+                <p className="text-white/70 text-sm">{adminAnalytics.platformStats.totalOrders.toLocaleString()} total orders</p>
+              </div>
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <Users className="w-10 h-10 text-blue-500" />
+                  <span className="text-sm text-gray-500">Active Users</span>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{adminAnalytics.platformStats.activeToday.toLocaleString()}</p>
+                <p className="text-gray-500 text-sm">Online today</p>
+              </div>
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <Package className="w-10 h-10 text-purple-500" />
+                  <span className="text-sm text-gray-500">Orders Today</span>
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{adminAnalytics.ordersByStatus.pending + adminAnalytics.ordersByStatus.preparing}</p>
+                <p className="text-gray-500 text-sm">Pending & preparing</p>
+              </div>
+            </div>
+
+            {/* Revenue Breakdown & Top Performers */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Revenue by Category</h2>
+                <div className="space-y-4">
+                  {[
+                    { label: 'Food Orders', value: adminAnalytics.revenueByCategory.food, color: 'bg-orange-500' },
+                    { label: 'Marketplace', value: adminAnalytics.revenueByCategory.marketplace, color: 'bg-blue-500' },
+                    { label: 'Rides', value: adminAnalytics.revenueByCategory.rides, color: 'bg-purple-500' },
+                    { label: 'Laundry', value: adminAnalytics.revenueByCategory.laundry, color: 'bg-cyan-500' },
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center gap-4">
+                      <div className={`w-4 h-4 rounded ${item.color}`} />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                          <span className="text-sm font-bold text-gray-900">Rs. {(item.value / 1000000).toFixed(1)}M</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${(item.value / adminAnalytics.platformStats.totalRevenue) * 100}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Shops</h2>
+                <div className="space-y-4">
+                  {adminAnalytics.topShops.map((shop, index) => (
+                    <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
+                      <span className="text-lg font-bold text-gray-400">#{index + 1}</span>
+                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <Store className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{shop.name}</p>
+                        <p className="text-sm text-gray-500">{shop.orders} orders</p>
+                      </div>
+                      <p className="font-bold text-green-600">Rs. {shop.revenue.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Top Riders */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Delivery Riders</h2>
+              <div className="grid md:grid-cols-3 gap-4">
+                {adminAnalytics.topRiders.map((rider, index) => (
+                  <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div className="relative">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Truck className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <span className="absolute -top-1 -right-1 w-6 h-6 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {index + 1}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{rider.name}</p>
+                      <p className="text-sm text-gray-500">{rider.deliveries} deliveries</p>
+                    </div>
+                    <p className="font-bold text-green-600">Rs. {rider.earnings.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -410,7 +886,7 @@ export default function AdminPage() {
         )}
 
         {/* Other Sections Placeholder */}
-        {!['dashboard', 'users', 'courses'].includes(activeSection) && (
+        {!['dashboard', 'students', 'shops', 'riders', 'orders', 'rides', 'laundry', 'courses', 'reports', 'announcements', 'marketplace'].includes(activeSection) && (
           <div className="bg-white rounded-2xl p-12 border border-gray-100 text-center animate-fadeIn">
             <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Settings className="w-10 h-10 text-gray-400" />

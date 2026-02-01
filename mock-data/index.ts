@@ -1175,3 +1175,209 @@ export const userProfile = {
   credits: 98,
   totalCredits: 140,
 };
+
+// ============================================
+// ADMIN DASHBOARD MOCK DATA
+// ============================================
+
+// All Students Data for Admin
+export const allStudents = [
+  { id: "STU001", name: "Alex Johnson", email: "alex.johnson@university.edu", department: "Computer Science", year: "3rd Year", status: "Active", gpa: 3.72, joinedDate: "2023-09-01" },
+  { id: "STU002", name: "Emma Wilson", email: "emma.wilson@university.edu", department: "Computer Science", year: "2nd Year", status: "Active", gpa: 3.85, joinedDate: "2024-09-01" },
+  { id: "STU003", name: "Ryan Garcia", email: "ryan.garcia@university.edu", department: "Information Technology", year: "4th Year", status: "Active", gpa: 3.45, joinedDate: "2022-09-01" },
+  { id: "STU004", name: "Sophia Lee", email: "sophia.lee@university.edu", department: "Computer Science", year: "1st Year", status: "Active", gpa: 3.92, joinedDate: "2025-09-01" },
+  { id: "STU005", name: "James Miller", email: "james.miller@university.edu", department: "Software Engineering", year: "3rd Year", status: "Suspended", gpa: 2.80, joinedDate: "2023-09-01" },
+  { id: "STU006", name: "Olivia Brown", email: "olivia.brown@university.edu", department: "Data Science", year: "2nd Year", status: "Active", gpa: 3.68, joinedDate: "2024-09-01" },
+  { id: "STU007", name: "Liam Davis", email: "liam.davis@university.edu", department: "Computer Science", year: "4th Year", status: "Graduated", gpa: 3.55, joinedDate: "2022-09-01" },
+  { id: "STU008", name: "Ava Martinez", email: "ava.martinez@university.edu", department: "Cybersecurity", year: "1st Year", status: "Active", gpa: 3.78, joinedDate: "2025-09-01" },
+];
+
+// All Shop Owners
+export const shopOwners = [
+  { id: "SHP001", name: "Campus Canteen", owner: "John Smith", email: "canteen@university.edu", type: "Canteen", status: "Active", totalOrders: 1234, rating: 4.2, revenue: 425000 },
+  { id: "SHP002", name: "Pizza Palace", owner: "Maria Garcia", email: "pizza@university.edu", type: "Restaurant", status: "Active", totalOrders: 856, rating: 4.5, revenue: 312000 },
+  { id: "SHP003", name: "Healthy Bites", owner: "Lisa Wang", email: "healthy@university.edu", type: "Cafe", status: "Active", totalOrders: 623, rating: 4.7, revenue: 198000 },
+  { id: "SHP004", name: "Dragon Wok", owner: "Wei Chen", email: "dragon@university.edu", type: "Restaurant", status: "Inactive", totalOrders: 445, rating: 4.4, revenue: 156000 },
+  { id: "SHP005", name: "Tech Gadgets Store", owner: "Mike Johnson", email: "techstore@university.edu", type: "Electronics", status: "Active", totalOrders: 234, rating: 4.6, revenue: 890000 },
+  { id: "SHP006", name: "Book Haven", owner: "Sarah Lee", email: "books@university.edu", type: "Bookstore", status: "Active", totalOrders: 567, rating: 4.8, revenue: 234000 },
+];
+
+// All Delivery Riders
+export const deliveryRiders = [
+  { id: "RDR001", name: "Ahmed Khan", email: "ahmed@delivery.edu", phone: "+94 77 123 4567", vehicle: "Motorcycle", status: "Active", rating: 4.8, totalDeliveries: 456, earnings: 125000 },
+  { id: "RDR002", name: "Priya Sharma", email: "priya@delivery.edu", phone: "+94 77 234 5678", vehicle: "Bicycle", status: "Active", rating: 4.9, totalDeliveries: 321, earnings: 89000 },
+  { id: "RDR003", name: "Kamal Fernando", email: "kamal@delivery.edu", phone: "+94 77 345 6789", vehicle: "Motorcycle", status: "On Delivery", rating: 4.6, totalDeliveries: 534, earnings: 145000 },
+  { id: "RDR004", name: "Nimal Perera", email: "nimal@delivery.edu", phone: "+94 77 456 7890", vehicle: "Car", status: "Inactive", rating: 4.5, totalDeliveries: 245, earnings: 78000 },
+  { id: "RDR005", name: "Sanjay Patel", email: "sanjay@delivery.edu", phone: "+94 77 567 8901", vehicle: "Motorcycle", status: "Active", rating: 4.7, totalDeliveries: 612, earnings: 167000 },
+];
+
+// All Orders for Admin Dashboard
+export const allOrders = [
+  { id: "ORD001", customer: "Alex Johnson", shop: "Campus Canteen", items: "Chicken Rice Bowl, Fresh Juice", total: 630, status: "Delivered", date: "2026-02-01", time: "12:30 PM", rider: "Ahmed Khan", paymentMethod: "Card" },
+  { id: "ORD002", customer: "Emma Wilson", shop: "Pizza Palace", items: "Margherita Pizza, Garlic Bread", total: 1650, status: "Preparing", date: "2026-02-01", time: "01:15 PM", rider: null, paymentMethod: "Cash" },
+  { id: "ORD003", customer: "Ryan Garcia", shop: "Healthy Bites", items: "Caesar Salad, Green Juice", total: 1050, status: "Out for Delivery", date: "2026-02-01", time: "12:45 PM", rider: "Priya Sharma", paymentMethod: "Card" },
+  { id: "ORD004", customer: "Sophia Lee", shop: "Campus Canteen", items: "Vegetable Curry, Grilled Sandwich", total: 630, status: "Pending", date: "2026-02-01", time: "01:30 PM", rider: null, paymentMethod: "Cash" },
+  { id: "ORD005", customer: "James Miller", shop: "Pizza Palace", items: "Pepperoni Pizza, Coke x2", total: 1800, status: "Delivered", date: "2026-01-31", time: "07:30 PM", rider: "Kamal Fernando", paymentMethod: "Card" },
+  { id: "ORD006", customer: "Olivia Brown", shop: "Healthy Bites", items: "Avocado Toast, Smoothie Bowl", total: 1300, status: "Cancelled", date: "2026-01-31", time: "11:00 AM", rider: null, paymentMethod: "Cash" },
+  { id: "ORD007", customer: "Liam Davis", shop: "Dragon Wok", items: "Fried Rice, Spring Rolls", total: 980, status: "Delivered", date: "2026-01-31", time: "06:15 PM", rider: "Sanjay Patel", paymentMethod: "Card" },
+  { id: "ORD008", customer: "Ava Martinez", shop: "Campus Canteen", items: "Chicken Rice Bowl x2", total: 900, status: "Preparing", date: "2026-02-01", time: "01:45 PM", rider: null, paymentMethod: "Cash" },
+];
+
+// Ride Bookings for Admin
+export const allRideBookings = [
+  { id: "RDE001", passenger: "Alex Johnson", pickup: "Student Hostel A", dropoff: "City Mall", vehicle: "Car", fare: 650, status: "Completed", date: "2026-02-01", time: "10:00 AM", rider: "Kamal Fernando" },
+  { id: "RDE002", passenger: "Emma Wilson", pickup: "University Main Gate", dropoff: "Central Station", vehicle: "Three-Wheeler", fare: 350, status: "In Progress", date: "2026-02-01", time: "01:30 PM", rider: "Ahmed Khan" },
+  { id: "RDE003", passenger: "Ryan Garcia", pickup: "Library Building", dropoff: "Airport", vehicle: "Premium Car", fare: 2500, status: "Confirmed", date: "2026-02-01", time: "03:00 PM", rider: "Sanjay Patel" },
+  { id: "RDE004", passenger: "Sophia Lee", pickup: "Sports Complex", dropoff: "City Mall", vehicle: "Bike", fare: 180, status: "Completed", date: "2026-01-31", time: "05:00 PM", rider: "Priya Sharma" },
+  { id: "RDE005", passenger: "James Miller", pickup: "Student Hostel A", dropoff: "Bus Terminal", vehicle: "Car", fare: 480, status: "Cancelled", date: "2026-01-31", time: "09:00 AM", rider: null },
+];
+
+// Laundry Orders for Admin
+export const allLaundryOrders = [
+  { id: "LND001", customer: "Alex Johnson", service: "QuickWash Campus", items: "5kg Regular Wash", total: 1250, status: "Ready for Pickup", date: "2026-02-01", pickupTime: "10:00 AM", deliveryTime: "06:00 PM", rider: "Ahmed Khan" },
+  { id: "LND002", customer: "Emma Wilson", service: "Premium Dry Clean", items: "2 Shirts, 1 Suit", total: 2400, status: "Processing", date: "2026-02-01", pickupTime: "09:00 AM", deliveryTime: "Pending", rider: null },
+  { id: "LND003", customer: "Ryan Garcia", service: "Express Laundry", items: "3kg Express Wash", total: 1350, status: "Picked Up", date: "2026-02-01", pickupTime: "11:00 AM", deliveryTime: "05:00 PM", rider: "Priya Sharma" },
+  { id: "LND004", customer: "Sophia Lee", service: "QuickWash Campus", items: "8kg Regular Wash, 2 Bedding", total: 3600, status: "Delivered", date: "2026-01-31", pickupTime: "02:00 PM", deliveryTime: "06:00 PM", rider: "Kamal Fernando" },
+  { id: "LND005", customer: "Olivia Brown", service: "Premium Dry Clean", items: "3 Dresses", total: 1800, status: "Out for Delivery", date: "2026-02-01", pickupTime: "08:00 AM", deliveryTime: "04:00 PM", rider: "Sanjay Patel" },
+];
+
+// Shop Owner Dashboard Data
+export const shopOwnerData = {
+  shopInfo: {
+    id: "SHP002",
+    name: "Pizza Palace",
+    owner: "Maria Garcia",
+    email: "pizza@university.edu",
+    phone: "+94 77 123 4567",
+    type: "Restaurant",
+    status: "Active",
+    rating: 4.5,
+    totalReviews: 189,
+    joinedDate: "2024-06-15",
+    description: "Authentic Italian pizzas made with fresh ingredients",
+    openingHours: "10:00 AM - 10:00 PM",
+    deliveryRadius: "5km",
+  },
+  stats: {
+    todayOrders: 24,
+    todayRevenue: 28500,
+    pendingOrders: 5,
+    avgRating: 4.5,
+    weeklyOrders: 156,
+    weeklyRevenue: 185000,
+    monthlyOrders: 612,
+    monthlyRevenue: 745000,
+  },
+  recentOrders: [
+    { id: "ORD002", customer: "Emma Wilson", items: "Margherita Pizza, Garlic Bread", total: 1650, status: "Preparing", time: "5 mins ago", address: "Block A, Room 203" },
+    { id: "ORD009", customer: "Liam Davis", items: "Pepperoni Pizza x2, Coke x3", total: 3450, status: "Pending", time: "10 mins ago", address: "Block C, Room 415" },
+    { id: "ORD010", customer: "Ava Martinez", items: "Garlic Bread x2", total: 900, status: "Ready", time: "15 mins ago", address: "Block B, Room 102" },
+    { id: "ORD011", customer: "Noah Wilson", items: "Margherita Pizza, Pepperoni Pizza", total: 2700, status: "Out for Delivery", time: "25 mins ago", address: "Block D, Room 308" },
+  ],
+  menuItems: [
+    { id: 1, name: "Margherita Pizza", category: "Pizza", price: 1200, originalPrice: null, available: true, popular: true, image: "🍕" },
+    { id: 2, name: "Pepperoni Pizza", category: "Pizza", price: 1500, originalPrice: null, available: true, popular: true, image: "🍕" },
+    { id: 3, name: "BBQ Chicken Pizza", category: "Pizza", price: 1600, originalPrice: 1800, available: true, popular: false, image: "🍕" },
+    { id: 4, name: "Veggie Supreme Pizza", category: "Pizza", price: 1400, originalPrice: null, available: true, popular: false, image: "🥬" },
+    { id: 5, name: "Garlic Bread", category: "Sides", price: 450, originalPrice: null, available: true, popular: false, image: "🥖" },
+    { id: 6, name: "Cheese Sticks", category: "Sides", price: 550, originalPrice: null, available: false, popular: false, image: "🧀" },
+    { id: 7, name: "Coke", category: "Drinks", price: 150, originalPrice: null, available: true, popular: false, image: "🥤" },
+    { id: 8, name: "Sprite", category: "Drinks", price: 150, originalPrice: null, available: true, popular: false, image: "🥤" },
+  ],
+  marketplaceItems: [
+    { id: 1, name: "Pizza Oven Thermometer", category: "Equipment", price: 2500, stock: 5, status: "Active", sales: 12, image: "🌡️" },
+    { id: 2, name: "Chef Apron Set", category: "Accessories", price: 1800, stock: 15, status: "Active", sales: 23, image: "👨‍🍳" },
+    { id: 3, name: "Italian Recipe Book", category: "Books", price: 3500, stock: 8, status: "Active", sales: 7, image: "📚" },
+  ],
+};
+
+// Delivery Rider Dashboard Data  
+export const riderDashboardData = {
+  riderInfo: {
+    id: "RDR001",
+    name: "Ahmed Khan",
+    email: "ahmed@delivery.edu",
+    phone: "+94 77 123 4567",
+    vehicle: "Motorcycle",
+    vehicleNumber: "WP-AB-1234",
+    status: "Active",
+    rating: 4.8,
+    totalReviews: 156,
+    joinedDate: "2025-03-15",
+    licenseExpiry: "2027-05-20",
+  },
+  stats: {
+    todayDeliveries: 8,
+    todayEarnings: 2400,
+    activeDelivery: 1,
+    pendingPickups: 2,
+    weeklyDeliveries: 45,
+    weeklyEarnings: 13500,
+    monthlyDeliveries: 178,
+    monthlyEarnings: 54000,
+  },
+  activeDeliveries: [
+    { id: "DEL001", type: "Food", orderId: "ORD003", customer: "Ryan Garcia", pickup: "Healthy Bites", dropoff: "Block B, Room 305", status: "Picked Up", estimatedTime: "10 mins", amount: 1050, distance: "1.2 km", pickupTime: "12:45 PM" },
+  ],
+  pendingPickups: [
+    { id: "DEL002", type: "Laundry", orderId: "LND001", customer: "Alex Johnson", pickup: "QuickWash Campus", dropoff: "Block A, Room 201", status: "Ready for Pickup", scheduledTime: "02:00 PM", amount: 1250, distance: "0.8 km" },
+    { id: "DEL003", type: "Food", orderId: "ORD011", customer: "Noah Wilson", pickup: "Pizza Palace", dropoff: "Block D, Room 308", status: "Ready for Pickup", scheduledTime: "02:15 PM", amount: 2700, distance: "1.5 km" },
+  ],
+  completedToday: [
+    { id: "DEL004", type: "Ride", orderId: "RDE002", customer: "Emma Wilson", pickup: "University Main Gate", dropoff: "Central Station", completedAt: "11:30 AM", amount: 350, distance: "3.2 km", rating: 5 },
+    { id: "DEL005", type: "Food", orderId: "ORD001", customer: "Alex Johnson", pickup: "Campus Canteen", dropoff: "Block A, Room 201", completedAt: "12:15 PM", amount: 630, distance: "0.5 km", rating: 5 },
+    { id: "DEL006", type: "Laundry", orderId: "LND003", customer: "Ryan Garcia", pickup: "Express Laundry", dropoff: "Block B, Room 305", completedAt: "10:45 AM", amount: 1350, distance: "1.0 km", rating: 4 },
+  ],
+  upcomingRides: [
+    { id: "RDE003", passenger: "Ryan Garcia", pickup: "Library Building", dropoff: "Airport", scheduledTime: "03:00 PM", vehicle: "Premium Car", fare: 2500, distance: "25 km" },
+  ],
+  earningsBreakdown: {
+    foodDeliveries: 15000,
+    laundryDeliveries: 8500,
+    rideBookings: 12000,
+    tips: 3500,
+    bonuses: 2000,
+  },
+};
+
+// Marketplace Items for Shop Owner (items they're selling in marketplace, not menu)
+export const shopMarketplaceItems = [
+  { id: 1, name: "Pizza Oven Thermometer", category: "Equipment", price: 2500, stock: 5, status: "Active", sales: 12, image: "🌡️" },
+  { id: 2, name: "Chef Apron Set", category: "Accessories", price: 1800, stock: 15, status: "Active", sales: 23, image: "👨‍🍳" },
+  { id: 3, name: "Italian Recipe Book", category: "Books", price: 3500, stock: 8, status: "Active", sales: 7, image: "📚" },
+];
+
+// Admin Analytics Data
+export const adminAnalytics = {
+  platformStats: {
+    totalUsers: 12847,
+    activeToday: 3421,
+    totalOrders: 45678,
+    totalRevenue: 12450000,
+    activeShops: 24,
+    activeRiders: 18,
+  },
+  ordersByStatus: {
+    pending: 45,
+    preparing: 32,
+    outForDelivery: 28,
+    delivered: 8956,
+    cancelled: 234,
+  },
+  revenueByCategory: {
+    food: 5600000,
+    marketplace: 3200000,
+    laundry: 1800000,
+    rides: 1850000,
+  },
+  topShops: [
+    { name: "Campus Canteen", orders: 1234, revenue: 425000 },
+    { name: "Pizza Palace", orders: 856, revenue: 312000 },
+    { name: "Healthy Bites", orders: 623, revenue: 198000 },
+  ],
+  topRiders: [
+    { name: "Sanjay Patel", deliveries: 612, earnings: 167000 },
+    { name: "Kamal Fernando", deliveries: 534, earnings: 145000 },
+    { name: "Ahmed Khan", deliveries: 456, earnings: 125000 },
+  ],
+};

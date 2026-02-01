@@ -3,25 +3,67 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { GraduationCap, Mail, ArrowRight, Sparkles, BookOpen, Users, Calendar, Shield } from 'lucide-react';
+import { GraduationCap, Mail, ArrowRight, Sparkles, BookOpen, Users, Calendar, Shield, Store, Truck } from 'lucide-react';
+
+type UserRole = 'student' | 'super-admin' | 'shop-owner' | 'delivery-rider';
+
+const roleConfig = {
+  'student': {
+    label: 'Student',
+    icon: GraduationCap,
+    color: 'bg-primary',
+    hoverColor: 'hover:bg-primary/90',
+    route: '/dashboard',
+    description: 'Access courses, assignments & campus services',
+  },
+  'super-admin': {
+    label: 'Super Admin',
+    icon: Shield,
+    color: 'bg-gradient-to-r from-amber-500 to-orange-500',
+    hoverColor: 'hover:from-amber-600 hover:to-orange-600',
+    route: '/admin',
+    description: 'Manage all platform users & services',
+  },
+  'shop-owner': {
+    label: 'Shop Owner',
+    icon: Store,
+    color: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+    hoverColor: 'hover:from-emerald-600 hover:to-teal-600',
+    route: '/admin/shop-owner',
+    description: 'Manage products, menus & orders',
+  },
+  'delivery-rider': {
+    label: 'Delivery Rider',
+    icon: Truck,
+    color: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+    hoverColor: 'hover:from-blue-600 hover:to-indigo-600',
+    route: '/admin/rider',
+    description: 'View & manage assigned deliveries',
+  },
+};
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
+  const [loadingRole, setLoadingRole] = useState<UserRole | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate login
+    // Simulate login based on selected role
     setTimeout(() => {
-      router.push('/dashboard');
+      router.push(roleConfig[selectedRole].route);
     }, 1000);
   };
 
-  const handleAdminLogin = () => {
-    router.push('/admin');
+  const handleRoleLogin = (role: UserRole) => {
+    setLoadingRole(role);
+    setTimeout(() => {
+      router.push(roleConfig[role].route);
+    }, 800);
   };
 
   const features = [
@@ -140,19 +182,47 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">or</span>
+                <span className="px-4 bg-white text-gray-500">or sign in as</span>
               </div>
             </div>
 
-            {/* Super Admin Button */}
-            <button
-              onClick={handleAdminLogin}
-              className="w-full btn py-3.5 text-base gap-2 group bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 transition-all duration-300 shadow-lg shadow-amber-500/25"
-            >
-              <Shield className="w-5 h-5" />
-              Go to Super Admin
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {/* Role Selection Buttons */}
+            <div className="space-y-3">
+              {(['super-admin', 'shop-owner', 'delivery-rider'] as UserRole[]).map((role) => {
+                const config = roleConfig[role];
+                const IconComponent = config.icon;
+                const isLoading = loadingRole === role;
+                
+                return (
+                  <button
+                    key={role}
+                    onClick={() => handleRoleLogin(role)}
+                    disabled={loadingRole !== null}
+                    className={`w-full btn py-3.5 text-base gap-2 group ${config.color} text-white ${config.hoverColor} transition-all duration-300 shadow-lg disabled:opacity-70`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        <IconComponent className="w-5 h-5" />
+                        <span className="flex-1 text-left">{config.label}</span>
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Role descriptions */}
+            <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+              <p className="text-xs text-gray-500 text-center">
+                <strong>Demo Mode:</strong> Click any role button above to explore different admin dashboards
+              </p>
+            </div>
 
             <div className="mt-6 pt-6 border-t border-gray-100">
               <p className="text-center text-sm text-gray-500">
