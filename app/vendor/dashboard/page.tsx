@@ -28,8 +28,8 @@ export default async function VendorDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={Package} label="Today's Orders" value="24" color="bg-blue-500" />
           <StatCard icon={Clock} label="Pending" value="8" color="bg-yellow-500" />
-          <StatCard icon={DollarSign} label="Today's Revenue" value="₦45,200" color="bg-green-500" />
-          <StatCard icon={TrendingUp} label="This Week" value="₦312,500" color="bg-purple-500" />
+          <StatCard icon={DollarSign} label="Today's Revenue" value="RS 45,200" color="bg-green-500" />
+          <StatCard icon={TrendingUp} label="This Week" value="RS 312,500" color="bg-purple-500" />
         </div>
 
         {/* Main Content */}
@@ -106,10 +106,10 @@ export default async function VendorDashboard() {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <PopularItem name="Jollof Rice" orders={15} price="₦1,200" />
-            <PopularItem name="Fried Rice" orders={12} price="₦1,500" />
-            <PopularItem name="Chicken & Chips" orders={10} price="₦2,000" />
-            <PopularItem name="Shawarma" orders={8} price="₦1,800" />
+            <PopularItem name="Jollof Rice" orders={15} price="RS 1,200" />
+            <PopularItem name="Fried Rice" orders={12} price="RS 1,500" />
+            <PopularItem name="Chicken & Chips" orders={10} price="RS 2,000" />
+            <PopularItem name="Shawarma" orders={8} price="RS 1,800" />
           </div>
         </div>
       </div>
