@@ -98,7 +98,14 @@ export default function SchedulePage() {
     setIsFormOpen(false)
   }
 
-  const handleEditSchedule = (updatedSchedule: Schedule) => {
+  const handleEditSchedule = (updatedSchedule: Schedule | Omit<Schedule, 'id'>) => {
+    if (!('id' in updatedSchedule)) {
+      // Should not happen for edit flow, but guard against missing id
+      setIsFormOpen(false)
+      setEditingSchedule(null)
+      return
+    }
+
     setSchedules(
       schedules.map((s) => (s.id === updatedSchedule.id ? updatedSchedule : s))
     )
