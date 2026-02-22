@@ -25,6 +25,17 @@ interface ScheduleFormProps {
   onClose: () => void
 }
 
+interface FormValues {
+  courseName: string
+  courseCode: string
+  day: string
+  startTime: string
+  endTime: string
+  location: string
+  capacity: number
+  color: string
+}
+
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const COLORS = [
   'bg-blue-500',
@@ -38,22 +49,22 @@ const COLORS = [
 ]
 
 export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormValues>({
     courseName: schedule?.courseName || '',
     courseCode: schedule?.courseCode || '',
     day: schedule?.day || 'Monday',
     startTime: schedule?.startTime || '09:00',
     endTime: schedule?.endTime || '10:30',
     location: schedule?.location || '',
-    capacity: schedule?.capacity || 30,
+    capacity: schedule?.capacity ?? 30,
     color: schedule?.color || 'bg-blue-500',
   })
 
-  const [errors, setErrors] = useState<Partial<typeof formData>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const validateForm = () => {
-    const newErrors: Partial<typeof formData> = {}
+    const newErrors: Partial<Record<keyof FormValues, string>> = {}
 
     if (!formData.courseName.trim()) newErrors.courseName = 'Course name is required'
     if (!formData.courseCode.trim()) newErrors.courseCode = 'Course code is required'
@@ -76,15 +87,16 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'capacity' ? parseInt(value) : value,
-    }))
+
+    if (name === 'capacity') {
+      setFormData((prev) => ({ ...prev, capacity: parseInt(value || '0', 10) }))
+      setErrors((prev) => ({ ...prev, capacity: undefined }))
+      return
+    }
+
+    setFormData((prev) => ({ ...(prev as any), [name]: value } as FormValues))
     // Clear error for this field
-    setErrors((prev) => ({
-      ...prev,
-      [name]: undefined,
-    }))
+    setErrors((prev) => ({ ...(prev as any), [name]: undefined }))
   }
 
   const handleColorChange = (color: string) => {

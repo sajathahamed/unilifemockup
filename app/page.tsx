@@ -8,10 +8,15 @@ import { getRoleBasedRedirect, UserRole } from '@/lib/auth'
  * - Unauthenticated users go to login
  */
 export default async function HomePage() {
+  // If Supabase env vars are not available at build time, skip server auth checks
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    redirect('/login')
+  }
+
   const supabase = await createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   if (user) {
     // Fetch user role
     const { data: userData } = await supabase
@@ -19,12 +24,12 @@ export default async function HomePage() {
       .select('role')
       .eq('id', user.id)
       .single()
-    
+
     if (userData?.role) {
       redirect(getRoleBasedRedirect(userData.role as UserRole))
     }
   }
-  
+
   // Redirect to login for unauthenticated users
   redirect('/login')
 }

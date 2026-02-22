@@ -122,7 +122,7 @@ export default function OrdersPage() {
   })
 
   return (
-    <DashboardLayout user={{ name: 'Showmika Uthayakumaran', role: 'vendor' }}>
+    <DashboardLayout user={{ id: 1, auth_id: 'auth0|showmika', name: 'Showmika Uthayakumaran', email: 'showmika@example.com', role: 'vendor' }}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

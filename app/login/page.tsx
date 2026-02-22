@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  const supabase = createClient()
 
   /**
    * Handle email/password login
@@ -28,6 +27,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
       // Authenticate with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -79,6 +79,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
 
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
