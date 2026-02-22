@@ -13,7 +13,6 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
-  const supabase = createClient()
 
   /**
    * Handle password reset request
@@ -24,6 +23,8 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       })

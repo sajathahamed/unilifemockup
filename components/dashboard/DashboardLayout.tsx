@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -113,13 +113,19 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const supabase = createClient()
+  const [supabase, setSupabase] = useState<any | null>(null)
+
+  // Initialize Supabase client only on client runtime
+  useEffect(() => {
+    setSupabase(createClient())
+  }, [])
   const navItems = roleNavItems[user.role]
   const roleInfo = roleConfig[user.role]
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
-    await supabase.auth.signOut()
+    const client = supabase ?? createClient()
+    await client.auth.signOut()
     router.push('/login')
     router.refresh()
   }
