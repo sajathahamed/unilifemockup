@@ -16,6 +16,74 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserProfile } from '@/lib/auth'
 
+// Inline mock data so cards show immediately while the API call is in-flight
+const MOCK_SHOPS = [
+    {
+        place_id: 'mock-1', name: 'Campus Canteen Central',
+        vicinity: '12 University Ave, Campus Block A', rating: 4.3,
+        user_ratings_total: 342, price_level: 1,
+        types: ['restaurant', 'food', 'canteen'], opening_hours: { open_now: true },
+        photo_url: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=600&q=80',
+        distance: '80m', tags: ['Canteen', 'Rice', 'Local'],
+    },
+    {
+        place_id: 'mock-2', name: 'The Study Bites Cafe',
+        vicinity: '5 Library Road, Near Main Gate', rating: 4.6,
+        user_ratings_total: 189, price_level: 1,
+        types: ['cafe', 'food', 'bakery'], opening_hours: { open_now: true },
+        photo_url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80',
+        distance: '150m', tags: ['Cafe', 'Sandwiches', 'Coffee'],
+    },
+    {
+        place_id: 'mock-3', name: 'Mama Nasi Corner',
+        vicinity: '3 Student Plaza, Block B', rating: 4.5,
+        user_ratings_total: 567, price_level: 1,
+        types: ['restaurant', 'food'], opening_hours: { open_now: false },
+        photo_url: 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=600&q=80',
+        distance: '200m', tags: ['Rice', 'Asian', 'Halal'],
+    },
+    {
+        place_id: 'mock-4', name: 'QuickBite Express',
+        vicinity: '8 Sports Complex, Ground Floor', rating: 4.1,
+        user_ratings_total: 254, price_level: 1,
+        types: ['fast_food', 'food', 'restaurant'], opening_hours: { open_now: true },
+        photo_url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80',
+        distance: '320m', tags: ['Fast Food', 'Burgers', 'Wraps'],
+    },
+    {
+        place_id: 'mock-5', name: 'FreshGreens Salad Bar',
+        vicinity: '1 Health Sciences Building', rating: 4.7,
+        user_ratings_total: 128, price_level: 2,
+        types: ['restaurant', 'food', 'health'], opening_hours: { open_now: true },
+        photo_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80',
+        distance: '450m', tags: ['Healthy', 'Salads', 'Vegan'],
+    },
+    {
+        place_id: 'mock-6', name: 'Roti House',
+        vicinity: '22 Engineering Street', rating: 4.4,
+        user_ratings_total: 403, price_level: 1,
+        types: ['restaurant', 'food'], opening_hours: { open_now: true },
+        photo_url: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600&q=80',
+        distance: '520m', tags: ['Indian', 'Roti', 'Halal'],
+    },
+    {
+        place_id: 'mock-7', name: 'Ice Bliss Desserts',
+        vicinity: '9 Arts Faculty, Lower Ground', rating: 4.8,
+        user_ratings_total: 231, price_level: 1,
+        types: ['cafe', 'food', 'dessert'], opening_hours: { open_now: true },
+        photo_url: 'https://images.unsplash.com/photo-1488900128323-21503983a07e?w=600&q=80',
+        distance: '600m', tags: ['Desserts', 'Ice Cream', 'Drinks'],
+    },
+    {
+        place_id: 'mock-8', name: 'The Noodle Stop',
+        vicinity: '7 Science Tower, Level 1', rating: 4.2,
+        user_ratings_total: 318, price_level: 1,
+        types: ['restaurant', 'food', 'asian'], opening_hours: { open_now: false },
+        photo_url: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&q=80',
+        distance: '700m', tags: ['Noodles', 'Chinese', 'Soup'],
+    },
+]
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Shop {
     place_id: string
@@ -122,27 +190,41 @@ function ShopCard({ shop, onClick }: { shop: Shop; onClick: () => void }) {
 
 export default function FoodOrderClient({ user }: { user: UserProfile }) {
     const router = useRouter()
-    const [shops, setShops] = useState<Shop[]>([])
-    const [filtered, setFiltered] = useState<Shop[]>([])
-    const [loading, setLoading] = useState(true)
+    // ⬇ start with mock data immediately – cards show before API responds
+    const [shops, setShops] = useState<Shop[]>(MOCK_SHOPS as Shop[])
+    const [filtered, setFiltered] = useState<Shop[]>(MOCK_SHOPS as Shop[])
+    const [loading, setLoading] = useState(false)
+    const [refreshing, setRefreshing] = useState(false)
     const [search, setSearch] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
     const [budgetOnly, setBudgetOnly] = useState(false)
     const [dataSource, setDataSource] = useState<'google' | 'mock'>('mock')
     const [locationGranted, setLocationGranted] = useState<boolean | null>(null)
+    const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
+    const [apiError, setApiError] = useState<string | null>(null)
 
     const fetchShops = useCallback(async (lat?: number, lng?: number) => {
-        setLoading(true)
+        setRefreshing(true)
+        setApiError(null)
         try {
             const url = lat && lng ? `/api/places?lat=${lat}&lng=${lng}` : '/api/places'
+            console.log('[FoodOrder] fetching:', url)
             const res = await fetch(url)
+            if (!res.ok) throw new Error(`API responded with HTTP ${res.status}`)
             const data = await res.json()
-            setShops(data.results ?? [])
-            setDataSource(data.source ?? 'mock')
-        } catch {
-            setShops([])
+            console.log('[FoodOrder] response:', data.source, data.results?.length, 'results')
+            const results = data.results ?? []
+            if (results.length > 0) {
+                setShops(results)
+                setDataSource(data.source ?? 'mock')
+            } else {
+                setApiError('Google returned 0 places — showing demo data. Check Places API is enabled in Google Cloud Console.')
+            }
+        } catch (err: any) {
+            console.warn('[FoodOrder] fetch failed:', err)
+            setApiError(`Fetch error: ${err?.message ?? err}`)
         } finally {
-            setLoading(false)
+            setRefreshing(false)
         }
     }, [])
 
@@ -150,14 +232,18 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
+                    const { latitude, longitude } = pos.coords
+                    console.log('[FoodOrder] location granted:', latitude, longitude)
                     setLocationGranted(true)
-                    fetchShops(pos.coords.latitude, pos.coords.longitude)
+                    setCoords({ lat: latitude, lng: longitude })
+                    fetchShops(latitude, longitude)
                 },
-                () => {
+                (err) => {
+                    console.warn('[FoodOrder] location denied:', err.message)
                     setLocationGranted(false)
                     fetchShops()
                 },
-                { timeout: 5000 }
+                { timeout: 10000, maximumAge: 60000 }
             )
         } else {
             fetchShops()
@@ -213,13 +299,18 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                         Affordable eats for uni students · Sorted by price &amp; rating
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-3">
-                        {dataSource === 'google' ? (
+                        {refreshing && (
+                            <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
+                                <Loader2 size={12} className="animate-spin" /> Updating…
+                            </span>
+                        )}
+                        {!refreshing && dataSource === 'google' ? (
                             <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
                                 <Wifi size={12} /> Live Google Places data
                             </span>
-                        ) : (
+                        ) : !refreshing && (
                             <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
-                                <WifiOff size={12} /> Demo data · Add API key for live results
+                                <WifiOff size={12} /> Demo data
                             </span>
                         )}
                         {locationGranted === false && (
@@ -228,6 +319,20 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                             </span>
                         )}
                     </div>
+                </div>
+
+                {/* Debug info bar */}
+                <div className="bg-gray-100 rounded-xl px-4 py-2 text-xs text-gray-500 space-y-1">
+                    <div className="flex flex-wrap gap-3 items-center">
+                        <span>📍 {coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : locationGranted === false ? 'Location denied' : 'Waiting for location…'}</span>
+                        <span>•</span>
+                        <span>Source: <strong className={dataSource === 'google' ? 'text-emerald-600' : 'text-amber-600'}>{dataSource === 'google' ? '🌐 Google Places' : '📦 Demo data'}</strong></span>
+                        <span>•</span>
+                        <span>{shops.length} places loaded</span>
+                    </div>
+                    {apiError && (
+                        <div className="text-red-500 font-medium mt-1">⚠️ {apiError}</div>
+                    )}
                 </div>
 
                 {/* Search + Budget filter */}
@@ -248,8 +353,8 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                     <button
                         onClick={() => setBudgetOnly((v) => !v)}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${budgetOnly
-                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
-                                : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-400'
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-400'
                             }`}
                     >
                         <Filter size={16} /> Budget ($)
@@ -263,8 +368,8 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
                             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeCategory === cat.id
-                                    ? 'bg-orange-500 text-white shadow-sm'
-                                    : 'bg-white text-gray-600 border border-gray-200 hover:border-orange-400'
+                                ? 'bg-orange-500 text-white shadow-sm'
+                                : 'bg-white text-gray-600 border border-gray-200 hover:border-orange-400'
                                 }`}
                         >
                             <span>{cat.emoji}</span> {cat.label}
