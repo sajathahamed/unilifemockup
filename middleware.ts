@@ -22,15 +22,9 @@ export async function middleware(request: NextRequest) {
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     // If user is already logged in and tries to access auth pages, redirect to dashboard
     if (user && (pathname === '/login' || pathname === '/signup')) {
-      // Fetch user role using auth_id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('auth_id', user.id)
-        .single()
-
-      if (userData?.role) {
-        const rolePrefix = userData.role === 'super_admin' ? 'super-admin' : userData.role
+      const role = user.user_metadata?.role
+      if (role) {
+        const rolePrefix = role === 'super_admin' ? 'super-admin' : role
         return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
       }
     }
@@ -44,19 +38,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Fetch user role for protected routes using auth_id
-  const { data: userData, error } = await supabase
+  // Fetch user role for protected routes - DB is Source of Truth
+  const { data: userData, error: userError } = await supabase
     .from('users')
     .select('role')
     .eq('auth_id', user.id)
     .single()
 
-  if (error || !userData) {
-    // User exists in auth but not in users table - redirect to login
+  let userRole = userData?.role as string
+
+  // Fallback to metadata if DB query fails or returns nothing
+  if (!userRole || userError) {
+    userRole = (user.user_metadata?.role as string) || ''
+  }
+
+  if (!userRole) {
+    // User exists in auth but no role found anywhere - redirect to login
     return NextResponse.redirect(new URL('/login?error=profile_not_found', request.url))
   }
 
-  const userRole = userData.role as string
   const allowedPrefixes = roleRoutes[userRole] || []
 
   // Check if user has access to the requested route
