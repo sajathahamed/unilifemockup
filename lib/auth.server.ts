@@ -9,25 +9,40 @@ import { UserProfile, UserRole, getRoleBasedRedirect, hasRoleAccess } from './au
  */
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const supabase = await createClient()
-  
+
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return null
   }
 
-  // Fetch user profile from users table using auth_id
+  // Source of Truth: Fetch user profile from users table
+  // This is where roles are usually updated
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('*')
     .eq('auth_id', user.id)
     .single()
 
-  if (profileError || !profile) {
-    return null
+  // If DB query worked, return that profile (most accurate)
+  if (profile && !profileError) {
+    return profile as UserProfile
   }
 
-  return profile as UserProfile
+  // Fallback: If DB query fails (due to RLS or missing record), use metadata
+  if (user.user_metadata?.role && user.user_metadata?.name) {
+    return {
+      auth_id: user.id,
+      email: user.email!,
+      name: user.user_metadata.name,
+      role: user.user_metadata.role as UserRole,
+      created_at: user.created_at,
+      id: -1,
+      uni_id: user.user_metadata.uni_id || null
+    } as UserProfile
+  }
+
+  return null
 }
 
 /**
@@ -36,11 +51,11 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
  */
 export async function requireAuth(): Promise<UserProfile> {
   const user = await getCurrentUser()
-  
+
   if (!user) {
     redirect('/login')
   }
-  
+
   return user
 }
 
@@ -50,10 +65,10 @@ export async function requireAuth(): Promise<UserProfile> {
  */
 export async function requireRole(requiredRole: UserRole): Promise<UserProfile> {
   const user = await requireAuth()
-  
+
   if (!hasRoleAccess(user.role, requiredRole)) {
     redirect(getRoleBasedRedirect(user.role))
   }
-  
+
   return user
 }

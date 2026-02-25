@@ -46,7 +46,7 @@ export default function SignupPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  const supabase = createClient()
+  // Supabase client created inside handlers to avoid build-time env usage
 
   /**
    * Validate form inputs
@@ -96,6 +96,8 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
+
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -166,6 +168,8 @@ export default function SignupPage() {
     setIsGoogleLoading(true)
 
     try {
+      const supabase = createClient()
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

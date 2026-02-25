@@ -101,11 +101,13 @@ export default function SchedulePage() {
   }
 
   const handleEditSchedule = (updatedSchedule: Schedule | Omit<Schedule, 'id'>) => {
+    
     if ('id' in updatedSchedule) {
       setSchedules(
         schedules.map((s) => (s.id === updatedSchedule.id ? updatedSchedule : s))
       )
     }
+    
     setEditingSchedule(null)
     setIsFormOpen(false)
   }

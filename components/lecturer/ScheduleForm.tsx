@@ -25,6 +25,17 @@ interface ScheduleFormProps {
   onClose: () => void
 }
 
+interface FormValues {
+  courseName: string
+  courseCode: string
+  day: string
+  startTime: string
+  endTime: string
+  location: string
+  capacity: number
+  color: string
+}
+
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const COLORS = [
   { name: 'Blue', value: 'bg-blue-500' },
@@ -49,16 +60,17 @@ const LOCATIONS = [
 ]
 
 export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFormProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormValues>({
     courseName: schedule?.courseName || '',
     courseCode: schedule?.courseCode || '',
     day: schedule?.day || 'Monday',
     startTime: schedule?.startTime || '09:00',
     endTime: schedule?.endTime || '10:30',
     location: schedule?.location || '',
-    capacity: schedule?.capacity || 30,
+    capacity: schedule?.capacity ?? 30,
     color: schedule?.color || 'bg-blue-500',
   })
+
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -103,6 +115,7 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+
     setFormData((prev) => ({
       ...prev,
       [name]: name === 'capacity' ? parseInt(value) || 0 : value,
@@ -111,6 +124,7 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
       ...prev,
       [name]: undefined,
     }))
+
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
