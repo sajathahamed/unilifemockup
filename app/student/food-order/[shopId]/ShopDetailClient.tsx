@@ -8,59 +8,11 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { UserProfile } from '@/lib/auth'
 
-interface MenuItem {
-    id: string
-    name: string
-    description: string
-    price: number
-    emoji: string
-    popular?: boolean
-}
-interface MenuCategory {
-    id: string
-    label: string
-    emoji: string
-    items: MenuItem[]
-}
+// interfaces are now imported from @/lib/food-utils
 
-const SAMPLE_MENU: MenuCategory[] = [
-    {
-        id: 'mains', label: 'Mains', emoji: '🍚',
-        items: [
-            { id: 'm1', name: 'Nasi Lemak Set', description: 'With sambal, egg & anchovies', price: 4.5, emoji: '🍛', popular: true },
-            { id: 'm2', name: 'Chicken Rice', description: 'Steamed or roasted, with soup', price: 5.0, emoji: '🍗', popular: true },
-            { id: 'm3', name: 'Mee Goreng', description: 'Wok-fried yellow noodles', price: 4.0, emoji: '🍜' },
-            { id: 'm4', name: 'Veggie Fried Rice', description: 'Mixed vegetables, soy sauce', price: 3.5, emoji: '🥗' },
-        ],
-    },
-    {
-        id: 'snacks', label: 'Snacks', emoji: '🍟',
-        items: [
-            { id: 's1', name: 'Curry Puff (2 pcs)', description: 'Crispy pastry with potato curry', price: 2.0, emoji: '🥐', popular: true },
-            { id: 's2', name: 'Spring Rolls (3 pcs)', description: 'Fried with sweet chili dip', price: 2.5, emoji: '🥢' },
-            { id: 's3', name: 'French Fries', description: 'Salted or seasoned', price: 3.0, emoji: '🍟' },
-        ],
-    },
-    {
-        id: 'drinks', label: 'Drinks', emoji: '🥤',
-        items: [
-            { id: 'd1', name: 'Teh Tarik', description: 'Pulled milk tea', price: 1.5, emoji: '🍵', popular: true },
-            { id: 'd2', name: 'Iced Milo', description: 'Chilled chocolate malt drink', price: 2.0, emoji: '🧋' },
-            { id: 'd3', name: 'Fresh Orange Juice', description: 'Freshly squeezed', price: 3.0, emoji: '🍊' },
-            { id: 'd4', name: 'Mineral Water', description: '500ml', price: 1.0, emoji: '💧' },
-        ],
-    },
-    {
-        id: 'desserts', label: 'Desserts', emoji: '🍨',
-        items: [
-            { id: 'ds1', name: 'Cendol', description: 'Coconut milk, palm sugar, pandan jelly', price: 2.5, emoji: '🍮', popular: true },
-            { id: 'ds2', name: 'Ice Kacang', description: 'Shaved ice with red beans & rose syrup', price: 2.5, emoji: '🧊' },
-            { id: 'ds3', name: 'Banana Fritter', description: 'Deep-fried with honey drizzle', price: 2.0, emoji: '🍌' },
-        ],
-    },
-]
+import { getMenuForShop, getPriceLabel, MenuCategory, MenuItem } from '@/lib/food-utils'
 
-const PRICE_MAP: Record<number, string> = { 0: 'Free', 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' }
+const PRICE_MAP: Record<number, string> = { 0: 'Free', 1: 'Rs', 2: 'Rs', 3: 'Rs', 4: 'Rs' }
 
 function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) => void }) {
     return (
@@ -104,7 +56,10 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
     const [activeCategory, setActiveCategory] = useState('mains')
     const [cartCount, setCartCount] = useState(0)
 
-    const activeMenu = SAMPLE_MENU.find((c) => c.id === activeCategory)
+    // Dynamic menu based on shop tags/name
+    const tags = searchParams.get('tags')?.split(',') ?? []
+    const menu = getMenuForShop(name, tags)
+    const activeMenu = menu.find((c) => c.id === activeCategory)
 
     const orderUrl = `/student/food-order/${encodeURIComponent(shopId)}/order?${new URLSearchParams({ name, photo })}`
 
@@ -176,7 +131,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
                         <h2 className="text-lg font-bold text-gray-900">Menu</h2>
                     </div>
                     <div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-gray-100" style={{ scrollbarWidth: 'none' }}>
-                        {SAMPLE_MENU.map((cat) => (
+                        {menu.map((cat) => (
                             <button
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}

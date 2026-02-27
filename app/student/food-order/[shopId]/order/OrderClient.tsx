@@ -9,11 +9,8 @@ import { UserProfile } from '@/lib/auth'
 
 interface CartItem { id: string; name: string; price: number; emoji: string; qty: number }
 
-const DEFAULT_CART: CartItem[] = [
-    { id: 'm1', name: 'Nasi Lemak Set', price: 4.5, emoji: '🍛', qty: 1 },
-    { id: 'd1', name: 'Teh Tarik', price: 1.5, emoji: '🍵', qty: 1 },
-]
-const DELIVERY_FEE = 1.5
+const DEFAULT_CART: CartItem[] = []
+const DELIVERY_FEE = 150.0 // Rs
 
 const DELIVERY_OPTIONS = [
     { id: 'delivery', label: 'Delivery', icon: Bike, eta: '15–25 min' },
@@ -32,7 +29,7 @@ function CartItemRow({ item, onInc, onDec, onRemove }: { item: CartItem; onInc: 
             <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">{item.emoji}</div>
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 line-clamp-1">{item.name}</p>
-                <p className="text-sm font-bold text-orange-500 mt-0.5">RM {(item.price * item.qty).toFixed(2)}</p>
+                <p className="text-sm font-bold text-orange-500 mt-0.5">Rs {(item.price * item.qty).toFixed(2)}</p>
             </div>
             <div className="flex items-center gap-2">
                 <button onClick={onDec} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors">
@@ -186,11 +183,11 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
                     <h2 className="font-semibold text-gray-900 mb-3">Order Summary</h2>
                     <div className="space-y-2 text-sm text-gray-600">
-                        <div className="flex justify-between"><span>Subtotal</span><span>RM {subtotal.toFixed(2)}</span></div>
-                        <div className="flex justify-between"><span>Delivery fee</span><span>{fee === 0 ? 'Free' : `RM ${fee.toFixed(2)}`}</span></div>
+                        <div className="flex justify-between"><span>Subtotal</span><span>Rs {subtotal.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span>Delivery fee</span><span>{fee === 0 ? 'Free' : `Rs ${fee.toFixed(2)}`}</span></div>
                         <div className="flex justify-between font-bold text-gray-900 text-base border-t border-gray-100 pt-2 mt-2">
                             <span>Total</span>
-                            <span className="text-orange-500">RM {total.toFixed(2)}</span>
+                            <span className="text-orange-500">Rs {total.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
@@ -212,7 +209,7 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                             Placing Order…
                         </span>
                     ) : (
-                        `Place Order · RM ${total.toFixed(2)}`
+                        `Place Order · Rs ${total.toFixed(2)}`
                     )}
                 </motion.button>
             </div>
