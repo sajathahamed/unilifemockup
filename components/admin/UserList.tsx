@@ -24,16 +24,49 @@ interface UserListProps {
 export default function UserList({ users, title = "User Directory", showActions = false }: UserListProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState('all')
+    const [userList, setUserList] = useState(users)
+    const [isDeleting, setIsDeleting] = useState<number | null>(null)
+    const [deleteError, setDeleteError] = useState<string | null>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null)
 
     const router = useRouter()
     const pathname = usePathname()
     const [activeMenu, setActiveMenu] = useState<any | null>(null)
 
+    // Sync users prop to state
+    useEffect(() => {
+        setUserList(users)
+    }, [users])
+
     // Helper to determine the edit base URL (either /admin/users or /super-admin/users)
     const baseEditPath = pathname.includes('/super-admin') ? '/super-admin/users' : '/admin/users'
 
+    const handleDeleteUser = async (userId: number) => {
+        setIsDeleting(userId)
+        setDeleteError(null)
+        
+        try {
+            const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE'
+            })
+            
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.message || 'Failed to delete user')
+            }
+            
+            // Remove user from list
+            setUserList(prev => prev.filter(u => u.id !== userId))
+            setShowDeleteConfirm(null)
+        } catch (err) {
+            setDeleteError(err instanceof Error ? err.message : 'Failed to delete user')
+        } finally {
+            setIsDeleting(null)
+        }
+    }
+
     const filteredUsers = useMemo(() => {
-        return users.filter(user => {
+        return userList.filter(user => {
             const name = user.name ?? ''
             const email = user.email ?? ''
             const matchesSearch =
@@ -42,10 +75,10 @@ export default function UserList({ users, title = "User Directory", showActions 
             const matchesRole = roleFilter === 'all' || user.role === roleFilter
             return matchesSearch && matchesRole
         })
-    }, [users, searchTerm, roleFilter])
+    }, [userList, searchTerm, roleFilter])
 
     const roles = useMemo(() => {
-        const uniqueRoles = Array.from(new Set(users.map(u => u.role).filter(Boolean)))
+        const uniqueRoles = Array.from(new Set(userList.map(u => u.role).filter(Boolean)))
         return uniqueRoles.sort()
     }, [users])
 
@@ -62,7 +95,7 @@ export default function UserList({ users, title = "User Directory", showActions 
                 <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">{title}</h3>
                     <span className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-lg">
-                        {filteredUsers.length} of {users.length} Users
+                        {filteredUsers.length} of {userList.length} Users
                     </span>
                 </div>
 
@@ -200,7 +233,10 @@ export default function UserList({ users, title = "User Directory", showActions 
                                                             <div className="h-px bg-gray-50 my-1" />
                                                             <button
                                                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
-                                                                onClick={() => setActiveMenu(null)}
+                                                                onClick={() => {
+                                                                    setActiveMenu(null)
+                                                                    setShowDeleteConfirm(u.id)
+                                                                }}
                                                             >
                                                                 <Trash2 size={14} className="text-red-400" />
                                                                 <span>Delete User</span>
@@ -217,6 +253,55 @@ export default function UserList({ users, title = "User Directory", showActions 
                     </tbody>
                 </table>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                                    <Trash2 size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Delete User</h3>
+                                    <p className="text-sm text-gray-500">This action cannot be undone</p>
+                                </div>
+                            </div>
+
+                            {deleteError && (
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+                                    <p className="text-sm text-red-700">{deleteError}</p>
+                                </div>
+                            )}
+
+                            <p className="text-sm text-gray-600">
+                                Are you sure you want to delete this user? All associated data will be permanently removed.
+                            </p>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowDeleteConfirm(null)}
+                                disabled={isDeleting !== null}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDeleteUser(showDeleteConfirm)}
+                                disabled={isDeleting !== null}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isDeleting === showDeleteConfirm && (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                )}
+                                Delete User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
