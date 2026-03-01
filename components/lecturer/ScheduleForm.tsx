@@ -1,39 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle, Zap, Check } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-
-interface Schedule {
-  id: string
-  courseCode: string
-  courseName: string
-  day: string
-  startTime: string
-  endTime: string
-  location: string
-  capacity: number
-  color: string
-  lecturer: string
-}
+import type { Schedule } from '@/components/lecturer/types'
 
 interface ScheduleFormProps {
-  schedule?: Schedule | null
-  onSubmit: (schedule: Schedule | Omit<Schedule, 'id'>) => void
+  schedule?: Schedule | null | undefined
+  onSubmit: (schedule: Omit<Schedule, 'id' | 'courseCode' | 'courseName' | 'color'> | Schedule) => void
   onClose: () => void
 }
 
+
 interface FormValues {
-  courseName: string
-  courseCode: string
-  day: string
-  startTime: string
-  endTime: string
+  academic_year: string
+  course_id: number | string
+  day_of_week: string
+  start_time: string
+  end_time: string
   location: string
-  capacity: number
-  color: string
+}
+
+interface Student {
+  id: number
+  name: string
+  email: string
+}
+
+interface Course {
+  id: number
+  course_code: string
+  course_name: string
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -61,52 +60,68 @@ const LOCATIONS = [
 
 export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFormProps) {
   const [formData, setFormData] = useState<FormValues>({
-    courseName: schedule?.courseName || '',
-    courseCode: schedule?.courseCode || '',
-    day: schedule?.day || 'Monday',
-    startTime: schedule?.startTime || '09:00',
-    endTime: schedule?.endTime || '10:30',
+    academic_year: schedule?.academic_year || '',
+    course_id: schedule?.course_id || '',
+    day_of_week: schedule?.day_of_week || 'Monday',
+    start_time: schedule?.start_time || '09:00',
+    end_time: schedule?.end_time || '10:30',
     location: schedule?.location || '',
-    capacity: schedule?.capacity ?? 30,
-    color: schedule?.color || 'bg-blue-500',
   })
-
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [courseError, setCourseError] = useState<string | null>(null)
+
+  // Fetch courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoadingCourses(true)
+        const coursesRes = await fetch('/api/lecturer/courses')
+        if (coursesRes.ok) {
+          const data = await coursesRes.json()
+          setCourses(data || [])
+        } else {
+          setCourseError('Failed to load courses')
+        }
+      } catch (err) {
+        setCourseError('Error loading courses')
+        console.error('Fetch courses error:', err)
+      } finally {
+        setLoadingCourses(false)
+      }
+    }
+    fetchCourses()
+  }, [])
 
   const validateForm = () => {
     const newErrors: Record<string, string | undefined> = {}
 
-    if (!formData.courseName.trim()) {
-      newErrors.courseName = 'Course name is required'
-    } else if (formData.courseName.length < 3) {
-      newErrors.courseName = 'Must be at least 3 characters'
+
+    if (!formData.academic_year) {
+      newErrors.academic_year = 'Academic year is required'
     }
 
-    if (!formData.courseCode.trim()) {
-      newErrors.courseCode = 'Course code is required'
-    } else if (!/^[A-Z]{2,}\d{3}$/i.test(formData.courseCode)) {
-      newErrors.courseCode = 'Format: CS101'
+    if (!formData.course_id) {
+      newErrors.course_id = 'Course is required'
     }
 
     if (!formData.location.trim()) newErrors.location = 'Location is required'
 
-    if (formData.capacity < 1) newErrors.capacity = 'Minimum capacity is 1'
-    if (formData.capacity > 1000) newErrors.capacity = 'Maximum capacity is 1000'
-
-    const [startHour, startMin] = formData.startTime.split(':').map(Number)
-    const [endHour, endMin] = formData.endTime.split(':').map(Number)
+    const [startHour, startMin] = formData.start_time.split(':').map(Number)
+    const [endHour, endMin] = formData.end_time.split(':').map(Number)
     const startInMinutes = startHour * 60 + startMin
     const endInMinutes = endHour * 60 + endMin
 
     if (startInMinutes >= endInMinutes) {
-      newErrors.endTime = 'End time must be after start time'
+      newErrors.end_time = 'End time must be after start time'
     }
 
     if ((endInMinutes - startInMinutes) < 30) {
-      newErrors.endTime = 'Minimum duration is 30 minutes'
+      newErrors.end_time = 'Minimum duration is 30 minutes'
     }
 
     setErrors(newErrors)
@@ -118,13 +133,12 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
 
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'capacity' ? parseInt(value) || 0 : value,
+      [name]: name === 'course_id' ? parseInt(value) || '' : value,
     }))
     setErrors((prev) => ({
       ...prev,
       [name]: undefined,
     }))
-
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,18 +152,10 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
       await new Promise((resolve) => setTimeout(resolve, 800))
       setShowSuccess(true)
       
-      if (schedule?.id) {
-        onSubmit({
-          ...formData,
-          id: schedule.id,
-          lecturer: schedule.lecturer,
-        } as Schedule)
-      } else {
-        onSubmit({
-          ...formData,
-          lecturer: 'Dr. Smith',
-        })
-      }
+      onSubmit({
+        ...formData,
+        course_id: formData.course_id as number,
+      } as Omit<Schedule, 'id' | 'courseCode' | 'courseName' | 'color'>)
 
       setTimeout(() => {
         setShowSuccess(false)
@@ -214,43 +220,52 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
 
           {/* Form Content */}
           <form onSubmit={handleSubmit} className="p-8 space-y-8">
-            {/* Section 1: Course Information */}
+            {/* Section 1: Selection */}
             <div className="space-y-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">1</div>
-                <h3 className="text-lg font-semibold text-gray-900">Course Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Selection</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-11">
                 <div>
-                  <Input
-                    label="Course Name"
-                    name="courseName"
-                    value={formData.courseName}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
+                  <select
+                    name="academic_year"
+                    value={formData.academic_year}
                     onChange={handleChange}
-                    placeholder="e.g., Introduction to Computer Science"
-                    error={errors.courseName}
-                  />
-                  {!errors.courseName && formData.courseName && (
-                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                      <Check size={14} /> Valid
-                    </p>
-                  )}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                      errors.academic_year ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                    }`}
+                  >
+                    <option value="">Select academic year</option>
+                    <option value="Year 1">Year 1</option>
+                    <option value="Year 2">Year 2</option>
+                    <option value="Year 3">Year 3</option>
+                    <option value="Year 4">Year 4</option>
+                  </select>
+                  {errors.academic_year && <p className="text-red-500 text-xs mt-1">{errors.academic_year}</p>}
                 </div>
                 <div>
-                  <Input
-                    label="Course Code"
-                    name="courseCode"
-                    value={formData.courseCode}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                  <select
+                    name="course_id"
+                    value={formData.course_id}
                     onChange={handleChange}
-                    placeholder="e.g., CS101"
-                    error={errors.courseCode}
-                  />
-                  {!errors.courseCode && formData.courseCode && (
-                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                      <Check size={14} /> Valid
-                    </p>
-                  )}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                      errors.course_id ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                    }`}
+                    disabled={loadingCourses}
+                  >
+                    <option value="">{loadingCourses ? 'Loading courses...' : 'Select course'}</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.course_code} - {course.course_name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.course_id && <p className="text-red-500 text-xs mt-1">{errors.course_id}</p>}
+                  {courseError && <p className="text-red-500 text-xs mt-1">{courseError}</p>}
                 </div>
               </div>
             </div>
@@ -269,8 +284,8 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Day of Week</label>
                     <select
-                      name="day"
-                      value={formData.day}
+                      name="day_of_week"
+                      value={formData.day_of_week}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                     >
@@ -302,13 +317,13 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
                     <input
                       type="time"
-                      name="startTime"
-                      value={formData.startTime}
+                      name="start_time"
+                      value={formData.start_time}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                     />
@@ -317,55 +332,20 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
                     <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
                     <input
                       type="time"
-                      name="endTime"
-                      value={formData.endTime}
+                      name="end_time"
+                      value={formData.end_time}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                        errors.endTime ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                        errors.end_time ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
                       }`}
                     />
-                    {errors.endTime && <p className="text-red-500 text-xs mt-1">{errors.endTime}</p>}
-                  </div>
-                  <div>
-                    <Input
-                      label="Student Capacity"
-                      name="capacity"
-                      type="number"
-                      value={formData.capacity.toString()}
-                      onChange={handleChange}
-                      placeholder="Number of students"
-                      error={errors.capacity}
-                    />
+                    {errors.end_time && <p className="text-red-500 text-xs mt-1">{errors.end_time}</p>}
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="border-t border-gray-200" />
-
-            {/* Section 3: Color Selection */}
-            <div className="space-y-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-sm">3</div>
-                <h3 className="text-lg font-semibold text-gray-900">Course Color</h3>
-              </div>
-
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 pl-11">
-                {COLORS.map((colorObj) => (
-                  <button
-                    key={colorObj.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, color: colorObj.value }))}
-                    className={`w-12 h-12 rounded-lg ${colorObj.value} transition-all transform ${
-                      formData.color === colorObj.value
-                        ? 'ring-4 ring-offset-2 ring-gray-900 scale-110 shadow-lg'
-                        : 'hover:scale-105 shadow hover:shadow-md'
-                    }`}
-                    title={colorObj.name}
-                  />
-                ))}
-              </div>
-            </div>
 
             {/* Form Actions */}
             <div className="border-t border-gray-200 pt-8 flex gap-3 justify-end">
