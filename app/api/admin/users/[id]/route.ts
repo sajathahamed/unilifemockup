@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireRole } from '@/lib/auth.server'
+import { verifyRole } from '@/lib/auth.server'
 import { deleteUser } from '@/lib/supabase/admin'
 
 /**
@@ -12,7 +12,7 @@ export async function DELETE(
 ) {
     try {
         // Check authorization
-        const user = await requireRole('admin')
+        const user = await verifyRole('admin')
         
         if (!user) {
             return NextResponse.json(

@@ -61,13 +61,41 @@ export async function requireAuth(): Promise<UserProfile> {
 
 /**
  * Role-protected route helper - redirects if user doesn't have required role
- * SERVER ONLY - Use in Server Components and Route Handlers
+ * SERVER ONLY - Use in Server Components and Page Routes
  */
 export async function requireRole(requiredRole: UserRole): Promise<UserProfile> {
   const user = await requireAuth()
 
   if (!hasRoleAccess(user.role, requiredRole)) {
     redirect(getRoleBasedRedirect(user.role))
+  }
+
+  return user
+}
+
+/**
+ * API-safe authentication check - returns null instead of redirecting
+ * Use in API routes instead of requireAuth()
+ * Returns null if not authenticated
+ */
+export async function verifyAuth(): Promise<UserProfile | null> {
+  return getCurrentUser()
+}
+
+/**
+ * API-safe role verification - returns null instead of redirecting
+ * Use in API routes instead of requireRole()
+ * Returns null if not authenticated or doesn't have required role
+ */
+export async function verifyRole(requiredRole: UserRole): Promise<UserProfile | null> {
+  const user = await verifyAuth()
+
+  if (!user) {
+    return null
+  }
+
+  if (!hasRoleAccess(user.role, requiredRole)) {
+    return null
   }
 
   return user
