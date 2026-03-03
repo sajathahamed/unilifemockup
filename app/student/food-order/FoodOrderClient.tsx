@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import {
@@ -184,7 +184,12 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         }
     }
 
+    const hasFetched = useRef(false)
+
     useEffect(() => {
+        if (hasFetched.current) return
+        hasFetched.current = true
+
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {

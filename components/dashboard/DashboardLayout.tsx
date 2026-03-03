@@ -58,7 +58,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Study Groups', href: '/student/study-groups', icon: Users },
     { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
     { label: 'Food Order', href: '/student/food-order', icon: Utensils },
-    { label: 'Campus Rides', href: '/student/rides', icon: Car },
+    { label: 'Laundry', href: '/student/laundry', icon: Truck },
   ],
   lecturer: [
     { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
@@ -76,15 +76,16 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   vendor: [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
     { label: 'Menu', href: '/vendor/menu', icon: Utensils },
     { label: 'Store Settings', href: '/vendor/settings', icon: Store },
     { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
-    { label: 'Active Deliveries', href: '/delivery/active', icon: Truck },
-    { label: 'History', href: '/delivery/history', icon: Package },
+    { label: 'Food Deliveries', href: '/delivery/active', icon: Package },
+    { label: 'Laundry Jobs', href: '/delivery/laundry', icon: Truck },
     { label: 'Earnings', href: '/delivery/earnings', icon: BarChart3 },
   ],
   super_admin: [
