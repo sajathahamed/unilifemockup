@@ -18,17 +18,22 @@ export default function ResetPasswordPage() {
   const [isValidSession, setIsValidSession] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
 
-  const supabase = createClient()
+  const [supabase, setSupabase] = useState<any | null>(null)
 
-  // Check if user has valid reset session
+  // Initialize Supabase client and check if user has valid reset session
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    const init = async () => {
+      const client = createClient()
+      setSupabase(client)
+
+      const { data: { session } } = await client.auth.getSession()
       setIsValidSession(!!session)
       setIsChecking(false)
     }
-    checkSession()
-  }, [supabase.auth])
+
+    // Only run on client
+    init()
+  }, [])
 
   /**
    * Handle password reset
@@ -51,6 +56,8 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
 
     try {
+      if (!supabase) throw new Error('Supabase client not initialized')
+
       const { error } = await supabase.auth.updateUser({
         password: password,
       })

@@ -32,13 +32,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             type={isPassword ? (showPassword ? 'text' : 'password') : type}
+            suppressHydrationWarning={true}
             className={`
               w-full px-4 py-3 rounded-xl border bg-white
               transition-all duration-200 outline-none
               ${Icon ? 'pl-10' : ''}
               ${isPassword ? 'pr-10' : ''}
-              ${error 
-                ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20' 
+              ${error
+                ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
                 : 'border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20'
               }
               placeholder:text-gray-400

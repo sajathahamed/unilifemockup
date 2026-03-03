@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  const supabase = createClient()
 
   /**
    * Handle email/password login
@@ -28,6 +27,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      const supabase = createClient()
       // Authenticate with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -48,19 +48,26 @@ export default function LoginPage() {
         throw new Error('Login failed. Please try again.')
       }
 
-      // Fetch user role from users table using auth_id
+      // Fetch user role from users table (Source of Truth)
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('role')
         .eq('auth_id', authData.user.id)
         .single()
 
-      if (userError || !userData) {
+      let userRole = userData?.role
+
+      if (!userRole || userError) {
+        // Fallback: Check metadata if DB query fails
+        userRole = authData.user.user_metadata?.role
+      }
+
+      if (!userRole) {
         throw new Error('User profile not found. Please contact support.')
       }
 
       // Redirect based on role
-      const redirectPath = getRoleBasedRedirect(userData.role as UserRole)
+      const redirectPath = getRoleBasedRedirect(userRole as UserRole)
       router.push(redirectPath)
       router.refresh()
 
@@ -79,6 +86,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true)
 
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
