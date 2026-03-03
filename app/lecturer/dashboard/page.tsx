@@ -1,8 +1,9 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { 
-  BookOpen, 
-  Users, 
+import { getLecturerDashboardData } from '@/lib/lecturer/dashboard.server'
+import {
+  BookOpen,
+  Users,
   FileText,
   Award,
   AlertCircle,
@@ -13,9 +14,35 @@ import {
   MessageSquare,
   MapPin,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function formatTimeForDisplay(t: string): string {
+  const s = String(t).trim()
+  const part = s.includes('T') ? s.split('T')[1] : s
+  const [h, m] = (part || s).split(':')
+  const hour = parseInt(h, 10)
+  const min = m ? parseInt(m, 10) : 0
+  if (Number.isNaN(hour)) return t
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${String(h12).padStart(2, '0')}:${String(min).padStart(2, '0')} ${ampm}`
+}
+
+function getClassStatus(startTime: string, endTime: string): 'completed' | 'in-progress' | 'upcoming' {
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const [startH, startM] = String(startTime).split(':').map(Number)
+  const [endH, endM] = String(endTime).split(':').map(Number)
+  const startMinutes = (startH || 0) * 60 + (startM || 0)
+  const endMinutes = (endH || 0) * 60 + (endM || 0)
+  if (currentMinutes < startMinutes) return 'upcoming'
+  if (currentMinutes >= endMinutes) return 'completed'
+  return 'in-progress'
+}
 
 interface StatCardProps {
   icon: any
@@ -174,11 +201,11 @@ function ActionCard({
   color
 }: ActionCardProps) {
   return (
-    <button className={`w-full ${color} text-white rounded-xl p-5 text-left hover:shadow-lg hover:scale-105 transition-all`}>
+    <div className={`w-full ${color} text-white rounded-xl p-5 text-left hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer`}>
       <Icon size={28} className="mb-3 opacity-90" />
       <h3 className="font-semibold text-sm mb-1">{title}</h3>
       <p className="text-xs opacity-80">{desc}</p>
-    </button>
+    </div>
   )
 }
 
@@ -234,8 +261,20 @@ function SubmissionRow({
 
 export default async function LecturerDashboard() {
   const user = await requireRole('lecturer')
+  const { courses, students, schedule } = await getLecturerDashboardData()
+
   const currentHour = new Date().getHours()
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening'
+
+  const today = new Date()
+  const todayDayName = DAY_NAMES[today.getDay()]
+  const todaySchedule = schedule
+    .filter((s) => s.day_of_week === todayDayName)
+    .sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
+
+  const courseCount = courses.length
+  const studentCount = students.length
+  const todayClassesCount = todaySchedule.length
 
   return (
     <DashboardLayout user={user}>
@@ -244,68 +283,65 @@ export default async function LecturerDashboard() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-8 text-white">
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-60 h-60 bg-indigo-400/10 rounded-full -ml-30 -mb-30 blur-3xl" />
-          
+
           <div className="relative z-10">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{greeting}, {user.name.split(' ')[0]}! 👋</h1>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                  {greeting}, {user.name.split(' ')[0]}! 👋
+                </h1>
                 <p className="text-white/90 text-lg">Welcome back to your teaching dashboard</p>
               </div>
               <div className="hidden sm:flex items-center gap-3 bg-white/20 backdrop-blur-md rounded-xl px-4 py-3">
                 <Clock size={20} />
                 <div>
                   <p className="text-sm font-medium text-white/80">Classes Today</p>
-                  <p className="text-2xl font-bold text-white">3</p>
+                  <p className="text-2xl font-bold text-white">{todayClassesCount}</p>
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 text-sm text-white/80">
-              <span>📊 128 students enrolled</span>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-white/80">
+              <span>📊 {studentCount} student{studentCount !== 1 ? 's' : ''} enrolled</span>
               <span>•</span>
-              <span>✅ 94% attendance rate</span>
+              <span>📚 {courseCount} course{courseCount !== 1 ? 's' : ''} running</span>
             </div>
           </div>
         </div>
 
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            icon={BookOpen} 
-            label="Active Courses" 
-            value="4" 
-            color="from-blue-500 to-blue-600"
-            trend={2}
-            subtitle="4 courses running"
+          <StatCard
+            icon={BookOpen}
+            label="Active Courses"
+            value={String(courseCount)}
+            color="bg-gradient-to-br from-blue-500 to-blue-600"
+            subtitle={`${courseCount} course${courseCount !== 1 ? 's' : ''} running`}
           />
-          <StatCard 
-            icon={Users} 
-            label="Total Students" 
-            value="156" 
-            color="from-green-500 to-green-600"
-            trend={8}
+          <StatCard
+            icon={Users}
+            label="Total Students"
+            value={String(studentCount)}
+            color="bg-gradient-to-br from-green-500 to-green-600"
             subtitle="across all courses"
           />
-          <StatCard 
-            icon={FileText} 
-            label="Pending Grades" 
-            value="23" 
-            color="from-orange-500 to-orange-600"
-            trend={-5}
-            subtitle="ready to review"
+          <StatCard
+            icon={FileText}
+            label="Pending Grades"
+            value="—"
+            color="bg-gradient-to-br from-orange-500 to-orange-600"
+            subtitle="Assignments module coming soon"
           />
-          <StatCard 
-            icon={Award} 
-            label="Avg. Grade Rate" 
-            value="94%" 
-            color="from-purple-500 to-purple-600"
-            trend={3}
-            subtitle="submission rate"
+          <StatCard
+            icon={Award}
+            label="Schedule Entries"
+            value={String(schedule.length)}
+            color="bg-gradient-to-br from-purple-500 to-purple-600"
+            subtitle="timetable slots"
           />
         </div>
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Today's Classes & Schedule */}
           <div className="lg:col-span-2 space-y-6">
             {/* Today's Classes */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -313,58 +349,70 @@ export default async function LecturerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Clock size={20} /> Today's Classes
+                      <Clock size={20} /> Today&apos;s Classes
                     </h2>
-                    <p className="text-blue-100 text-sm mt-1">Tuesday, Feb 24, 2026</p>
+                    <p className="text-blue-100 text-sm mt-1">
+                      {todayDayName}, {today.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
                   </div>
-                  <Link href="/lecturer/schedule" className="text-white hover:text-blue-100 flex items-center gap-1 text-sm font-medium">
+                  <Link
+                    href="/lecturer/schedule"
+                    className="text-white hover:text-blue-100 flex items-center gap-1 text-sm font-medium"
+                  >
                     View schedule <ArrowRight size={14} />
                   </Link>
                 </div>
               </div>
-              
+
               <div className="divide-y divide-gray-100">
-                <ClassItem
-                  time="09:00 - 10:30 AM"
-                  course="CS 101 - Intro to Programming"
-                  room="Room 101, Block A"
-                  students={45}
-                  status="completed"
-                  attended={43}
-                />
-                <ClassItem
-                  time="11:00 AM - 12:30 PM"
-                  course="CS 201 - Data Structures"
-                  room="Room 203, Block B"
-                  students={38}
-                  status="in-progress"
-                  attended={37}
-                />
-                <ClassItem
-                  time="02:00 - 03:30 PM"
-                  course="CS 301 - Algorithms"
-                  room="Lab 3, IT Building"
-                  students={32}
-                  status="upcoming"
-                  attended={0}
-                />
+                {todaySchedule.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Clock size={32} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm font-medium">No classes scheduled for today</p>
+                    <Link href="/lecturer/schedule" className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-1 inline-block">
+                      Add to schedule →
+                    </Link>
+                  </div>
+                ) : (
+                  todaySchedule.map((entry) => {
+                    const status = getClassStatus(entry.start_time, entry.end_time)
+                    const courseLabel = entry.course_name
+                      ? `${entry.course_code || ''} - ${entry.course_name}`.trim()
+                      : `Course #${entry.course_id}`
+                    return (
+                      <ClassItem
+                        key={entry.id}
+                        time={`${formatTimeForDisplay(entry.start_time)} - ${formatTimeForDisplay(entry.end_time)}`}
+                        course={courseLabel}
+                        room={entry.location || '—'}
+                        students={studentCount}
+                        status={status}
+                        attended={undefined}
+                      />
+                    )
+                  })
+                )}
               </div>
             </div>
 
             {/* Quick Actions */}
             <div className="grid grid-cols-2 gap-4">
-              <ActionCard 
-                icon={MessageSquare}
-                title="Post Announcement"
-                desc="Create a new class announcement"
-                color="bg-gradient-to-br from-cyan-500 to-blue-500"
-              />
-              <ActionCard 
-                icon={FileText}
-                title="Grade Assignment"
-                desc="Start grading pending submissions"
-                color="bg-gradient-to-br from-orange-500 to-red-500"
-              />
+              <Link href="/lecturer/assignments" className="block">
+                <ActionCard
+                  icon={MessageSquare}
+                  title="Post Announcement"
+                  desc="Create a new class announcement"
+                  color="bg-gradient-to-br from-cyan-500 to-blue-500"
+                />
+              </Link>
+              <Link href="/lecturer/assignments" className="block">
+                <ActionCard
+                  icon={FileText}
+                  title="Grade Assignment"
+                  desc="Start grading pending submissions"
+                  color="bg-gradient-to-br from-orange-500 to-red-500"
+                />
+              </Link>
             </div>
           </div>
 
@@ -374,17 +422,19 @@ export default async function LecturerDashboard() {
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <AlertCircle size={20} /> Pending Tasks
               </h2>
-              <p className="text-amber-100 text-sm mt-1">4 tasks waiting</p>
+              <p className="text-amber-100 text-sm mt-1">Manage assignments & deadlines</p>
             </div>
             <div className="divide-y divide-gray-100 flex-1">
-              <TaskItem title="Grade Assignment 3" course="CS 101" dueIn="Today" urgent />
-              <TaskItem title="Upload lecture notes" course="CS 201" dueIn="Today" urgent />
-              <TaskItem title="Review project proposals" course="CS 301" dueIn="2 days" urgent={false} />
-              <TaskItem title="Prepare quiz questions" course="CS 101" dueIn="5 days" urgent={false} />
+              <TaskItem title="Review schedule" course="Schedule" dueIn="Ongoing" urgent={false} />
+              <TaskItem title="Grade submissions" course="Assignments" dueIn="When ready" urgent={false} />
+              <TaskItem title="Update course materials" course="Courses" dueIn="As needed" urgent={false} />
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-              <Link href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                View all tasks <ArrowRight size={14} />
+              <Link
+                href="/lecturer/assignments"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              >
+                View assignments <ArrowRight size={14} />
               </Link>
             </div>
           </div>
@@ -392,7 +442,6 @@ export default async function LecturerDashboard() {
 
         {/* Recent Submissions & Analytics */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Recent Submissions */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -402,12 +451,15 @@ export default async function LecturerDashboard() {
                   </h2>
                   <p className="text-emerald-100 text-sm mt-1">Latest from your students</p>
                 </div>
-                <Link href="#" className="text-white hover:text-emerald-100 flex items-center gap-1 text-sm font-medium">
+                <Link
+                  href="/lecturer/assignments"
+                  className="text-white hover:text-emerald-100 flex items-center gap-1 text-sm font-medium"
+                >
                   View all <ArrowRight size={14} />
                 </Link>
               </div>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -420,44 +472,48 @@ export default async function LecturerDashboard() {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  <SubmissionRow
-                    student="John Doe"
-                    assignment="Programming Assignment 3"
-                    course="CS 101"
-                    submitted="10 mins ago"
-                    status="pending"
-                  />
-                  <SubmissionRow
-                    student="Jane Smith"
-                    assignment="Data Structures Lab 2"
-                    course="CS 201"
-                    submitted="1 hour ago"
-                    status="pending"
-                  />
-                  <SubmissionRow
-                    student="Mike Johnson"
-                    assignment="Algorithm Analysis"
-                    course="CS 301"
-                    submitted="3 hours ago"
-                    status="graded"
-                  />
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      <FileText size={32} className="mx-auto mb-2 opacity-50" />
+                      <p>No submissions yet. When students submit assignments, they will appear here.</p>
+                      <Link href="/lecturer/assignments" className="text-blue-600 hover:text-blue-700 text-sm font-medium mt-2 inline-block">
+                        Go to Assignments →
+                      </Link>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Class Performance */}
+          {/* Class Performance - real course names */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <BarChart3 size={20} /> Class Performance
+                <BarChart3 size={20} /> Courses
               </h2>
-              <p className="text-indigo-100 text-sm mt-1">This week's statistics</p>
+              <p className="text-indigo-100 text-sm mt-1">{courses.length} active courses</p>
             </div>
             <div className="p-6 space-y-4">
-              <MetricBar label="CS 101" value={92} maxValue={100} color="bg-blue-500" />
-              <MetricBar label="CS 201" value={88} maxValue={100} color="bg-green-500" />
-              <MetricBar label="CS 301" value={85} maxValue={100} color="bg-purple-500" />
+              {courses.length === 0 ? (
+                <p className="text-sm text-gray-500">No courses yet. Add courses from the admin to see them here.</p>
+              ) : (
+                courses.slice(0, 6).map((c, i) => {
+                  const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500', 'bg-cyan-500', 'bg-rose-500']
+                  const scheduleCount = schedule.filter((s) => s.course_id === c.id).length
+                  const maxSlots = Math.max(...courses.map((co) => schedule.filter((s) => s.course_id === co.id).length), 1)
+                  const pct = maxSlots > 0 ? Math.round((scheduleCount / maxSlots) * 100) : 0
+                  return (
+                    <MetricBar
+                      key={c.id}
+                      label={`${c.course_code} – ${c.course_name}`}
+                      value={pct}
+                      maxValue={100}
+                      color={colors[i % colors.length]}
+                    />
+                  )
+                })
+              )}
             </div>
           </div>
         </div>

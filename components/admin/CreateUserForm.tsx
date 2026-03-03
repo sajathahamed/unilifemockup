@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Building2, Shield, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +24,30 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
     const [generalError, setGeneralError] = useState<string | null>(null)
     const [generalSuccess, setGeneralSuccess] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [universities, setUniversities] = useState<{ id: number; name: string }[]>([])
+    const [isLoadingUniversities, setIsLoadingUniversities] = useState(true)
+
+    // Fetch universities on mount
+    useEffect(() => {
+        const fetchUniversities = async () => {
+            try {
+                const supabase = createClient()
+                const { data } = await supabase
+                    .from('universities')
+                    .select('id, name')
+                    .eq('is_active', true)
+                    .order('name', { ascending: true })
+                
+                setUniversities(data || [])
+            } catch (err) {
+                console.error('Failed to fetch universities:', err)
+            } finally {
+                setIsLoadingUniversities(false)
+            }
+        }
+        
+        fetchUniversities()
+    }, [])
 
     // Filter role options based on current user role
     const roleOptions = [
@@ -35,13 +59,10 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
         { value: 'super_admin', label: 'Super Admin' },
     ]
 
-    // Sample universities (can be fetched from database)
+    // Build university options from fetched data
     const universityOptions = [
         { value: '', label: 'Select university (optional)' },
-        { value: '1', label: 'University of Lagos' },
-        { value: '2', label: 'University of Ibadan' },
-        { value: '3', label: 'Ahmadu Bello University' },
-        { value: '4', label: 'University of Nigeria, Nsukka' },
+        ...universities.map(uni => ({ value: uni.id.toString(), label: uni.name }))
     ]
 
     const validateForm = (): boolean => {
@@ -211,7 +232,7 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
                     value={formData.university}
                     onChange={(e) => updateField('university', e.target.value)}
                     helperText="Optional - links the user to a specific campus"
-                    disabled={isLoading}
+                    disabled={isLoading || isLoadingUniversities}
                 />
 
                 <div className="pt-4 flex justify-end">

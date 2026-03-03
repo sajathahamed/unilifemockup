@@ -50,3 +50,51 @@ export async function fetchAllUsers(): Promise<{
 
     return data || []
 }
+
+/**
+ * Fetches all active universities from the database
+ */
+export async function fetchUniversities(): Promise<{
+    id: number
+    name: string
+    city: string | null
+    is_active: boolean
+}[]> {
+    try {
+        const client = await createClient()
+        const { data, error } = await client
+            .from('universities')
+            .select('id, name, city, is_active')
+            .eq('is_active', true)
+            .order('name', { ascending: true })
+
+        if (error) throw error
+        return data || []
+    } catch (err) {
+        console.error('Failed to fetch universities:', err)
+        return []
+    }
+}
+
+/**
+ * Deletes a user and their associated auth account
+ */
+export async function deleteUser(userId: number): Promise<{ success: boolean; error?: string }> {
+    try {
+        const client = await createClient()
+        
+        // Delete from users table (auth will be deleted by trigger or manually)
+        const { error } = await client
+            .from('users')
+            .delete()
+            .eq('id', userId)
+
+        if (error) throw error
+        
+        return { success: true }
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete user'
+        console.error('Failed to delete user:', err)
+        return { success: false, error: errorMessage }
+    }
+}

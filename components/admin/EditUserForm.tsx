@@ -35,31 +35,26 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
     const [generalSuccess, setGeneralSuccess] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
+    const [universities, setUniversities] = useState<{ id: number; name: string }[]>([])
+    const [isLoadingUniversities, setIsLoadingUniversities] = useState(true)
 
-    // Filter role options based on current user role
-    const roleOptions = [
-        { value: 'student', label: 'Student' },
-        { value: 'lecturer', label: 'Lecturer' },
-        { value: 'vendor', label: 'Vendor Admin' },
-        { value: 'delivery', label: 'Delivery Rider' },
-        { value: 'admin', label: 'Admin' },
-        { value: 'super_admin', label: 'Super Admin' },
-    ]
-
-    // Sample universities (can be fetched from database)
-    const universityOptions = [
-        { value: '', label: 'Select university (optional)' },
-        { value: '1', label: 'University of Lagos' },
-        { value: '2', label: 'University of Ibadan' },
-        { value: '3', label: 'Ahmadu Bello University' },
-        { value: '4', label: 'University of Nigeria, Nsukka' },
-    ]
-
+    // Fetch universities and user data on mount
     useEffect(() => {
-        const fetchUser = async () => {
-            setIsLoading(true)
+        const fetchData = async () => {
             try {
                 const supabase = createClient()
+                
+                // Fetch universities
+                const { data: uniData } = await supabase
+                    .from('universities')
+                    .select('id, name')
+                    .eq('is_active', true)
+                    .order('name', { ascending: true })
+                
+                setUniversities(uniData || [])
+                setIsLoadingUniversities(false)
+
+                // Fetch user data
                 const { data, error } = await supabase
                     .from('users')
                     .select('*')
@@ -76,14 +71,30 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
                     })
                 }
             } catch (err) {
-                setGeneralError(err instanceof Error ? err.message : 'Failed to fetch user data')
+                setGeneralError(err instanceof Error ? err.message : 'Failed to fetch data')
             } finally {
                 setIsLoading(false)
             }
         }
 
-        fetchUser()
+        fetchData()
     }, [userId])
+
+    // Filter role options based on current user role
+    const roleOptions = [
+        { value: 'student', label: 'Student' },
+        { value: 'lecturer', label: 'Lecturer' },
+        { value: 'vendor', label: 'Vendor Admin' },
+        { value: 'delivery', label: 'Delivery Rider' },
+        { value: 'admin', label: 'Admin' },
+        { value: 'super_admin', label: 'Super Admin' },
+    ]
+
+    // Build university options from fetched data
+    const universityOptions = [
+        { value: '', label: 'Select university (optional)' },
+        ...universities.map(uni => ({ value: uni.id.toString(), label: uni.name }))
+    ]
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {}
@@ -235,7 +246,7 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
                         value={formData.university}
                         onChange={(e) => updateField('university', e.target.value)}
                         helperText="Optional - links the user to a specific campus"
-                        disabled={isSaving}
+                        disabled={isSaving || isLoadingUniversities}
                     />
                 </div>
 
