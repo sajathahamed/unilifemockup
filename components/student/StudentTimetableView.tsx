@@ -115,11 +115,11 @@ export default function StudentTimetableView({ entries }: { entries: TimetableEn
                     <td key={`${day}-${time}`} className="px-3 py-2 align-top border-l border-gray-100 min-w-[160px]">
                       {slotEntries.map((e) => {
                         const colour = e.colour ? String(e.colour) : ''
-                        const colorClass = colour && colour.startsWith('bg-') ? colour : `bg-${colour || 'blue'}-500`
+                        const borderClass = colour && colour.startsWith('bg-') ? `border-l-4 ${colour}` : 'border-l-4 border-blue-500'
                         return (
                           <div
                             key={e.id}
-                            className={`${colorClass} text-white rounded-xl p-3 shadow-sm border-l-4 border-white/30`}
+                            className={`bg-gray-50 ${borderClass} rounded-xl p-3 shadow-sm border border-gray-200 text-black`}
                             style={{
                               minHeight: `${getDurationHeight(e.start_time, e.end_time)}px`,
                               display: 'flex',
@@ -128,13 +128,13 @@ export default function StudentTimetableView({ entries }: { entries: TimetableEn
                             }}
                           >
                             <div>
-                              <p className="font-semibold text-sm">{e.course_name || 'Course'}</p>
-                              <p className="text-xs opacity-90">{e.course_code || ''}</p>
+                              <p className="font-semibold text-sm text-gray-900">{e.course_name || 'Course'}</p>
+                              <p className="text-xs text-gray-700">{e.course_code || ''}</p>
                             </div>
-                            <div className="mt-2 text-xs opacity-95 flex items-center gap-1">
+                            <div className="mt-2 text-xs text-gray-800 flex items-center gap-1">
                               <MapPin size={12} /> {e.location || '—'}
                             </div>
-                            <div className="text-xs opacity-95">
+                            <div className="text-xs text-gray-800">
                               <Clock size={12} className="inline mr-1" />
                               {formatTime(e.start_time)} – {formatTime(e.end_time)}
                             </div>

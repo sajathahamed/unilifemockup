@@ -1,14 +1,15 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { 
-  Package, 
-  DollarSign, 
+import {
+  Package,
+  DollarSign,
   Clock,
   TrendingUp,
   ArrowRight,
   Plus,
   CheckCircle,
-  XCircle
+  XCircle,
+  Truck
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -42,7 +43,7 @@ export default async function VendorDashboard() {
                 View all <ArrowRight size={14} />
               </Link>
             </div>
-            
+
             <div className="space-y-3">
               <OrderCard
                 id="#ORD-2451"
@@ -73,8 +74,9 @@ export default async function VendorDashboard() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
               <div className="space-y-3">
-                <ActionButton href="/vendor/menu/add" label="Add Menu Item" icon={Plus} />
-                <ActionButton href="/vendor/menu" label="Manage Menu" icon={Package} />
+                <ActionButton href="/vendor/orders" label="Food Orders" icon={Package} />
+                <ActionButton href="/vendor/laundry/orders" label="Laundry Orders" icon={Truck} />
+                <ActionButton href="/vendor/menu" label="Manage Menu" icon={Plus} />
                 <ActionButton href="/vendor/analytics" label="View Analytics" icon={TrendingUp} />
               </div>
             </div>
@@ -104,7 +106,7 @@ export default async function VendorDashboard() {
               Manage menu <ArrowRight size={14} />
             </Link>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <PopularItem name="Jollof Rice" orders={15} price="RS 1,200" />
             <PopularItem name="Fried Rice" orders={12} price="RS 1,500" />
@@ -174,7 +176,7 @@ function OrderCard({ id, items, customer, time, status }: {
 
 function ActionButton({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
   return (
-    <Link 
+    <Link
       href={href}
       className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
     >

@@ -1,7 +1,9 @@
 import { requireRole } from '@/lib/auth.server'
+
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { Utensils, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+
 
 export default async function StudentFoodOrderPage() {
   const user = await requireRole('student')
@@ -26,4 +28,11 @@ export default async function StudentFoodOrderPage() {
       </div>
     </DashboardLayout>
   )
+
+import FoodOrderClient from './FoodOrderClient'
+
+export default async function FoodOrderPage() {
+    const user = await requireRole('student')
+    return <FoodOrderClient user={user} />
+
 }
