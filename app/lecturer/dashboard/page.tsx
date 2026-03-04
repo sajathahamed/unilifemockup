@@ -383,7 +383,7 @@ export default async function LecturerDashboard() {
               <TaskItem title="Prepare quiz questions" course="CS 101" dueIn="5 days" urgent={false} />
             </div>
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-              <Link href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              <Link href="/lecturer/assignments" className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                 View all tasks <ArrowRight size={14} />
               </Link>
             </div>
@@ -402,7 +402,7 @@ export default async function LecturerDashboard() {
                   </h2>
                   <p className="text-emerald-100 text-sm mt-1">Latest from your students</p>
                 </div>
-                <Link href="#" className="text-white hover:text-emerald-100 flex items-center gap-1 text-sm font-medium">
+                <Link href="/lecturer/assignments" className="text-white hover:text-emerald-100 flex items-center gap-1 text-sm font-medium">
                   View all <ArrowRight size={14} />
                 </Link>
               </div>

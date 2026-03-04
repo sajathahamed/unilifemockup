@@ -18,6 +18,7 @@ interface Schedule {
   capacity: number
   color: string
   lecturer: string
+  studyYear?: string
 }
 
 // Sample data - replace with API call
@@ -90,6 +91,7 @@ export default function SchedulePageClient() {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterDay, setFilterDay] = useState<string>('All')
+  const [filterYear, setFilterYear] = useState<string>('All years')
 
   const handleAddSchedule = (newSchedule: Omit<Schedule, 'id'>) => {
     const schedule: Schedule = {
@@ -127,11 +129,15 @@ export default function SchedulePageClient() {
   }
 
   const filteredSchedules = schedules.filter((schedule) => {
-    const matchesSearch = schedule.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         schedule.courseCode.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = !searchQuery.trim() ||
+      schedule.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      schedule.courseCode.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesDay = filterDay === 'All' || schedule.day === filterDay
-    return matchesSearch && matchesDay
+    const matchesYear = filterYear === 'All years' || schedule.studyYear === filterYear
+    return matchesSearch && matchesDay && matchesYear
   })
+
+  const academicYears = ['All years', 'Year 1', 'Year 2', 'Year 3', 'Year 4']
 
   return (
     <div className="space-y-6">
@@ -176,9 +182,9 @@ export default function SchedulePageClient() {
         </div>
       </motion.div>
 
-      {/* Filters and Search */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
+      {/* Filters and Search - academic year + day + search */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-2">
           <div className="relative">
             <Search size={18} className="absolute left-3 top-3 text-gray-400" />
             <input
@@ -191,9 +197,20 @@ export default function SchedulePageClient() {
           </div>
         </div>
         <select
+          value={filterYear}
+          onChange={(e) => setFilterYear(e.target.value)}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
+          aria-label="Academic year"
+        >
+          {academicYears.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <select
           value={filterDay}
           onChange={(e) => setFilterDay(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
+          aria-label="Day filter"
         >
           <option>All</option>
           <option>Monday</option>
@@ -274,6 +291,11 @@ export default function SchedulePageClient() {
                   </div>
 
                   <div className="space-y-1.5 text-xs text-gray-600 ml-4.5">
+                    {schedule.studyYear && (
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-medium">{schedule.studyYear}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Clock size={14} className="text-gray-400" />
                       <span>{schedule.day} • {schedule.startTime} - {schedule.endTime}</span>

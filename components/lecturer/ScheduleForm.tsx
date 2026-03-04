@@ -17,6 +17,7 @@ interface Schedule {
   capacity: number
   color: string
   lecturer: string
+  studyYear?: string
 }
 
 interface ScheduleFormProps {
@@ -34,9 +35,11 @@ interface FormValues {
   location: string
   capacity: number
   color: string
+  studyYear: string
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+const STUDY_YEARS = ['Year 1', 'Year 2', 'Year 3', 'Year 4']
 const COLORS = [
   { name: 'Blue', value: 'bg-blue-500' },
   { name: 'Purple', value: 'bg-purple-500' },
@@ -69,6 +72,7 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
     location: schedule?.location || '',
     capacity: schedule?.capacity ?? 30,
     color: schedule?.color || 'bg-blue-500',
+    studyYear: schedule?.studyYear || 'Year 1',
   })
 
 
@@ -143,11 +147,13 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
           ...formData,
           id: schedule.id,
           lecturer: schedule.lecturer,
+          studyYear: formData.studyYear,
         } as Schedule)
       } else {
         onSubmit({
           ...formData,
           lecturer: 'Dr. Smith',
+          studyYear: formData.studyYear,
         })
       }
 
@@ -265,7 +271,22 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
               </div>
 
               <div className="pl-11 space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Study Year</label>
+                    <select
+                      name="studyYear"
+                      value={formData.studyYear}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    >
+                      {STUDY_YEARS.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Day of Week</label>
                     <select

@@ -72,3 +72,13 @@ export async function requireRole(requiredRole: UserRole): Promise<UserProfile> 
 
   return user
 }
+
+/**
+ * Check role and return user or null (for API routes - no redirect)
+ * SERVER ONLY
+ */
+export async function verifyRole(requiredRole: UserRole): Promise<UserProfile | null> {
+  const user = await getCurrentUser()
+  if (!user || !hasRoleAccess(user.role, requiredRole)) return null
+  return user
+}
