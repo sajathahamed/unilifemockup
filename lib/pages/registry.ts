@@ -1,0 +1,78 @@
+/**
+ * Central page registry for UniLife.
+ * Every navigable page has a unique id and is associated with a role.
+ * Used to seed app_pages and as fallback when DB is empty.
+ * Super Admin sees all pages; other roles see only their role's pages (filtered by permissions in DB).
+ */
+
+import type { UserRole } from '@/lib/auth'
+
+export interface PageRecord {
+  id: number
+  path: string
+  label: string
+  role: UserRole
+  icon: string
+  sort_order: number
+}
+
+/** All app pages with unique IDs. path is the main href for nav (exact or base path). */
+export const PAGE_REGISTRY: PageRecord[] = [
+  // Student (1–12)
+  { id: 1, path: '/student/dashboard', label: 'Dashboard', role: 'student', icon: 'LayoutDashboard', sort_order: 1 },
+  { id: 2, path: '/student/courses', label: 'Courses', role: 'student', icon: 'BookOpen', sort_order: 2 },
+  { id: 3, path: '/student/timetable', label: 'Timetable', role: 'student', icon: 'Calendar', sort_order: 3 },
+  { id: 4, path: '/student/assignments', label: 'Assignments', role: 'student', icon: 'Briefcase', sort_order: 4 },
+  { id: 5, path: '/student/study-groups', label: 'Study Groups', role: 'student', icon: 'Users', sort_order: 5 },
+  { id: 6, path: '/student/marketplace', label: 'Marketplace', role: 'student', icon: 'ShoppingBag', sort_order: 6 },
+  { id: 7, path: '/student/food-order', label: 'Food Order', role: 'student', icon: 'Utensils', sort_order: 7 },
+  { id: 8, path: '/student/laundry', label: 'Laundry', role: 'student', icon: 'Truck', sort_order: 8 },
+  { id: 9, path: '/student/rides', label: 'Rides', role: 'student', icon: 'Car', sort_order: 9 },
+  // Lecturer (10–14)
+  { id: 10, path: '/lecturer/dashboard', label: 'Dashboard', role: 'lecturer', icon: 'LayoutDashboard', sort_order: 1 },
+  { id: 11, path: '/lecturer/courses', label: 'My Courses', role: 'lecturer', icon: 'BookOpen', sort_order: 2 },
+  { id: 12, path: '/lecturer/schedule', label: 'Schedule', role: 'lecturer', icon: 'Calendar', sort_order: 3 },
+  { id: 13, path: '/lecturer/students', label: 'Students', role: 'lecturer', icon: 'Users', sort_order: 4 },
+  { id: 14, path: '/lecturer/assignments', label: 'Assignments', role: 'lecturer', icon: 'Briefcase', sort_order: 5 },
+  // Admin (15–19)
+  { id: 15, path: '/admin/dashboard', label: 'Dashboard', role: 'admin', icon: 'LayoutDashboard', sort_order: 1 },
+  { id: 16, path: '/admin/users', label: 'Users', role: 'admin', icon: 'Users', sort_order: 2 },
+  { id: 17, path: '/admin/courses', label: 'Courses', role: 'admin', icon: 'BookOpen', sort_order: 3 },
+  { id: 18, path: '/admin/reports', label: 'Reports', role: 'admin', icon: 'BarChart3', sort_order: 4 },
+  { id: 19, path: '/admin/announcements', label: 'Announcements', role: 'admin', icon: 'Bell', sort_order: 5 },
+  // Vendor (20–25)
+  { id: 20, path: '/vendor/dashboard', label: 'Dashboard', role: 'vendor', icon: 'LayoutDashboard', sort_order: 1 },
+  { id: 21, path: '/vendor/orders', label: 'Food Orders', role: 'vendor', icon: 'Package', sort_order: 2 },
+  { id: 22, path: '/vendor/laundry/orders', label: 'Laundry Orders', role: 'vendor', icon: 'Truck', sort_order: 3 },
+  { id: 23, path: '/vendor/menu', label: 'Menu', role: 'vendor', icon: 'Utensils', sort_order: 4 },
+  { id: 24, path: '/vendor/settings', label: 'Store Settings', role: 'vendor', icon: 'Store', sort_order: 5 },
+  { id: 25, path: '/vendor/analytics', label: 'Analytics', role: 'vendor', icon: 'BarChart3', sort_order: 6 },
+  // Delivery (26–29)
+  { id: 26, path: '/delivery/dashboard', label: 'Dashboard', role: 'delivery', icon: 'LayoutDashboard', sort_order: 1 },
+  { id: 27, path: '/delivery/active', label: 'Food Deliveries', role: 'delivery', icon: 'Package', sort_order: 2 },
+  { id: 28, path: '/delivery/laundry', label: 'Laundry Jobs', role: 'delivery', icon: 'Truck', sort_order: 3 },
+  { id: 29, path: '/delivery/earnings', label: 'Earnings', role: 'delivery', icon: 'BarChart3', sort_order: 4 },
+  // Super Admin (30–35)
+  { id: 30, path: '/super-admin/dashboard', label: 'Dashboard', role: 'super_admin', icon: 'LayoutDashboard', sort_order: 1 },
+  { id: 31, path: '/super-admin/users', label: 'All Users', role: 'super_admin', icon: 'UserCog', sort_order: 2 },
+  { id: 32, path: '/super-admin/roles', label: 'Roles & Permissions', role: 'super_admin', icon: 'Shield', sort_order: 3 },
+  { id: 33, path: '/super-admin/analytics', label: 'System Analytics', role: 'super_admin', icon: 'BarChart3', sort_order: 4 },
+  { id: 34, path: '/super-admin/settings', label: 'Settings', role: 'super_admin', icon: 'Settings', sort_order: 5 },
+  { id: 35, path: '/super-admin/pages', label: 'Page Management', role: 'super_admin', icon: 'LayoutList', sort_order: 6 },
+]
+
+/** Default nav items per role (when DB has no permissions yet). */
+export function getDefaultNavItemsForRole(role: UserRole): { label: string; href: string; icon: string }[] {
+  const items = PAGE_REGISTRY.filter((p) => p.role === role).sort((a, b) => a.sort_order - b.sort_order)
+  return items.map((p) => ({ label: p.label, href: p.path, icon: p.icon }))
+}
+
+/** All pages for a given role from registry (for super_admin: all pages from all roles). */
+export function getAllPagesForRole(role: UserRole): PageRecord[] {
+  if (role === 'super_admin') {
+    return [...PAGE_REGISTRY].sort((a, b) => a.role.localeCompare(b.role) || a.sort_order - b.sort_order)
+  }
+  return PAGE_REGISTRY.filter((p) => p.role === role).sort((a, b) => a.sort_order - b.sort_order)
+}
+
+export const ROLES: UserRole[] = ['student', 'lecturer', 'admin', 'vendor', 'delivery', 'super_admin']
