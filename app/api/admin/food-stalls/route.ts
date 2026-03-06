@@ -73,10 +73,10 @@ export async function POST(request: NextRequest) {
 
     const items = Array.isArray(menu_items) ? menu_items : []
     if (items.length > 0) {
-      const rows = items.map((m: { name?: string; price?: number; food_category?: string; image_url?: string }, i: number) => ({
+      const rows = items.map((m: { name?: string; price?: number | string; food_category?: string; image_url?: string }, i: number) => ({
         food_stall_id: stall.id,
         name: m.name ? String(m.name).trim() : 'Item',
-        price: m.price != null && m.price !== '' ? parseFloat(String(m.price)) : 0,
+        price: m.price != null && String(m.price).trim() !== '' ? parseFloat(String(m.price)) : 0,
         food_category: m.food_category ? String(m.food_category).trim() : null,
         image_url: m.image_url ? String(m.image_url).trim() : null,
         sort_order: i,

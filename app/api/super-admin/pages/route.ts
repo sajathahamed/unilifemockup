@@ -96,7 +96,7 @@ export async function PATCH(request: NextRequest) {
       if (!Array.isArray(roles) || roles.length === 0) {
         return NextResponse.json({ message: 'Bad request: roles[] required for type=role_bulk' }, { status: 400 })
       }
-      const valid = roles.filter((r: string) => ROLES.includes(r))
+      const valid = roles.filter((r: string): r is UserRole => ROLES.includes(r as UserRole))
       if (valid.length === 0) return NextResponse.json({ message: 'No valid roles' }, { status: 400 })
       const { error } = await setRolePagePermissionBulk(valid as UserRole[], pageId, enabled)
       if (error) return NextResponse.json({ message: error }, { status: 400 })
