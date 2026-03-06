@@ -153,7 +153,15 @@ export default function AdminTripAddForm() {
             </div>
             <div>
               <label className={LABEL_STYLE}>Organizer Email *</label>
-              <input type="email" value={form.organizer_email} onChange={(e) => setForm((p) => ({ ...p, organizer_email: e.target.value }))} placeholder="owner@example.com" required className={INPUT_STYLE} />
+              <input
+                type="email"
+                value={form.organizer_email}
+                onChange={(e) => setForm((p) => ({ ...p, organizer_email: e.target.value }))}
+                placeholder="owner@example.com"
+                required
+                className={INPUT_STYLE}
+                suppressHydrationWarning
+              />
             </div>
             <div>
               <label className={LABEL_STYLE}>Phone Number</label>
