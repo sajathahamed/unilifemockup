@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyRole } from '@/lib/auth.server'
+import { createClient } from '@/lib/supabase/server'
+
+/**
+ * GET /api/lecturer/assignments/[id]
+ * Get one assignment with course info (for lecturer)
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await verifyRole('lecturer')
+    if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+
+    const { id } = await context.params
+    const assignmentId = parseInt(id, 10)
+    if (Number.isNaN(assignmentId)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 })
+
+    const client = await createClient()
+    const { data, error } = await client
+      .from('assignments')
+      .select('*, courses(course_code, course_name)')
+      .eq('id', assignmentId)
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ message: 'Assignment not found' }, { status: 404 })
+    }
+
+    const row = data as Record<string, unknown>
+    const courses = row.courses as { course_code?: string; course_name?: string } | null
+    const { courses: _, ...rest } = row
+    return NextResponse.json(
+      { ...rest, course_code: courses?.course_code ?? null, course_name: courses?.course_name ?? null },
+      { status: 200 }
+    )
+  } catch (e) {
+    console.error('Lecturer assignment GET error:', e)
+    return NextResponse.json(
+      { message: e instanceof Error ? e.message : 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

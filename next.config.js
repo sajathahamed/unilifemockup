@@ -14,6 +14,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com', // Google profile pictures
       },
+      {
+        protocol: 'https',
+        hostname: 'maps.googleapis.com', // Google Places photos
+      },
     ],
   },
 }
