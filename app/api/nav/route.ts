@@ -12,7 +12,7 @@ export async function GET() {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
-    const items = await getAllowedNavItemsForRole(user.role)
+    const items = await getAllowedNavItemsForRole(user.role, user.id)
     return NextResponse.json({ items }, { status: 200 })
   } catch (e) {
     console.error('Nav API error:', e)

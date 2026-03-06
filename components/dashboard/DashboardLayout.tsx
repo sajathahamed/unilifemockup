@@ -27,6 +27,8 @@ import {
   BarChart3,
   UserCog,
   LayoutList,
+  MapPin,
+  UserPlus,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -71,9 +73,13 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
-    { label: 'Courses', href: '/admin/courses', icon: BookOpen },
+    { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
   vendor: [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
@@ -96,6 +102,15 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/super-admin/settings', icon: Settings },
     { label: 'Page Management', href: '/super-admin/pages', icon: LayoutList },
+    // Admin pages (super_admin can access all admin features)
+    { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Admin Users', href: '/admin/users', icon: Users },
+    { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
+    { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
+    { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
   ],
 }
 
@@ -117,6 +132,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
   UserCog,
   LayoutList,
+  MapPin,
+  UserPlus,
 }
 
 // Role display names and colors
@@ -149,34 +166,40 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [supabase, setSupabase] = useState<any | null>(null)
   const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
   const [superAdminFilter, setSuperAdminFilter] = useState<string>('all')
-  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setSupabase(createClient())
   }, [])
 
-  useEffect(() => {
+  const fetchNav = () => {
     fetch('/api/nav')
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
-        const items = (data?.items || []).map((i: { label: string; href: string; icon: string }) => ({
+        let items = (data?.items || []).map((i: { label: string; href: string; icon: string }) => ({
           label: i.label,
           href: i.href,
           icon: ICON_MAP[i.icon] || LayoutDashboard,
         }))
-        setApiNavItems(items.length ? items : null)
+        items = items.filter((i: NavItem) => i.href !== '/admin/timetable/add' && i.href !== '/admin/vendors/new')
+        if (user.role === 'super_admin') {
+          items = items.filter((i: NavItem) => i.href !== '/admin/users/new')
+        }
+        setApiNavItems(items)
       })
       .catch(() => setApiNavItems(null))
-  }, [user.role])
+  }
 
-  const navItems: NavItem[] = apiNavItems ?? roleNavItems[user.role]
-  const filteredNavItems: NavItem[] =
-    user.role === 'super_admin' && superAdminFilter !== 'all'
-      ? navItems.filter((item) => {
-          const r = getRoleFromHref(item.href)
-          return r === superAdminFilter
-        })
-      : navItems
+  useEffect(() => {
+    fetchNav()
+  }, [user.role, user.id])
+
+  useEffect(() => {
+    const onNavInvalidated = () => fetchNav()
+    window.addEventListener('unilife-nav-invalidated', onNavInvalidated)
+    return () => window.removeEventListener('unilife-nav-invalidated', onNavInvalidated)
+  }, [])
+
+  const navItems: NavItem[] = apiNavItems !== null && apiNavItems !== undefined ? apiNavItems : roleNavItems[user.role]
   const roleInfo = roleConfig[user.role]
 
   // Group nav items by role for collapsible sections
