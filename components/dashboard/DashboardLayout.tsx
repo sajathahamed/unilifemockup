@@ -149,6 +149,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [supabase, setSupabase] = useState<any | null>(null)
   const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
   const [superAdminFilter, setSuperAdminFilter] = useState<string>('all')
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setSupabase(createClient())
@@ -177,6 +178,35 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         })
       : navItems
   const roleInfo = roleConfig[user.role]
+
+  // Group nav items by role for collapsible sections
+  const groupedNavItems = filteredNavItems.reduce<Record<string, NavItem[]>>((acc, item) => {
+    const itemRole = getRoleFromHref(item.href) || user.role
+    if (!acc[itemRole]) acc[itemRole] = []
+    acc[itemRole].push(item)
+    return acc
+  }, {})
+
+  // Toggle role section expansion
+  const toggleRoleExpansion = (role: string) => {
+    setExpandedRoles((prev) => {
+      const next = new Set(prev)
+      if (next.has(role)) {
+        next.delete(role)
+      } else {
+        next.add(role)
+      }
+      return next
+    })
+  }
+
+  // Auto-expand the role section containing the current active path
+  useEffect(() => {
+    const activeRole = getRoleFromHref(pathname)
+    if (activeRole && !expandedRoles.has(activeRole)) {
+      setExpandedRoles((prev) => new Set([...prev, activeRole]))
+    }
+  }, [pathname])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -257,30 +287,62 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
               </div>
             )}
             <ul className="space-y-1">
-              {filteredNavItems.map((item) => {
-                const isActive = pathname === item.href
-                const itemRole = user.role === 'super_admin' ? getRoleFromHref(item.href) : null
-                const rolePrefix =
-                  user.role === 'super_admin' && itemRole ? `${roleConfig[itemRole].label}: ` : ''
+              {Object.entries(groupedNavItems).map(([role, items]) => {
+                const isExpanded = expandedRoles.has(role)
+                const config = roleConfig[role as UserRole]
+                const RoleIcon = items[0]?.icon || LayoutDashboard
+                
                 return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200
-                        ${isActive
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                        }
-                      `}
+                  <li key={role}>
+                    {/* Role group header */}
+                    <button
+                      onClick={() => toggleRoleExpansion(role)}
+                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-all duration-200"
                     >
-                      <item.icon size={20} />
-                      <span>
-                        {rolePrefix}
-                        {item.label}
-                      </span>
-                    </Link>
+                      <div className="flex items-center gap-3">
+                        <RoleIcon size={20} />
+                        <span>{config?.label || role}</span>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+                    
+                    {/* Collapsible items */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.ul
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden ml-4 mt-1 space-y-1"
+                        >
+                          {items.map((item) => {
+                            const isActive = pathname === item.href
+                            return (
+                              <li key={item.href}>
+                                <Link
+                                  href={item.href}
+                                  onClick={() => setIsSidebarOpen(false)}
+                                  className={`
+                                    flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                                    ${isActive
+                                      ? 'bg-primary text-white shadow-sm'
+                                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                    }
+                                  `}
+                                >
+                                  <item.icon size={18} />
+                                  <span>{item.label}</span>
+                                </Link>
+                              </li>
+                            )
+                          })}
+                        </motion.ul>
+                      )}
+                    </AnimatePresence>
                   </li>
                 )
               })}
