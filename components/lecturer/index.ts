@@ -1,7 +1,2 @@
 export { default as TimetableView } from './TimetableView'
 export { default as ScheduleForm } from './ScheduleForm'
-export { default as LecturerCoursesClient } from './LecturerCoursesClient'
-export { default as LecturerAssignmentsClient } from './LecturerAssignmentsClient'
-export { default as LecturerStudentsClient } from './LecturerStudentsClient'
-export { default as LecturerAssignmentDetailClient } from './LecturerAssignmentDetailClient'
-export { default as AssignmentCreateForm } from './AssignmentCreateForm'
