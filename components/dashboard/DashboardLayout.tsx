@@ -26,6 +26,9 @@ import {
   Shield,
   BarChart3,
   UserCog,
+  LayoutList,
+  MapPin,
+  UserPlus,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -58,7 +61,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Study Groups', href: '/student/study-groups', icon: Users },
     { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
     { label: 'Food Order', href: '/student/food-order', icon: Utensils },
-    { label: 'Campus Rides', href: '/student/rides', icon: Car },
+    { label: 'Laundry', href: '/student/laundry', icon: Truck },
   ],
   lecturer: [
     { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
@@ -70,21 +73,26 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
-    { label: 'Courses', href: '/admin/courses', icon: BookOpen },
+    { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
   vendor: [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
     { label: 'Menu', href: '/vendor/menu', icon: Utensils },
     { label: 'Store Settings', href: '/vendor/settings', icon: Store },
     { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
-    { label: 'Active Deliveries', href: '/delivery/active', icon: Truck },
-    { label: 'History', href: '/delivery/history', icon: Package },
+    { label: 'Food Deliveries', href: '/delivery/active', icon: Package },
+    { label: 'Laundry Jobs', href: '/delivery/laundry', icon: Truck },
     { label: 'Earnings', href: '/delivery/earnings', icon: BarChart3 },
   ],
   super_admin: [
@@ -93,7 +101,39 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Roles & Permissions', href: '/super-admin/roles', icon: Shield },
     { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/super-admin/settings', icon: Settings },
+    { label: 'Page Management', href: '/super-admin/pages', icon: LayoutList },
+    // Admin pages (super_admin can access all admin features)
+    { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Admin Users', href: '/admin/users', icon: Users },
+    { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
+    { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
+    { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
   ],
+}
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  BookOpen,
+  Calendar,
+  Users,
+  ShoppingBag,
+  Utensils,
+  Car,
+  Bell,
+  Settings,
+  Package,
+  Briefcase,
+  Store,
+  Truck,
+  Shield,
+  BarChart3,
+  UserCog,
+  LayoutList,
+  MapPin,
+  UserPlus,
 }
 
 // Role display names and colors
@@ -114,12 +154,41 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const [supabase, setSupabase] = useState<any | null>(null)
+  const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
 
-  // Initialize Supabase client only on client runtime
   useEffect(() => {
     setSupabase(createClient())
   }, [])
-  const navItems = roleNavItems[user.role]
+
+  const fetchNav = () => {
+    fetch('/api/nav')
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => {
+        let items = (data?.items || []).map((i: { label: string; href: string; icon: string }) => ({
+          label: i.label,
+          href: i.href,
+          icon: ICON_MAP[i.icon] || LayoutDashboard,
+        }))
+        items = items.filter((i: NavItem) => i.href !== '/admin/timetable/add' && i.href !== '/admin/vendors/new')
+        if (user.role === 'super_admin') {
+          items = items.filter((i: NavItem) => i.href !== '/admin/users/new')
+        }
+        setApiNavItems(items)
+      })
+      .catch(() => setApiNavItems(null))
+  }
+
+  useEffect(() => {
+    fetchNav()
+  }, [user.role, user.id])
+
+  useEffect(() => {
+    const onNavInvalidated = () => fetchNav()
+    window.addEventListener('unilife-nav-invalidated', onNavInvalidated)
+    return () => window.removeEventListener('unilife-nav-invalidated', onNavInvalidated)
+  }, [])
+
+  const navItems: NavItem[] = apiNavItems !== null && apiNavItems !== undefined ? apiNavItems : roleNavItems[user.role]
   const roleInfo = roleConfig[user.role]
 
   const handleLogout = async () => {

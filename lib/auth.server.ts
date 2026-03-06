@@ -72,3 +72,13 @@ export async function requireRole(requiredRole: UserRole): Promise<UserProfile> 
 
   return user
 }
+
+/**
+ * Role check for API routes - returns null if not authorized (no redirect).
+ * Use this in API route handlers to return 403 JSON instead of redirecting.
+ */
+export async function verifyRole(requiredRole: UserRole): Promise<UserProfile | null> {
+  const user = await getCurrentUser()
+  if (!user || !hasRoleAccess(user.role, requiredRole)) return null
+  return user
+}
