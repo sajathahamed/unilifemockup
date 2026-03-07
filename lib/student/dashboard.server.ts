@@ -54,8 +54,8 @@ export async function getStudentDashboardData(): Promise<StudentDashboardData> {
         start_time: String(rest.start_time ?? ''),
         end_time: String(rest.end_time ?? ''),
         location: String(rest.location ?? ''),
-        course_code: courses?.course_code ?? null,
-        course_name: courses?.course_name ?? null,
+        course_code: courses?.course_code ?? undefined,
+        course_name: courses?.course_name ?? undefined,
       }
     }
   )
