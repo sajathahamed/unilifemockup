@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Bell,
   Calendar,
+  LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -124,7 +125,7 @@ function StatCard({
   value,
   color,
 }: {
-  icon: React.ComponentType<{ size?: number }>
+  icon: LucideIcon
   label: string
   value: string
   color: string
