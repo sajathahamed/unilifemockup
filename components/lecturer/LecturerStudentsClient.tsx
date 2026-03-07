@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Loader2, Mail, Hash, Search } from 'lucide-react'
+import { Users, Mail, Hash, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { CardLoader } from '@/components/ui/LoadingSpinner'
 
 interface Student {
   id: number
@@ -77,9 +78,7 @@ export default function LecturerStudentsClient() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={32} className="text-violet-600 animate-spin" />
-        </div>
+        <CardLoader variant="users" text="Loading students..." />
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm">
           <Users size={48} className="mx-auto text-gray-300 mb-4" />

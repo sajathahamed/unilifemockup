@@ -162,53 +162,45 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const [supabase, setSupabase] = useState<any | null>(null)
-  const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
-  const [superAdminFilter, setSuperAdminFilter] = useState<string>('all')
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setSupabase(createClient())
   }, [])
 
-  const fetchNav = () => {
-    fetch('/api/nav')
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data) => {
-        let items = (data?.items || []).map((i: { label: string; href: string; icon: string }) => ({
-          label: i.label,
-          href: i.href,
-          icon: ICON_MAP[i.icon] || LayoutDashboard,
-        }))
-        items = items.filter((i: NavItem) => i.href !== '/admin/timetable/add' && i.href !== '/admin/vendors/new')
-        if (user.role === 'super_admin') {
-          items = items.filter((i: NavItem) => i.href !== '/admin/users/new')
-        }
-        setApiNavItems(items)
-      })
-      .catch(() => setApiNavItems(null))
+  // Clear navigation state when route changes
+  useEffect(() => {
+    setIsNavigating(false)
+    setNavigatingTo(null)
+  }, [pathname])
+
+  // Handle navigation with loading state
+  const handleNavigation = (href: string) => {
+    if (href !== pathname) {
+      setIsNavigating(true)
+      setNavigatingTo(href)
+    }
+    setIsSidebarOpen(false)
   }
 
-  useEffect(() => {
-    fetchNav()
-  }, [user.role, user.id])
-
-  useEffect(() => {
-    const onNavInvalidated = () => fetchNav()
-    window.addEventListener('unilife-nav-invalidated', onNavInvalidated)
-    return () => window.removeEventListener('unilife-nav-invalidated', onNavInvalidated)
-  }, [])
-
-  const navItems: NavItem[] = apiNavItems !== null && apiNavItems !== undefined ? apiNavItems : roleNavItems[user.role]
   const roleInfo = roleConfig[user.role]
 
-  // Group nav items by role for collapsible sections
-  const groupedNavItems = filteredNavItems.reduce<Record<string, NavItem[]>>((acc, item) => {
-    const itemRole = getRoleFromHref(item.href) || user.role
-    if (!acc[itemRole]) acc[itemRole] = []
-    acc[itemRole].push(item)
-    return acc
-  }, {})
+  // All roles sorted alphabetically for sidebar display
+  const allRoles: UserRole[] = ['admin', 'delivery', 'lecturer', 'student', 'super_admin', 'vendor']
+
+  // Role icons for sidebar headers
+  const roleIcons: Record<UserRole, LucideIcon> = {
+    admin: LayoutDashboard,
+    delivery: Truck,
+    lecturer: BookOpen,
+    student: GraduationCap,
+    super_admin: Shield,
+    vendor: Store,
+  }
 
   // Toggle role section expansion
   const toggleRoleExpansion = (role: string) => {
@@ -223,13 +215,10 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
     })
   }
 
-  // Auto-expand the role section containing the current active path
+  // Auto-expand the current user's role on initial load
   useEffect(() => {
-    const activeRole = getRoleFromHref(pathname)
-    if (activeRole && !expandedRoles.has(activeRole)) {
-      setExpandedRoles((prev) => new Set([...prev, activeRole]))
-    }
-  }, [pathname])
+    setExpandedRoles(new Set([user.role]))
+  }, [])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -250,6 +239,19 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top navigation progress bar */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 0.7 }}
+            exit={{ scaleX: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left"
+          />
+        )}
+      </AnimatePresence>
+      
       {/* Mobile sidebar overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -291,29 +293,12 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">
-            {user.role === 'super_admin' && (
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-500">Filter by role</span>
-                <select
-                  value={superAdminFilter}
-                  onChange={(e) => setSuperAdminFilter(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="all">All</option>
-                  <option value="student">Student</option>
-                  <option value="lecturer">Lecturer</option>
-                  <option value="admin">Admin</option>
-                  <option value="vendor">Vendor</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="super_admin">Super Admin</option>
-                </select>
-              </div>
-            )}
             <ul className="space-y-1">
-              {Object.entries(groupedNavItems).map(([role, items]) => {
+              {allRoles.map((role) => {
                 const isExpanded = expandedRoles.has(role)
-                const config = roleConfig[role as UserRole]
-                const RoleIcon = items[0]?.icon || LayoutDashboard
+                const config = roleConfig[role]
+                const RoleIcon = roleIcons[role]
+                const items = roleNavItems[role]
                 
                 return (
                   <li key={role}>
@@ -324,7 +309,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     >
                       <div className="flex items-center gap-3">
                         <RoleIcon size={20} />
-                        <span>{config?.label || role}</span>
+                        <span>{config.label}</span>
                       </div>
                       <ChevronDown
                         size={16}
@@ -344,20 +329,26 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                         >
                           {items.map((item) => {
                             const isActive = pathname === item.href
+                            const isLoading = isNavigating && navigatingTo === item.href
                             return (
                               <li key={item.href}>
                                 <Link
                                   href={item.href}
-                                  onClick={() => setIsSidebarOpen(false)}
+                                  onClick={() => handleNavigation(item.href)}
                                   className={`
                                     flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200
                                     ${isActive
                                       ? 'bg-primary text-white shadow-sm'
                                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                                     }
+                                    ${isLoading ? 'opacity-70' : ''}
                                   `}
                                 >
-                                  <item.icon size={18} />
+                                  {isLoading ? (
+                                    <div className="w-[18px] h-[18px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                  ) : (
+                                    <item.icon size={18} />
+                                  )}
                                   <span>{item.label}</span>
                                 </Link>
                               </li>
@@ -475,7 +466,29 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-4 lg:p-6 relative">
+          {/* Navigation loading overlay */}
+          <AnimatePresence>
+            {isNavigating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <GraduationCap size={24} className="text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-gray-500 font-medium text-sm animate-pulse">Loading...</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
