@@ -36,7 +36,8 @@ export default function LaundryClient({ user }: { user: UserProfile }) {
     const fetchVendors = useCallback(async (lat?: number, lng?: number) => {
         setLoading(true)
         try {
-            const url = lat && lng ? `/api/laundry?lat=${lat}&lng=${lng}` : '/api/laundry'
+            let url = '/api/student/laundry'
+            if (lat != null && lng != null) url += `?lat=${lat}&lng=${lng}`
             const res = await fetch(url)
             const data = await res.json()
             setVendors(data.results || [])

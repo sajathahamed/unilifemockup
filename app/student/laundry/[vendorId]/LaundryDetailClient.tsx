@@ -42,18 +42,33 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
     useEffect(() => {
         const fetchVendor = async () => {
             try {
-                // Fetch specifically by ID to avoid regional search issues
-                const res = await fetch(`/api/laundry?id=${vendorId}`)
-                const data = await res.json()
-                const found = data.result
-                if (found) {
+                const isDbVendor = vendorId?.startsWith?.('db-')
+                const stallId = isDbVendor ? vendorId.replace('db-', '') : null
+
+                if (isDbVendor && stallId) {
+                    const res = await fetch(`/api/student/laundry/${stallId}`)
+                    if (!res.ok) throw new Error('Not found')
+                    const found = await res.json()
                     setVendor({
                         ...found,
-                        services: [
+                        services: found.services ?? [
                             { id: 'wash_fold', type: 'Wash & Fold', price: found.pricePerKg || 250 },
                             { id: 'wash_iron', type: 'Wash & Iron', price: (found.pricePerKg || 250) + 50 }
                         ]
                     })
+                } else {
+                    const res = await fetch(`/api/laundry?id=${vendorId}`)
+                    const data = await res.json()
+                    const found = data.result
+                    if (found) {
+                        setVendor({
+                            ...found,
+                            services: found.services ?? [
+                                { id: 'wash_fold', type: 'Wash & Fold', price: found.pricePerKg || 250 },
+                                { id: 'wash_iron', type: 'Wash & Iron', price: (found.pricePerKg || 250) + 50 }
+                            ]
+                        })
+                    }
                 }
             } catch (err) {
                 console.error('Failed to fetch vendor details:', err)

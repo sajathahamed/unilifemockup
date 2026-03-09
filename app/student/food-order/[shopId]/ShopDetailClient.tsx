@@ -1,18 +1,45 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { ArrowLeft, Star, MapPin, Clock, ShoppingCart, Plus } from 'lucide-react'
+import { ArrowLeft, Star, MapPin, Clock, ShoppingCart, Plus, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { UserProfile } from '@/lib/auth'
 
-// interfaces are now imported from @/lib/food-utils
-
-import { getMenuForShop, getPriceLabel, MenuCategory, MenuItem } from '@/lib/food-utils'
+import { getMenuForShop, MenuCategory, MenuItem } from '@/lib/food-utils'
 
 const PRICE_MAP: Record<number, string> = { 0: 'Free', 1: 'Rs', 2: 'Rs', 3: 'Rs', 4: 'Rs' }
+const CATEGORY_EMOJI: Record<string, string> = { mains: '🍛', drinks: '🥤', snacks: '🥐', desserts: '🍨', default: '🍽️' }
+
+function formatTime(v: string | null): string {
+    if (!v) return '—'
+    const s = String(v)
+    const match = s.match(/(\d{1,2}):(\d{2})/)
+    return match ? `${match[1]}:${match[2]} AM` : s
+}
+
+function mapDbMenuToCategories(menuItems: { id: number; name: string; price: number | string; food_category?: string | null }[]): MenuCategory[] {
+    const byCat: Record<string, MenuItem[]> = {}
+    for (const m of menuItems) {
+        const cat = m.food_category?.trim() || 'items'
+        if (!byCat[cat]) byCat[cat] = []
+        byCat[cat].push({
+            id: String(m.id),
+            name: m.name,
+            description: m.food_category || '',
+            price: Number(m.price) || 0,
+            emoji: CATEGORY_EMOJI[cat.toLowerCase()] || CATEGORY_EMOJI.default,
+        })
+    }
+    return Object.entries(byCat).map(([id, items]) => ({
+        id,
+        label: id.charAt(0).toUpperCase() + id.slice(1),
+        emoji: CATEGORY_EMOJI[id.toLowerCase()] || CATEGORY_EMOJI.default,
+        items,
+    }))
+}
 
 function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) => void }) {
     return (
@@ -30,7 +57,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) =>
                     )}
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.description}</p>
-                <p className="text-sm font-bold text-gray-900 mt-1">RM {item.price.toFixed(2)}</p>
+                <p className="text-sm font-bold text-gray-900 mt-1">Rs {item.price.toFixed(2)}</p>
             </div>
             <button
                 onClick={() => onAdd(item)}
@@ -46,22 +73,86 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
     const router = useRouter()
     const searchParams = useSearchParams()
 
-    const name = searchParams.get('name') ?? 'Food Shop'
-    const photo = searchParams.get('photo') ?? 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=800&q=80'
-    const rating = parseFloat(searchParams.get('rating') ?? '4.5')
-    const price = parseInt(searchParams.get('price') ?? '1', 10)
-    const address = searchParams.get('address') ?? 'Campus Area'
-    const isOpen = searchParams.get('open') !== 'false'
+    const isDbStall = shopId?.startsWith?.('db-') ?? false
+    const stallId = isDbStall ? shopId?.replace?.('db-', '') ?? null : null
+
+    const [stallData, setStallData] = useState<{
+        shop_name: string
+        address?: string | null
+        banner?: string | null
+        logo?: string | null
+        is_open?: boolean
+        opening_time?: string | null
+        closing_time?: string | null
+        menu_items: { id: number; name: string; price: number | string; food_category?: string | null }[]
+    } | null>(null)
+    const [loading, setLoading] = useState(isDbStall)
+    const [error, setError] = useState<string | null>(null)
+
+    const name = stallData?.shop_name ?? searchParams.get('name') ?? 'Food Shop'
+    const photo = (stallData?.banner || stallData?.logo) ?? searchParams.get('photo') ?? 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=800&q=80'
+    const rating = 4.5
+    const price: number = parseInt(searchParams.get('price') ?? '1', 10)
+    const address = stallData?.address ?? searchParams.get('address') ?? 'Campus Area'
+    const isOpen = stallData?.is_open ?? searchParams.get('open') !== 'false'
+    const hoursText = stallData?.opening_time && stallData?.closing_time
+        ? `${formatTime(stallData.opening_time)} – ${formatTime(stallData.closing_time)}`
+        : '7:00 AM – 9:00 PM'
 
     const [activeCategory, setActiveCategory] = useState('mains')
     const [cartCount, setCartCount] = useState(0)
 
-    // Dynamic menu based on shop tags/name
+    // Menu: from DB if available, else mock
     const tags = searchParams.get('tags')?.split(',') ?? []
-    const menu = getMenuForShop(name, tags)
-    const activeMenu = menu.find((c) => c.id === activeCategory)
+    const dbMenu = stallData?.menu_items?.length ? mapDbMenuToCategories(stallData.menu_items) : null
+    const mockMenu = getMenuForShop(name, tags)
+    const menu = (dbMenu && dbMenu.length > 0) ? dbMenu : mockMenu
+    const activeMenu = menu.find((c) => c.id === activeCategory) ?? menu[0]
 
-    const orderUrl = `/student/food-order/${encodeURIComponent(shopId)}/order?${new URLSearchParams({ name, photo })}`
+    useEffect(() => {
+        if (menu.length > 0 && !menu.some((c) => c.id === activeCategory)) {
+            setActiveCategory(menu[0].id)
+        }
+    }, [menu, activeCategory])
+
+    useEffect(() => {
+        if (isDbStall && stallId) {
+            setLoading(true)
+            fetch(`/api/student/food-stalls/${stallId}`)
+                .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Not found'))))
+                .then(setStallData)
+                .catch((e) => setError(e?.message ?? 'Failed to load'))
+                .finally(() => setLoading(false))
+        }
+    }, [isDbStall, stallId])
+
+    const orderParams = new URLSearchParams({ name, photo })
+    if (isDbStall && stallId) orderParams.set('stallId', stallId)
+    const orderUrl = `/student/food-order/${encodeURIComponent(shopId)}/order?${orderParams}`
+
+    if (loading && isDbStall) {
+        return (
+            <DashboardLayout user={user}>
+                <div className="max-w-3xl mx-auto py-20 flex flex-col items-center justify-center gap-4">
+                    <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+                    <p className="text-gray-500">Loading stall details…</p>
+                </div>
+            </DashboardLayout>
+        )
+    }
+
+    if (error && isDbStall) {
+        return (
+            <DashboardLayout user={user}>
+                <div className="max-w-3xl mx-auto py-20 text-center">
+                    <p className="text-red-500 font-medium">{error}</p>
+                    <button onClick={() => router.back()} className="mt-4 text-sm text-orange-500 hover:underline">
+                        Back to Food
+                    </button>
+                </div>
+            </DashboardLayout>
+        )
+    }
 
     return (
         <DashboardLayout user={user}>
@@ -112,7 +203,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
                     <div className="flex items-center gap-2">
                         <Clock size={18} className="text-gray-400" />
                         <div>
-                            <p className="text-sm font-bold text-gray-900">7:00 AM – 9:00 PM</p>
+                            <p className="text-sm font-bold text-gray-900">{hoursText}</p>
                             <p className="text-xs text-gray-400">Hours</p>
                         </div>
                     </div>

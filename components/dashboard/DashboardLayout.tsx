@@ -27,6 +27,8 @@ import {
   BarChart3,
   UserCog,
   LayoutList,
+  MapPin,
+  UserPlus,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -60,6 +62,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
     { label: 'Food Order', href: '/student/food-order', icon: Utensils },
     { label: 'Laundry', href: '/student/laundry', icon: Truck },
+    { label: 'Trips', href: '/student/trips', icon: MapPin },
   ],
   lecturer: [
     { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
@@ -71,17 +74,28 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
-    { label: 'Courses', href: '/admin/courses', icon: BookOpen },
+    { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
-  vendor: [
+  'vendor-food': [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
+  'vendor-laundry': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
     { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
-    { label: 'Menu', href: '/vendor/menu', icon: Utensils },
-    { label: 'Store Settings', href: '/vendor/settings', icon: Store },
-    { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
@@ -96,6 +110,15 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/super-admin/settings', icon: Settings },
     { label: 'Page Management', href: '/super-admin/pages', icon: LayoutList },
+    // Admin pages (super_admin can access all admin features)
+    { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Admin Users', href: '/admin/users', icon: Users },
+    { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
+    { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
+    { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
   ],
 }
 
@@ -117,6 +140,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
   UserCog,
   LayoutList,
+  MapPin,
+  UserPlus,
 }
 
 // Role display names and colors
@@ -124,19 +149,17 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
-  vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
 }
 
-function getRoleFromHref(href: string): UserRole | null {
-  if (href.startsWith('/student/')) return 'student'
-  if (href.startsWith('/lecturer/')) return 'lecturer'
-  if (href.startsWith('/admin/')) return 'admin'
-  if (href.startsWith('/vendor/')) return 'vendor'
-  if (href.startsWith('/delivery/')) return 'delivery'
-  if (href.startsWith('/super-admin/')) return 'super_admin'
-  return null
+/** Role segment used in URLs (vendor-food/vendor-laundry -> vendor) */
+function rolePathSegment(role: UserRole): string {
+  if (role === 'super_admin') return 'super-admin'
+  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
+  return role.replace('_', '-')
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -145,38 +168,35 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const [supabase, setSupabase] = useState<any | null>(null)
   const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
-  const [superAdminFilter, setSuperAdminFilter] = useState<string>('all')
+  const pathSegment = rolePathSegment(user.role)
 
   useEffect(() => {
     setSupabase(createClient())
   }, [])
 
+  // Clear navigation state when route changes
   useEffect(() => {
-    fetch('/api/nav')
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data) => {
-        const items = (data?.items || []).map((i: { label: string; href: string; icon: string }) => ({
-          label: i.label,
-          href: i.href,
-          icon: ICON_MAP[i.icon] || LayoutDashboard,
-        }))
-        setApiNavItems(items.length ? items : null)
-      })
-      .catch(() => setApiNavItems(null))
-  }, [user.role])
+    setIsNavigating(false)
+    setNavigatingTo(null)
+  }, [pathname])
 
-  const navItems: NavItem[] = apiNavItems ?? roleNavItems[user.role]
-  const filteredNavItems: NavItem[] =
-    user.role === 'super_admin' && superAdminFilter !== 'all'
-      ? navItems.filter((item) => {
-          const r = getRoleFromHref(item.href)
-          return r === superAdminFilter
-        })
-      : navItems
-  const roleInfo = roleConfig[user.role]
+  // Handle navigation with loading state
+  const handleNavigation = (href: string) => {
+    if (href !== pathname) {
+      setIsNavigating(true)
+      setNavigatingTo(href)
+    }
+    setIsSidebarOpen(false)
+  }
+
+  const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
+  const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
+  const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -197,6 +217,19 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top navigation progress bar */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 0.7 }}
+            exit={{ scaleX: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left"
+          />
+        )}
+      </AnimatePresence>
+      
       {/* Mobile sidebar overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -222,7 +255,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <Link href={`/${user.role.replace('_', '-')}/dashboard`} className="flex items-center gap-3">
+            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
@@ -238,48 +271,21 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">
-            {user.role === 'super_admin' && (
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-500">Filter by role</span>
-                <select
-                  value={superAdminFilter}
-                  onChange={(e) => setSuperAdminFilter(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="all">All</option>
-                  <option value="student">Student</option>
-                  <option value="lecturer">Lecturer</option>
-                  <option value="admin">Admin</option>
-                  <option value="vendor">Vendor</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="super_admin">Super Admin</option>
-                </select>
-              </div>
-            )}
             <ul className="space-y-1">
-              {filteredNavItems.map((item) => {
+              {navItems.map((item) => {
                 const isActive = pathname === item.href
-                const itemRole = user.role === 'super_admin' ? getRoleFromHref(item.href) : null
-                const rolePrefix =
-                  user.role === 'super_admin' && itemRole ? `${roleConfig[itemRole].label}: ` : ''
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200
-                        ${isActive
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                        }
-                      `}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-primary text-white'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                     >
                       <item.icon size={20} />
-                      <span>
-                        {rolePrefix}
-                        {item.label}
-                      </span>
+                      <span>{item.label}</span>
                     </Link>
                   </li>
                 )
@@ -328,7 +334,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
                   >
                     <Link
-                      href={`/${user.role.replace('_', '-')}/settings`}
+                      href={`/${pathSegment}/settings`}
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />
@@ -390,7 +396,29 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">
+        <main className="p-4 lg:p-6 relative">
+          {/* Navigation loading overlay */}
+          <AnimatePresence>
+            {isNavigating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <GraduationCap size={24} className="text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-gray-500 font-medium text-sm animate-pulse">Loading...</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

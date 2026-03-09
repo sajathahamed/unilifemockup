@@ -6,11 +6,8 @@ export const metadata = {
     title: 'Vendor Details | Laundry',
 }
 
-export default async function VendorDetailPage({ params }: { params: { vendorId: string } }) {
+export default async function VendorDetailPage({ params }: { params: Promise<{ vendorId: string }> }) {
     const user = await requireRole('student')
-
-    // In a real app, we'd fetch the vendor data from a DB here
-    // For now, we'll let the client component handle the mock data or fetch it
-
-    return <LaundryDetailClient user={user} vendorId={params.vendorId} />
+    const { vendorId } = await params
+    return <LaundryDetailClient user={user} vendorId={vendorId ?? ''} />
 }
