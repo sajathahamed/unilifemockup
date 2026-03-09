@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Bell,
   Calendar,
+  LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 
