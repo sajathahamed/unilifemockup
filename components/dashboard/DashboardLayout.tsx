@@ -154,14 +154,11 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
 }
 
-function getRoleFromHref(href: string): UserRole | null {
-  if (href.startsWith('/student/')) return 'student'
-  if (href.startsWith('/lecturer/')) return 'lecturer'
-  if (href.startsWith('/admin/')) return 'admin'
-  if (href.startsWith('/vendor/')) return 'vendor'
-  if (href.startsWith('/delivery/')) return 'delivery'
-  if (href.startsWith('/super-admin/')) return 'super_admin'
-  return null
+/** Role segment used in URLs (vendor-food/vendor-laundry -> vendor) */
+function rolePathSegment(role: UserRole): string {
+  if (role === 'super_admin') return 'super-admin'
+  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
+  return role.replace('_', '-')
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -271,30 +268,9 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">
-            {user.role === 'super_admin' && (
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="text-xs font-medium text-gray-500">Filter by role</span>
-                <select
-                  value={superAdminFilter}
-                  onChange={(e) => setSuperAdminFilter(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="all">All</option>
-                  <option value="student">Student</option>
-                  <option value="lecturer">Lecturer</option>
-                  <option value="admin">Admin</option>
-                  <option value="vendor">Vendor</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="super_admin">Super Admin</option>
-                </select>
-              </div>
-            )}
             <ul className="space-y-1">
-              {filteredNavItems.map((item) => {
+              {navItems.map((item) => {
                 const isActive = pathname === item.href
-                const itemRole = user.role === 'super_admin' ? getRoleFromHref(item.href) : null
-                const rolePrefix =
-                  user.role === 'super_admin' && itemRole ? `${roleConfig[itemRole].label}: ` : ''
                 return (
                   <li key={item.href}>
                     <Link
@@ -309,10 +285,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                       `}
                     >
                       <item.icon size={20} />
-                      <span>
-                        {rolePrefix}
-                        {item.label}
-                      </span>
+                      <span>{item.label}</span>
                     </Link>
                   </li>
                 )

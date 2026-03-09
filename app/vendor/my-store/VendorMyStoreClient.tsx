@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { Store, MapPin, Phone, Clock, Edit2, Image, X, Circle } from 'lucide-react'
+import { Store, MapPin, Phone, Clock, Edit2, Image, X, CheckCircle, XCircle } from 'lucide-react'
 import { UserRole } from '@/lib/auth'
 
 interface VendorMyStoreClientProps {
@@ -32,6 +32,8 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
   const [shopType, setShopType] = useState<'food' | 'laundry' | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [toggling, setToggling] = useState(false)
+  const [toggleError, setToggleError] = useState<string | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [form, setForm] = useState<Partial<StoreData>>({})
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
   useEffect(() => {
     ;(async () => {
       try {
-        const res = await fetch('/api/vendor/my-store')
+        const res = await fetch('/api/vendor/my-store', { cache: 'no-store', headers: { Pragma: 'no-cache', 'Cache-Control': 'no-cache' } })
         const data = await res.json()
         if (data.store) {
           setStore(data.store)
@@ -100,18 +102,28 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
 
   const handleToggleOpen = async () => {
     if (!store || !shopType) return
-    const next = !store.is_open
+    setToggleError(null)
+    const newState = !store.is_open
+    setStore((s) => (s ? { ...s, is_open: newState } : s))
+    setToggling(true)
     try {
       const res = await fetch('/api/vendor/my-store', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: store.id, shopType, is_open: next }),
+        body: JSON.stringify({ id: store.id, shopType, is_open: newState }),
       })
       const data = await res.json()
-      if (!res.ok) return
-      setStore((s) => (s ? { ...s, is_open: next } : null))
-    } catch {
-      //
+      if (!res.ok) {
+        setStore((s) => (s ? { ...s, is_open: store.is_open } : s))
+        setToggleError(data.message || 'Failed to update')
+        return
+      }
+      setStore((s) => (s ? { ...s, is_open: data.is_open ?? newState } : s))
+    } catch (e) {
+      setStore((s) => (s ? { ...s, is_open: store.is_open } : s))
+      setToggleError('Network error — try again')
+    } finally {
+      setToggling(false)
     }
   }
 
@@ -157,29 +169,26 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
                 </div>
                 <div className="mt-4 flex items-start justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">{store.name}</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-gray-900">{store.name}</h2>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          store.is_open ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {store.is_open ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                        {store.is_open ? 'Open' : 'Closed'}
+                      </span>
+                    </div>
                     <p className="text-gray-500">{shopType === 'food' ? 'Food Stall' : 'Laundry Shop'}</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={handleToggleOpen}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        store.is_open
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Circle size={14} fill={store.is_open ? 'currentColor' : 'none'} stroke="currentColor" />
-                      {store.is_open ? 'Shop Open' : 'Shop Closed'}
-                    </button>
-                    <button
+                  <button
                     onClick={openEdit}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors"
                   >
-                      <Edit2 size={16} />
-                      Edit
-                    </button>
-                  </div>
+                    <Edit2 size={16} />
+                    Edit
+                  </button>
                 </div>
                 {store.description && <p className="mt-3 text-gray-600 text-sm">{store.description}</p>}
               </div>
@@ -221,6 +230,28 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
           </div>
 
           <div className="space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Shop Status</h3>
+              {toggleError && (
+                <p className="text-sm text-red-600 mb-3 p-2 bg-red-50 rounded-lg">{toggleError}</p>
+              )}
+              <button
+                onClick={handleToggleOpen}
+                disabled={toggling}
+                className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl font-medium transition-colors ${
+                  store.is_open
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } disabled:opacity-60`}
+              >
+                {store.is_open ? <CheckCircle size={22} /> : <XCircle size={22} />}
+                <span>{toggling ? 'Updating...' : store.is_open ? 'Shop Open' : 'Shop Closed'}</span>
+              </button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                {store.is_open ? 'Active — accepting orders' : 'Away — not accepting orders'}
+              </p>
+            </div>
+
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Store Type</h3>
               <p className="text-gray-600 text-sm">

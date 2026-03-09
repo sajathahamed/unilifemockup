@@ -16,20 +16,10 @@ const roleRoutes: Record<string, string[]> = {
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  console.log(`>>> Middleware: ${request.method} ${pathname}`)
-
-  // 1. Bypass all API routes — they handle their own auth
-  if (pathname.includes('/api/')) {
-    console.log(`>>> Bypassing API: ${pathname}`)
-    return NextResponse.next()
-  }
-
   const { supabaseResponse, user, supabase } = await updateSession(request)
+  const { pathname } = request.nextUrl
 
-
-
-  // 2. Allow public routes
+  // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     if (user && (pathname === '/login' || pathname === '/signup')) {
       const role = (user.user_metadata?.role as string) || ''
@@ -89,15 +79,21 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
+function normalizeRolePrefix(role: string): string {
+  if (role === 'super_admin') return 'super-admin'
+  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
+  return role
+}
+
 export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - api routes
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - images in public folder
+     * - public folder
+     * - api routes (they handle their own auth)
      */
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
