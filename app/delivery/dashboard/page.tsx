@@ -1,8 +1,8 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { 
-  Truck, 
-  DollarSign, 
+import {
+  Truck,
+  DollarSign,
   Clock,
   MapPin,
   ArrowRight,
@@ -42,7 +42,7 @@ export default async function DeliveryDashboard() {
                 View all <ArrowRight size={14} />
               </Link>
             </div>
-            
+
             <div className="space-y-3">
               <DeliveryCard
                 id="#DEL-1234"
@@ -98,9 +98,19 @@ export default async function DeliveryDashboard() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Summary</h2>
               <div className="space-y-3">
                 <SummaryItem label="Completed" value="8 deliveries" />
-                <SummaryItem label="Total Distance" value="12.5 km" />
                 <SummaryItem label="Total Earnings" value="₦4,200" highlight />
-                <SummaryItem label="Avg. Rating" value="4.8 ⭐" />
+                <div className="pt-2 border-t border-gray-50">
+                  <Link
+                    href="/delivery/laundry"
+                    className="flex items-center justify-between p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Truck size={16} className="text-blue-600" />
+                      <span className="text-sm font-bold text-blue-700">Laundry Jobs</span>
+                    </div>
+                    <ArrowRight size={14} className="text-blue-400" />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -114,7 +124,7 @@ export default async function DeliveryDashboard() {
               View history <ArrowRight size={14} />
             </Link>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -170,7 +180,7 @@ function DeliveryCard({ id, pickup, dropoff, customer, distance, earnings, statu
           {config.label}
         </span>
       </div>
-      
+
       <div className="space-y-2 mb-3">
         <div className="flex items-center gap-2 text-sm">
           <Package size={14} className="text-blue-500" />
@@ -181,13 +191,13 @@ function DeliveryCard({ id, pickup, dropoff, customer, distance, earnings, statu
           <span className="text-gray-600">Drop off: <strong>{dropoff}</strong></span>
         </div>
       </div>
-      
+
       <div className="flex items-center justify-between text-sm mb-3">
         <span className="text-gray-500">{customer}</span>
         <span className="text-gray-500">{distance}</span>
         <span className="font-semibold text-green-600">{earnings}</span>
       </div>
-      
+
       {status === 'pickup' && (
         <button className="w-full py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
           <Navigation size={14} /> Navigate to Pickup
@@ -226,7 +236,7 @@ function HistoryRow({ id, route, time, earnings, rating }: {
       <td className="py-3 text-gray-500">{time}</td>
       <td className="py-3 font-medium text-green-600">{earnings}</td>
       <td className="py-3">
-        <span className="text-yellow-500">{'★'.repeat(rating)}{'☆'.repeat(5-rating)}</span>
+        <span className="text-yellow-500">{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>
       </td>
     </tr>
   )
