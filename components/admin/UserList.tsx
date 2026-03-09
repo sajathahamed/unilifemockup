@@ -307,9 +307,11 @@ function getRoleStyles(role: string): string {
             return 'bg-purple-50 text-purple-700 border-purple-100'
         case 'admin':
             return 'bg-blue-50 text-blue-700 border-blue-100'
-        case 'vendor':
+        case 'vendor-food':
         case 'vendor_admin':
             return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+        case 'vendor-laundry':
+            return 'bg-teal-50 text-teal-700 border-teal-100'
         case 'delivery':
         case 'delivery_rider':
             return 'bg-orange-50 text-orange-700 border-orange-100'

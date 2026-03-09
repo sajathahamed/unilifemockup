@@ -113,8 +113,10 @@ function getRoleCardClass(role: UserRole): string {
             return 'bg-purple-50 text-purple-800 border-purple-200'
         case 'admin':
             return 'bg-blue-50 text-blue-800 border-blue-200'
-        case 'vendor':
+        case 'vendor-food':
             return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+        case 'vendor-laundry':
+            return 'bg-teal-50 text-teal-800 border-teal-200'
         case 'delivery':
             return 'bg-orange-50 text-orange-800 border-orange-200'
         case 'lecturer':

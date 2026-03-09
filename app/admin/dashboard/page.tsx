@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Bell, MapPin, Truck, TrendingUp, Users, Utensils, UserPlus, FileText } from 'lucide-react'
 import Link from 'next/link'
 
-type Role = 'student' | 'lecturer' | 'admin' | 'vendor' | 'delivery' | 'super_admin'
+type Role = 'student' | 'lecturer' | 'admin' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
 
 export default async function AdminDashboard() {
   const user = await requireRole('admin')
@@ -91,7 +91,7 @@ export default async function AdminDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <RoleCard role="Students" count={byRole.student || 0} color="bg-blue-500" />
             <RoleCard role="Lecturers" count={byRole.lecturer || 0} color="bg-purple-500" />
-            <RoleCard role="Vendors" count={byRole.vendor || 0} color="bg-green-500" />
+            <RoleCard role="Vendors" count={(byRole['vendor-food'] || 0) + (byRole['vendor-laundry'] || 0)} color="bg-green-500" />
             <RoleCard role="Delivery" count={byRole.delivery || 0} color="bg-yellow-500" />
             <RoleCard role="Admins" count={byRole.admin || 0} color="bg-red-500" />
             <RoleCard role="Super Admin" count={byRole.super_admin || 0} color="bg-gray-700" />

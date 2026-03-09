@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { Utensils, Loader2, Save, Plus, Trash2, MapPin } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Utensils, Loader2, Save, Plus, Trash2, MapPin, Edit2 } from 'lucide-react'
+
+type FoodStallRow = { id: number; shop_name: string; owner_name: string; owner_email: string; phone?: string; address?: string }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const CATEGORIES = ['Street Food', 'Fast Food', 'Snacks', 'Beverages', 'Bakery', 'Restaurant', 'Café', 'Other']
@@ -12,30 +14,54 @@ const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:
 
 type MenuItem = { name: string; price: string; food_category: string; image_url: string }
 
+const emptyForm = () => ({
+  shop_name: '',
+  owner_name: '',
+  owner_email: '',
+  phone: '',
+  whatsapp: '',
+  address: '',
+  city: '',
+  area: '',
+  lat: '',
+  lng: '',
+  description: '',
+  opening_time: '',
+  closing_time: '',
+  days_open: [] as string[],
+  category: '',
+  logo: '',
+  banner: '',
+  gallery: [] as string[],
+})
+
 export default function AdminFoodStallAddForm() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [form, setForm] = useState({
-    shop_name: '',
-    owner_name: '',
-    owner_email: '',
-    phone: '',
-    whatsapp: '',
-    address: '',
-    city: '',
-    area: '',
-    lat: '',
-    lng: '',
-    description: '',
-    opening_time: '',
-    closing_time: '',
-    days_open: [] as string[],
-    category: '',
-    logo: '',
-    banner: '',
-    gallery: [] as string[],
-  })
+  const [list, setList] = useState<FoodStallRow[]>([])
+  const [loadingList, setLoadingList] = useState(true)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [form, setForm] = useState(emptyForm())
   const [menuItems, setMenuItems] = useState<MenuItem[]>([{ name: '', price: '', food_category: '', image_url: '' }])
+
+  const fetchList = () => {
+    setLoadingList(true)
+    fetch('/api/admin/food-stalls')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setList(Array.isArray(data) ? data : []))
+      .catch(() => setList([]))
+      .finally(() => setLoadingList(false))
+  }
+
+  useEffect(() => {
+    fetchList()
+  }, [])
+
+  const resetForm = () => {
+    setForm(emptyForm())
+    setMenuItems([{ name: '', price: '', food_category: '', image_url: '' }])
+    setEditingId(null)
+  }
 
   const toggleDay = (day: string) => {
     setForm((p) => ({
@@ -49,6 +75,59 @@ export default function AdminFoodStallAddForm() {
     setMenuItems((p) => p.map((m, ix) => (ix === i ? { ...m, [k]: v } : m)))
   }
   const removeMenuItem = (i: number) => setMenuItems((p) => p.filter((_, ix) => ix !== i))
+
+  const handleEdit = async (id: number) => {
+    try {
+      const res = await fetch(`/api/admin/food-stalls/${id}`)
+      if (!res.ok) throw new Error('Failed to load')
+      const stall = await res.json()
+      const ot = stall.opening_time
+      const ct = stall.closing_time
+      setForm({
+        shop_name: stall.shop_name || '',
+        owner_name: stall.owner_name || '',
+        owner_email: stall.owner_email || '',
+        phone: stall.phone || '',
+        whatsapp: stall.whatsapp || '',
+        address: stall.address || '',
+        city: stall.city || '',
+        area: stall.area || '',
+        lat: stall.lat != null ? String(stall.lat) : '',
+        lng: stall.lng != null ? String(stall.lng) : '',
+        description: stall.description || '',
+        opening_time: ot ? (typeof ot === 'string' ? ot.slice(0, 5) : '') : '',
+        closing_time: ct ? (typeof ct === 'string' ? ct.slice(0, 5) : '') : '',
+        days_open: Array.isArray(stall.days_open) ? stall.days_open : [],
+        category: stall.category || '',
+        logo: stall.logo || '',
+        banner: stall.banner || '',
+        gallery: Array.isArray(stall.gallery) ? stall.gallery : [],
+      })
+      const items = stall.menu_items ?? []
+      setMenuItems(items.length > 0 ? items.map((m: { name: string; price: number; food_category?: string; image_url?: string }) => ({ name: m.name || '', price: String(m.price ?? ''), food_category: m.food_category || '', image_url: m.image_url || '' })) : [{ name: '', price: '', food_category: '', image_url: '' }])
+      setEditingId(id)
+      setMessage(null)
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to load stall' })
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this food stall? This cannot be undone.')) return
+    try {
+      const res = await fetch(`/api/admin/food-stalls/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Food stall deleted.' })
+        resetForm()
+        fetchList()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setMessage({ type: 'error', text: data?.message || 'Delete failed' })
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error' })
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,28 +146,30 @@ export default function AdminFoodStallAddForm() {
     }
     setSaving(true)
     try {
-      const res = await fetch('/api/admin/food-stalls', {
-        method: 'POST',
+      const payload = {
+        ...form,
+        lat: form.lat ? parseFloat(form.lat) : null,
+        lng: form.lng ? parseFloat(form.lng) : null,
+        menu_items: menuItems.filter((m) => m.name.trim()).map((m) => ({
+          name: m.name.trim(),
+          price: m.price ? parseFloat(m.price) : 0,
+          food_category: m.food_category.trim() || null,
+          image_url: m.image_url.trim() || null,
+        })),
+      }
+      const url = editingId ? `/api/admin/food-stalls/${editingId}` : '/api/admin/food-stalls'
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          lat: form.lat ? parseFloat(form.lat) : null,
-          lng: form.lng ? parseFloat(form.lng) : null,
-          menu_items: menuItems.filter((m) => m.name.trim()).map((m) => ({
-            name: m.name.trim(),
-            price: m.price ? parseFloat(m.price) : 0,
-            food_category: m.food_category.trim() || null,
-            image_url: m.image_url.trim() || null,
-          })),
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Food stall registered successfully.' })
-        setForm({ shop_name: '', owner_name: '', owner_email: '', phone: '', whatsapp: '', address: '', city: '', area: '', lat: '', lng: '', description: '', opening_time: '', closing_time: '', days_open: [], category: '', logo: '', banner: '', gallery: [] })
-        setMenuItems([{ name: '', price: '', food_category: '', image_url: '' }])
+        setMessage({ type: 'success', text: editingId ? 'Food stall updated.' : 'Food stall registered successfully.' })
+        resetForm()
+        fetchList()
       } else {
-        setMessage({ type: 'error', text: data?.message || 'Failed to register' })
+        setMessage({ type: 'error', text: data?.message || 'Failed' })
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error' })
@@ -98,6 +179,7 @@ export default function AdminFoodStallAddForm() {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4">
         <div className="flex items-center gap-3">
@@ -131,7 +213,7 @@ export default function AdminFoodStallAddForm() {
             </div>
             <div>
               <label className={LABEL_STYLE}>Owner Email *</label>
-              <input type="email" value={form.owner_email} onChange={(e) => setForm((p) => ({ ...p, owner_email: e.target.value }))} placeholder="vendor@example.com (links to login)" required className={INPUT_STYLE} />
+              <input type="email" value={form.owner_email} onChange={(e) => setForm((p) => ({ ...p, owner_email: e.target.value }))} placeholder="vendor@example.com (links to login)" required className={INPUT_STYLE} suppressHydrationWarning />
             </div>
             <div>
               <label className={LABEL_STYLE}>Phone Number</label>
@@ -261,13 +343,63 @@ export default function AdminFoodStallAddForm() {
           </div>
         </section>
 
-        <div className="pt-4">
+        <div className="pt-4 flex gap-3">
           <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50">
             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-            Register Food Stall
+            {editingId ? 'Update Food Stall' : 'Register Food Stall'}
           </button>
+          {editingId && (
+            <button type="button" onClick={resetForm} className="px-6 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50">
+              Create New
+            </button>
+          )}
         </div>
       </div>
     </form>
+
+    <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <h2 className="text-lg font-semibold text-gray-900">Assigned Food Stalls (ID below)</h2>
+        <p className="text-sm text-gray-500">Edit or delete existing stalls. IDs are shown for reference.</p>
+      </div>
+      {loadingList ? (
+        <div className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto" /></div>
+      ) : list.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">No food stalls yet. Create one above.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left py-3 px-4 font-medium text-gray-700">ID</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Shop Name</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Owner</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Email</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Address</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((row) => (
+                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-mono text-sm">{row.id}</td>
+                  <td className="py-3 px-4 font-medium">{row.shop_name}</td>
+                  <td className="py-3 px-4">{row.owner_name}</td>
+                  <td className="py-3 px-4 text-sm">{row.owner_email}</td>
+                  <td className="py-3 px-4 text-sm text-gray-500 truncate max-w-[180px]">{row.address || '—'}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => handleEdit(row.id)} className="p-2 text-primary hover:bg-primary/10 rounded-lg" title="Edit"><Edit2 size={16} /></button>
+                      <button type="button" onClick={() => handleDelete(row.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+    </>
   )
 }

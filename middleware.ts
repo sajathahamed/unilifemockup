@@ -4,14 +4,15 @@ import { updateSession } from '@/lib/supabase/middleware'
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/reset-password']
 
-// Role-based route prefixes
+// Role-based route prefixes (no generic vendor - only vendor-food, vendor-laundry)
 const roleRoutes: Record<string, string[]> = {
   student: ['/student'],
   lecturer: ['/lecturer'],
   admin: ['/admin'],
-  vendor: ['/vendor'],
+  'vendor-food': ['/vendor'],
+  'vendor-laundry': ['/vendor'],
   delivery: ['/delivery'],
-  super_admin: ['/super-admin', '/admin', '/vendor', '/delivery', '/student', '/lecturer'], // Super admin can access all
+  super_admin: ['/super-admin', '/admin', '/vendor', '/delivery', '/student', '/lecturer'],
 }
 
 export async function middleware(request: NextRequest) {
@@ -20,11 +21,10 @@ export async function middleware(request: NextRequest) {
 
   // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
-    // If user is already logged in and tries to access auth pages, redirect to dashboard
     if (user && (pathname === '/login' || pathname === '/signup')) {
-      const role = user.user_metadata?.role
+      const role = (user.user_metadata?.role as string) || ''
       if (role) {
-        const rolePrefix = role === 'super_admin' ? 'super-admin' : role
+        const rolePrefix = normalizeRolePrefix(role)
         return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
       }
     }
@@ -38,43 +38,51 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Fetch user role for protected routes - DB is Source of Truth
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('role')
-    .eq('auth_id', user.id)
-    .single()
+  let userRole: string = (user.user_metadata?.role as string) || ''
 
-  let userRole = userData?.role as string
-
-  // Fallback to metadata if DB query fails or returns nothing
-  if (!userRole || userError) {
-    userRole = (user.user_metadata?.role as string) || ''
+  // Fetch role from DB when Supabase is available
+  if (supabase) {
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('auth_id', user.id)
+      .single()
+    if (userData?.role && !userError) userRole = userData.role as string
   }
 
   if (!userRole) {
-    // User exists in auth but no role found anywhere - redirect to login
     return NextResponse.redirect(new URL('/login?error=profile_not_found', request.url))
   }
 
   const allowedPrefixes = roleRoutes[userRole] || []
+  let hasAccess = allowedPrefixes.some(prefix => pathname.startsWith(prefix))
 
-  // Check if user has access to the requested route
-  const hasAccess = allowedPrefixes.some(prefix => pathname.startsWith(prefix))
+  // vendor-food: cannot access laundry pages
+  if (userRole === 'vendor-food' && pathname.startsWith('/vendor/laundry')) {
+    hasAccess = false
+  }
+  // vendor-laundry: cannot access food orders page
+  if (userRole === 'vendor-laundry' && pathname === '/vendor/orders') {
+    hasAccess = false
+  }
 
   if (!hasAccess) {
-    // Redirect to user's own dashboard
-    const rolePrefix = userRole === 'super_admin' ? 'super-admin' : userRole
+    const rolePrefix = normalizeRolePrefix(userRole)
     return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
   }
 
-  // Root path - redirect to appropriate dashboard
   if (pathname === '/') {
-    const rolePrefix = userRole === 'super_admin' ? 'super-admin' : userRole
+    const rolePrefix = normalizeRolePrefix(userRole)
     return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
   }
 
   return supabaseResponse
+}
+
+function normalizeRolePrefix(role: string): string {
+  if (role === 'super_admin') return 'super-admin'
+  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
+  return role
 }
 
 export const config = {

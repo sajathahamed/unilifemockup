@@ -6,7 +6,8 @@ const ROLE_COLORS: Record<string, string> = {
   student: '#0ea5e9',
   lecturer: '#6366f1',
   admin: '#3b82f6',
-  vendor: '#10b981',
+  'vendor-food': '#10b981',
+  'vendor-laundry': '#14b8a6',
   delivery: '#f59e0b',
   super_admin: '#a855f7',
 }

@@ -76,18 +76,25 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
     { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
-  vendor: [
+  'vendor-food': [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
+  'vendor-laundry': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
     { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
-    { label: 'Menu', href: '/vendor/menu', icon: Utensils },
-    { label: 'Store Settings', href: '/vendor/settings', icon: Store },
-    { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
@@ -108,9 +115,9 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
   ],
 }
 
@@ -141,9 +148,17 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
-  vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
+}
+
+/** Role segment used in URLs (vendor-food/vendor-laundry -> vendor) */
+function rolePathSegment(role: UserRole): string {
+  if (role === 'super_admin') return 'super-admin'
+  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
+  return role.replace('_', '-')
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -155,6 +170,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
   const [supabase, setSupabase] = useState<any | null>(null)
   const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
+  const pathSegment = rolePathSegment(user.role)
 
   useEffect(() => {
     setSupabase(createClient())
@@ -188,8 +204,9 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
     return () => window.removeEventListener('unilife-nav-invalidated', onNavInvalidated)
   }, [])
 
-  const navItems: NavItem[] = apiNavItems !== null && apiNavItems !== undefined ? apiNavItems : roleNavItems[user.role]
-  const roleInfo = roleConfig[user.role]
+  const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
+  const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
+  const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -235,7 +252,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <Link href={`/${user.role.replace('_', '-')}/dashboard`} className="flex items-center gap-3">
+            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
@@ -317,7 +334,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
                   >
                     <Link
-                      href={`/${user.role.replace('_', '-')}/settings`}
+                      href={`/${pathSegment}/settings`}
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />

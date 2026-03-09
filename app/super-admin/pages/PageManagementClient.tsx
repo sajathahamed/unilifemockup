@@ -29,7 +29,8 @@ const ROLE_LABELS: Record<string, string> = {
   student: 'Student',
   lecturer: 'Lecturer',
   admin: 'Admin',
-  vendor: 'Vendor',
+  'vendor-food': 'Food Vendor',
+  'vendor-laundry': 'Laundry Vendor',
   delivery: 'Delivery',
   super_admin: 'Super Admin',
 }

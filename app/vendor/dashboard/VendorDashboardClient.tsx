@@ -18,26 +18,58 @@ import Link from 'next/link'
 
 type FoodStall = { id: number; shop_name: string; owner_email: string }
 type LaundryShop = { id: number; shop_name: string; owner_email: string }
+type FoodOrder = { id: number; customer_name: string; items: string; total_amount: number; status: string; created_at: string }
+type LaundryOrder = { id: number; customer_name: string; service: string; items_count?: number; total_amount: number; status: string; created_at: string }
 
-export default function VendorDashboardClient({ userName }: { userName: string }) {
+function timeAgo(dateStr: string): string {
+  const d = new Date(dateStr).getTime()
+  const diff = Math.floor((Date.now() - d) / 60000)
+  if (diff < 1) return 'Just now'
+  if (diff < 60) return `${diff} mins ago`
+  if (diff < 1440) return `${Math.floor(diff / 60)} hrs ago`
+  return `${Math.floor(diff / 1440)} days ago`
+}
+
+export default function VendorDashboardClient({ userName, userRole }: { userName: string; userRole?: string }) {
   const [foodStalls, setFoodStalls] = useState<FoodStall[]>([])
   const [laundryShops, setLaundryShops] = useState<LaundryShop[]>([])
+  const [foodOrders, setFoodOrders] = useState<FoodOrder[]>([])
+  const [laundryOrders, setLaundryOrders] = useState<LaundryOrder[]>([])
+  const [menuItems, setMenuItems] = useState<{ name: string; price: number }[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/vendor/shops')
-      .then((r) => (r.ok ? r.json() : { food_stalls: [], laundry_shops: [] }))
-      .then((data) => {
-        setFoodStalls(data.food_stalls ?? [])
-        setLaundryShops(data.laundry_shops ?? [])
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+    Promise.all([
+      fetch('/api/vendor/shops').then((r) => (r.ok ? r.json() : { food_stalls: [], laundry_shops: [] })),
+      userRole === 'vendor-food' ? fetch('/api/vendor/food-orders').then((r) => (r.ok ? r.json() : { orders: [] })) : Promise.resolve({ orders: [] }),
+      userRole === 'vendor-food' ? fetch('/api/vendor/menu-items').then((r) => (r.ok ? r.json() : { items: [] })) : Promise.resolve({ items: [] }),
+      userRole === 'vendor-laundry' ? fetch('/api/vendor/laundry-orders').then((r) => (r.ok ? r.json() : { orders: [] })) : Promise.resolve({ orders: [] }),
+    ]).then(([shopRes, foodOrdRes, menuRes, laundryOrdRes]) => {
+      const shops = shopRes as { food_stalls: FoodStall[]; laundry_shops: LaundryShop[] }
+      setFoodStalls(shops.food_stalls ?? [])
+      setLaundryShops(shops.laundry_shops ?? [])
+      setFoodOrders((foodOrdRes as { orders: FoodOrder[] }).orders ?? [])
+      setMenuItems(((menuRes as { items: { name: string; price: number }[] }).items ?? []).map((m) => ({ name: m.name, price: m.price })))
+      setLaundryOrders((laundryOrdRes as { orders: LaundryOrder[] }).orders ?? [])
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [userRole])
 
   const hasFood = foodStalls.length > 0
   const hasLaundry = laundryShops.length > 0
   const hasShops = hasFood || hasLaundry
+
+  const today = new Date().toISOString().slice(0, 10)
+  const foodToday = foodOrders.filter((o) => o.created_at?.slice(0, 10) === today)
+  const laundryToday = laundryOrders.filter((o) => o.created_at?.slice(0, 10) === today)
+  const todayOrderCount = foodToday.length + laundryToday.length
+  const pendingCount = [...foodOrders, ...laundryOrders].filter((o) => !['completed', 'cancelled'].includes(o.status)).length
+  const todayRevenue = foodToday.reduce((s, o) => s + Number(o.total_amount), 0) + laundryToday.reduce((s, o) => s + Number(o.total_amount), 0)
+  const weekRevenue = [...foodOrders, ...laundryOrders]
+    .filter((o) => {
+      const d = new Date(o.created_at).getTime()
+      return d > Date.now() - 7 * 24 * 60 * 60 * 1000
+    })
+    .reduce((s, o) => s + Number(o.total_amount), 0)
 
   if (loading) {
     return (
@@ -62,10 +94,10 @@ export default function VendorDashboardClient({ userName }: { userName: string }
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Package} label="Today's Orders" value="24" color="bg-blue-500" />
-        <StatCard icon={Clock} label="Pending" value="8" color="bg-yellow-500" />
-        <StatCard icon={DollarSign} label="Today's Revenue" value="RS 45,200" color="bg-green-500" />
-        <StatCard icon={TrendingUp} label="This Week" value="RS 312,500" color="bg-purple-500" />
+        <StatCard icon={Package} label="Today's Orders" value={String(todayOrderCount)} color="bg-blue-500" />
+        <StatCard icon={Clock} label="Pending" value={String(pendingCount)} color="bg-yellow-500" />
+        <StatCard icon={DollarSign} label="Today's Revenue" value={`RS ${todayRevenue.toLocaleString()}`} color="bg-green-500" />
+        <StatCard icon={TrendingUp} label="This Week" value={`RS ${weekRevenue.toLocaleString()}`} color="bg-purple-500" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -83,8 +115,19 @@ export default function VendorDashboardClient({ userName }: { userName: string }
               Your shops: {foodStalls.map((s) => s.shop_name).join(', ')}
             </p>
             <div className="space-y-3">
-              <OrderCard id="#ORD-2451" items="Jollof Rice, Chicken" customer="John D." time="5 mins ago" status="new" />
-              <OrderCard id="#ORD-2450" items="Fried Rice, Fish" customer="Sarah M." time="12 mins ago" status="preparing" />
+              {foodOrders.slice(0, 5).filter((o) => !['completed', 'cancelled'].includes(o.status)).map((o) => {
+                let itemsStr = '—'
+                try {
+                  const arr = o.items ? JSON.parse(o.items) : []
+                  itemsStr = Array.isArray(arr) ? arr.map((i: { name: string; quantity?: number }) => `${i.name}${i.quantity > 1 ? ` x${i.quantity}` : ''}`).join(', ') : '—'
+                } catch { /* ignore */ }
+                return (
+                  <OrderCard key={o.id} id={`#ORD-${o.id}`} items={itemsStr} customer={o.customer_name} time={timeAgo(o.created_at)} status={o.status as 'new' | 'preparing' | 'ready'} />
+                )
+              })}
+              {foodOrders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length === 0 && (
+                <p className="text-sm text-gray-500 py-4">No active orders</p>
+              )}
             </div>
           </div>
         )}
@@ -103,7 +146,12 @@ export default function VendorDashboardClient({ userName }: { userName: string }
               Your shops: {laundryShops.map((s) => s.shop_name).join(', ')}
             </p>
             <div className="space-y-3">
-              <OrderCard id="#LND-101" items="Wash & Iron (5 kg)" customer="Mike O." time="20 mins ago" status="ready" />
+              {laundryOrders.slice(0, 5).filter((o) => !['completed', 'cancelled'].includes(o.status)).map((o) => (
+                <OrderCard key={o.id} id={`#LND-${o.id}`} items={`${o.service} (${o.items_count ?? 1} items)`} customer={o.customer_name} time={timeAgo(o.created_at)} status={(o.status === 'washing' || o.status === 'ironing' ? 'preparing' : o.status === 'ready' ? 'ready' : 'new') as 'new' | 'preparing' | 'ready'} />
+              ))}
+              {laundryOrders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length === 0 && (
+                <p className="text-sm text-gray-500 py-4">No active orders</p>
+              )}
             </div>
           </div>
         )}
@@ -136,9 +184,9 @@ export default function VendorDashboardClient({ userName }: { userName: string }
             <div className="space-y-3">
               {hasFood && <ActionButton href="/vendor/orders" label="Food Orders" icon={Package} />}
               {hasLaundry && <ActionButton href="/vendor/laundry/orders" label="Laundry Orders" icon={Truck} />}
-              {hasFood && <ActionButton href="/vendor/menu" label="Manage Menu" icon={Plus} />}
-              <ActionButton href="/vendor/settings" label="Store Settings" icon={Store} />
-              <ActionButton href="/vendor/analytics" label="View Analytics" icon={TrendingUp} />
+              {hasFood && <ActionButton href="/vendor/products" label="Manage Menu" icon={Plus} />}
+              <ActionButton href="/vendor/my-store" label="Store Settings" icon={Store} />
+              <ActionButton href="/vendor/sales-analytics" label="View Analytics" icon={TrendingUp} />
             </div>
           </div>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -158,15 +206,17 @@ export default function VendorDashboardClient({ userName }: { userName: string }
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Popular Items Today</h2>
-            <Link href="/vendor/menu" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1">
+            <Link href="/vendor/products" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1">
               Manage menu <ArrowRight size={14} />
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <PopularItem name="Jollof Rice" orders={15} price="RS 1,200" />
-            <PopularItem name="Fried Rice" orders={12} price="RS 1,500" />
-            <PopularItem name="Chicken & Chips" orders={10} price="RS 2,000" />
-            <PopularItem name="Shawarma" orders={8} price="RS 1,800" />
+            {menuItems.slice(0, 4).map((m) => (
+              <PopularItem key={m.name} name={m.name} orders={0} price={`RS ${Number(m.price).toLocaleString()}`} />
+            ))}
+            {menuItems.length === 0 && (
+              <p className="col-span-2 text-sm text-gray-500 py-4">Add menu items in Products to see them here.</p>
+            )}
           </div>
         </div>
       )}
