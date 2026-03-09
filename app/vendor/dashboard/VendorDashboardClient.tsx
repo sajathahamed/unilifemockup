@@ -119,7 +119,7 @@ export default function VendorDashboardClient({ userName, userRole }: { userName
                 let itemsStr = '—'
                 try {
                   const arr = o.items ? JSON.parse(o.items) : []
-                  itemsStr = Array.isArray(arr) ? arr.map((i: { name: string; quantity?: number }) => `${i.name}${i.quantity > 1 ? ` x${i.quantity}` : ''}`).join(', ') : '—'
+                  itemsStr = Array.isArray(arr) ? arr.map((i: { name: string; quantity?: number }) => `${i.name}${(i.quantity ?? 1) > 1 ? ` x${i.quantity ?? 1}` : ''}`).join(', ') : '—'
                 } catch { /* ignore */ }
                 return (
                   <OrderCard key={o.id} id={`#ORD-${o.id}`} items={itemsStr} customer={o.customer_name} time={timeAgo(o.created_at)} status={o.status as 'new' | 'preparing' | 'ready'} />

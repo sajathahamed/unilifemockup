@@ -10,7 +10,9 @@ const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:
 type ItineraryItem = { day_number: number; activity: string }
 type TripRow = { id: number; destination: string; organizer_name: string; organizer_email: string; address?: string; trip_type?: string }
 
-const emptyForm = () => ({
+type TripStatus = 'draft' | 'published' | 'archived'
+
+const emptyForm = (): Record<string, string> & { status: TripStatus } => ({
   destination: '',
   organizer_name: '',
   organizer_email: '',
@@ -33,7 +35,7 @@ const emptyForm = () => ({
   logo_url: '',
   banner_url: '',
   gallery_urls: '',
-  status: 'draft' as const,
+  status: 'draft',
 })
 
 export default function AdminTripAddForm() {
@@ -95,7 +97,7 @@ export default function AdminTripAddForm() {
         logo_url: trip.logo_url || '',
         banner_url: trip.banner_url || '',
         gallery_urls: Array.isArray(gallery) ? gallery.join('\n') : '',
-        status: (trip.status || 'draft') as 'draft' | 'published' | 'archived',
+        status: ((trip.status || 'draft') as TripStatus),
       })
       const items = trip.itinerary ?? []
       setItinerary(items.length > 0 ? items.map((d: { day_number: number; activity: string }) => ({ day_number: d.day_number, activity: d.activity || '' })) : [{ day_number: 1, activity: '' }])
@@ -377,7 +379,7 @@ export default function AdminTripAddForm() {
         <section className={SECTION_STYLE}>
           <div>
             <label className={LABEL_STYLE}>Status</label>
-            <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className={INPUT_STYLE}>
+            <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as TripStatus }))} className={INPUT_STYLE}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="archived">Archived</option>

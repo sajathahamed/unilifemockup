@@ -64,18 +64,19 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   })
 
   const openAddModal = () => {
-    setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '' })
+    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: p.stall_id || stalls[0]?.id || 0 }))
     setShowAddModal(true)
   }
 
   const openEditModal = (p: Product) => {
-    setForm({
+    setForm((prev) => ({
       name: p.name,
       category: p.category,
       price: p.price,
       inStock: p.inStock,
       description: (p as Product & { description?: string }).description || '',
-    })
+      stall_id: (p as Product & { food_stall_id?: number }).food_stall_id ?? prev.stall_id ?? stalls[0]?.id ?? 0,
+    }))
     setEditingProduct(p)
   }
 
