@@ -82,6 +82,13 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
     { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
+  vendor: [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
   'vendor-food': [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
     { label: 'Orders', href: '/vendor/orders', icon: Package },
@@ -149,6 +156,7 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
+  vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },

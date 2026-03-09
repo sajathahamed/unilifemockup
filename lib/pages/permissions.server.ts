@@ -61,7 +61,15 @@ export async function getPagesWithPermissionsForRole(role: UserRole): Promise<
   const supabase = await createClient()
   const { data: pages } = await supabase.from('app_pages').select('*').eq('role', role).order('sort_order')
   if (!pages?.length) {
-    return getAllPagesForRole(role).map((p) => ({ ...p, role: p.role, enabled: true }))
+    return getAllPagesForRole(role).map((p) => ({
+      page_id: p.id,
+      path: p.path,
+      label: p.label,
+      role: p.role,
+      icon: p.icon,
+      sort_order: p.sort_order,
+      enabled: true,
+    }))
   }
   const { data: perms } = await supabase
     .from('role_page_permissions')

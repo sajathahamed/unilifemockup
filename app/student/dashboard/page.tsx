@@ -124,7 +124,7 @@ function StatCard({
   value,
   color,
 }: {
-  icon: React.ComponentType<{ size?: number }>
+  icon: React.ElementType
   label: string
   value: string
   color: string

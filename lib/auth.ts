@@ -1,5 +1,5 @@
 // User roles as defined in the database
-export type UserRole = 'student' | 'lecturer' | 'admin' | 'vendor' | 'delivery' | 'super_admin'
+export type UserRole = 'student' | 'lecturer' | 'admin' | 'vendor' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
 
 // User profile from the users table (matches database schema)
 export interface UserProfile {
@@ -21,6 +21,8 @@ export function getRoleBasedRedirect(role: UserRole): string {
     lecturer: '/lecturer/dashboard',
     admin: '/admin/dashboard',
     vendor: '/vendor/dashboard',
+    'vendor-food': '/vendor/dashboard',
+    'vendor-laundry': '/vendor/dashboard',
     delivery: '/delivery/dashboard',
     super_admin: '/super-admin/dashboard',
   }
@@ -34,7 +36,11 @@ export function getRoleBasedRedirect(role: UserRole): string {
 export function hasRoleAccess(userRole: UserRole, requiredRole: UserRole): boolean {
   // Super admin has access to everything
   if (userRole === 'super_admin') return true
-  
+  // vendor-food and vendor-laundry can access vendor routes
+  if (userRole === 'vendor-food' || userRole === 'vendor-laundry') {
+    if (requiredRole === 'vendor' || requiredRole === 'vendor-food' || requiredRole === 'vendor-laundry') return true
+  }
+  if (requiredRole === 'vendor' && (userRole === 'vendor-food' || userRole === 'vendor-laundry')) return true
   // Otherwise, must match exactly
   return userRole === requiredRole
 }

@@ -56,6 +56,8 @@ export function PageManagementClient({ roles }: PageManagementClientProps) {
     lecturer: 'Lecturer',
     admin: 'Admin',
     vendor: 'Vendor',
+    'vendor-food': 'Food Vendor',
+    'vendor-laundry': 'Laundry Vendor',
     delivery: 'Delivery',
     super_admin: 'Super Admin',
   }
