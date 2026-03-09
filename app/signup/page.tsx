@@ -9,11 +9,12 @@ import { createClient } from '@/lib/supabase/client'
 import { getRoleBasedRedirect, UserRole } from '@/lib/auth'
 import { AuthLayout, GoogleButton, Button, Input, Select, Alert } from '@/components'
 
-// Available roles for signup
+// Available roles for signup (no generic vendor - only vendor-food, vendor-laundry)
 const roleOptions = [
   { value: 'student', label: 'Student' },
   { value: 'lecturer', label: 'Lecturer' },
-  { value: 'vendor', label: 'Food Vendor' },
+  { value: 'vendor-food', label: 'Food Vendor' },
+  { value: 'vendor-laundry', label: 'Laundry Vendor' },
   { value: 'delivery', label: 'Delivery Rider' },
 ]
 

@@ -10,7 +10,8 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   student: 'Access to courses, timetable, study groups, marketplace, food order, laundry, and rides.',
   lecturer: 'Manage courses, schedule, students, and assignments.',
   admin: 'Campus management: users, timetable, reports, announcements. Can add laundry shops, food stalls, timetable, trips, and users.',
-  vendor: 'Manage food and laundry orders, menu, store settings, and analytics.',
+  'vendor-food': 'Manage food orders, products, fulfillment, store settings, and sales analytics.',
+  'vendor-laundry': 'Manage laundry orders, products, fulfillment, store settings, and sales analytics.',
   delivery: 'View and complete food and laundry deliveries and earnings.',
   super_admin: 'Full system access: all users, roles, analytics, settings, and page permissions.',
 }
@@ -19,7 +20,9 @@ export default async function SuperAdminRolesPage() {
   const user = await requireRole('super_admin')
 
   const roleInfo = ROLES.map((role) => {
-    const pageCount = PAGE_REGISTRY.filter((p) => p.role === role).length
+    const pageCount = role === 'vendor-laundry'
+      ? PAGE_REGISTRY.filter((p) => p.role === 'vendor-food').length
+      : PAGE_REGISTRY.filter((p) => p.role === role).length
     return {
       role,
       label: role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -103,8 +106,10 @@ function getRoleBadgeClass(role: UserRole): string {
       return 'bg-purple-100 text-purple-800'
     case 'admin':
       return 'bg-blue-100 text-blue-800'
-    case 'vendor':
+    case 'vendor-food':
       return 'bg-emerald-100 text-emerald-800'
+    case 'vendor-laundry':
+      return 'bg-teal-100 text-teal-800'
     case 'delivery':
       return 'bg-orange-100 text-orange-800'
     case 'lecturer':

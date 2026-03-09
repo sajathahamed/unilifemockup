@@ -99,7 +99,7 @@ export default async function SuperAdminDashboard() {
                 positive
               />
               <MetricCard label="App Pages" value={String(pagesCount)} change="Controlled by permissions" />
-              <MetricCard label="Roles" value="6" change="student, lecturer, admin, vendor, delivery, super_admin" />
+              <MetricCard label="Roles" value="7" change="student, lecturer, admin, vendor-food, vendor-laundry, delivery, super_admin" />
               <MetricCard label="Page Permissions" value="DB-driven" change="Per-role toggles" positive />
             </div>
 
@@ -173,8 +173,8 @@ export default async function SuperAdminDashboard() {
             />
             <RoleStatCard
               role="Vendors"
-              count={roleCounts.vendor ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.vendor ?? 0) / userCount) * 100) : 0}
+              count={(roleCounts['vendor-food'] ?? 0) + (roleCounts['vendor-laundry'] ?? 0)}
+              percentage={userCount ? Math.round((((roleCounts['vendor-food'] ?? 0) + (roleCounts['vendor-laundry'] ?? 0)) / userCount) * 100) : 0}
               color="bg-green-500"
             />
             <RoleStatCard

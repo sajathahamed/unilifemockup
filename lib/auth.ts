@@ -1,5 +1,8 @@
-// User roles as defined in the database
-export type UserRole = 'student' | 'lecturer' | 'admin' | 'vendor' | 'delivery' | 'super_admin'
+// User roles as defined in the database (no generic 'vendor' - only vendor-food and vendor-laundry)
+export type UserRole = 'student' | 'lecturer' | 'admin' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
+
+/** Role required for route protection - 'vendor' means any vendor subtype (vendor-food, vendor-laundry) */
+export type RequiredRole = UserRole | 'vendor'
 
 // User profile from the users table (matches database schema)
 export interface UserProfile {
@@ -20,21 +23,23 @@ export function getRoleBasedRedirect(role: UserRole): string {
     student: '/student/dashboard',
     lecturer: '/lecturer/dashboard',
     admin: '/admin/dashboard',
-    vendor: '/vendor/dashboard',
+    'vendor-food': '/vendor/dashboard',
+    'vendor-laundry': '/vendor/dashboard',
     delivery: '/delivery/dashboard',
     super_admin: '/super-admin/dashboard',
   }
-  
+
   return roleRoutes[role] || '/login'
 }
 
 /**
  * Check if a user has access to a specific role's routes
  */
-export function hasRoleAccess(userRole: UserRole, requiredRole: UserRole): boolean {
-  // Super admin has access to everything
+export function hasRoleAccess(userRole: UserRole, requiredRole: RequiredRole): boolean {
   if (userRole === 'super_admin') return true
-  
-  // Otherwise, must match exactly
+  // 'vendor' required = any vendor subtype (vendor-food, vendor-laundry)
+  if (requiredRole === 'vendor') {
+    return userRole === 'vendor-food' || userRole === 'vendor-laundry'
+  }
   return userRole === requiredRole
 }

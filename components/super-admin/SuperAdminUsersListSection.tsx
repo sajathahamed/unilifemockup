@@ -23,7 +23,7 @@ export default function SuperAdminUsersListSection({ users, title = 'System-wide
   const [vendorEmail, setVendorEmail] = useState('')
 
   const vendors = useMemo(
-    () => users.filter((u) => u.role === 'vendor').map((u) => ({ id: u.id, name: u.name, email: u.email })),
+    () => users.filter((u) => u.role === 'vendor-food' || u.role === 'vendor-laundry').map((u) => ({ id: u.id, name: u.name, email: u.email })),
     [users]
   )
 

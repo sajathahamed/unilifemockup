@@ -12,7 +12,7 @@ export default async function VendorDashboard() {
           <h1 className="text-2xl font-bold">Welcome, {user.name.split(' ')[0]}! 🏪</h1>
           <p className="mt-1 text-green-100">Manage your store and track orders in real-time.</p>
         </div>
-        <VendorDashboardClient userName={user.name} />
+        <VendorDashboardClient userName={user.name} userRole={user.role} />
       </div>
     </DashboardLayout>
   )

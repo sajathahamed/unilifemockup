@@ -76,18 +76,25 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
     { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
-  vendor: [
+  'vendor-food': [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
+  'vendor-laundry': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
     { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
-    { label: 'Menu', href: '/vendor/menu', icon: Utensils },
-    { label: 'Store Settings', href: '/vendor/settings', icon: Store },
-    { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
@@ -108,9 +115,9 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
     { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Add Laundry Shop', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Add Food Stall', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Add Trip Location', href: '/admin/trips/add', icon: MapPin },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
   ],
 }
 
@@ -141,19 +148,17 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
-  vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
 }
 
-function getRoleFromHref(href: string): UserRole | null {
-  if (href.startsWith('/student/')) return 'student'
-  if (href.startsWith('/lecturer/')) return 'lecturer'
-  if (href.startsWith('/admin/')) return 'admin'
-  if (href.startsWith('/vendor/')) return 'vendor'
-  if (href.startsWith('/delivery/')) return 'delivery'
-  if (href.startsWith('/super-admin/')) return 'super_admin'
-  return null
+/** Role segment used in URLs (vendor-food/vendor-laundry -> vendor) */
+function rolePathSegment(role: UserRole): string {
+  if (role === 'super_admin') return 'super-admin'
+  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
+  return role.replace('_', '-')
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -166,7 +171,8 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const [supabase, setSupabase] = useState<any | null>(null)
-  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set())
+  const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
+  const pathSegment = rolePathSegment(user.role)
 
   useEffect(() => {
     setSupabase(createClient())
@@ -219,6 +225,10 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   useEffect(() => {
     setExpandedRoles(new Set([user.role]))
   }, [])
+
+  const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
+  const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
+  const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -277,7 +287,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <Link href={`/${user.role.replace('_', '-')}/dashboard`} className="flex items-center gap-3">
+            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
@@ -294,12 +304,8 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">
             <ul className="space-y-1">
-              {allRoles.map((role) => {
-                const isExpanded = expandedRoles.has(role)
-                const config = roleConfig[role]
-                const RoleIcon = roleIcons[role]
-                const items = roleNavItems[role]
-                
+              {navItems.map((item) => {
+                const isActive = pathname === item.href
                 return (
                   <li key={role}>
                     {/* Role group header */}
@@ -307,56 +313,9 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                       onClick={() => toggleRoleExpansion(role)}
                       className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-all duration-200"
                     >
-                      <div className="flex items-center gap-3">
-                        <RoleIcon size={20} />
-                        <span>{config.label}</span>
-                      </div>
-                      <ChevronDown
-                        size={16}
-                        className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-                    
-                    {/* Collapsible items */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.ul
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden ml-4 mt-1 space-y-1"
-                        >
-                          {items.map((item) => {
-                            const isActive = pathname === item.href
-                            const isLoading = isNavigating && navigatingTo === item.href
-                            return (
-                              <li key={item.href}>
-                                <Link
-                                  href={item.href}
-                                  onClick={() => handleNavigation(item.href)}
-                                  className={`
-                                    flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200
-                                    ${isActive
-                                      ? 'bg-primary text-white shadow-sm'
-                                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                    }
-                                    ${isLoading ? 'opacity-70' : ''}
-                                  `}
-                                >
-                                  {isLoading ? (
-                                    <div className="w-[18px] h-[18px] border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                                  ) : (
-                                    <item.icon size={18} />
-                                  )}
-                                  <span>{item.label}</span>
-                                </Link>
-                              </li>
-                            )
-                          })}
-                        </motion.ul>
-                      )}
-                    </AnimatePresence>
+                      <item.icon size={20} />
+                      <span>{item.label}</span>
+                    </Link>
                   </li>
                 )
               })}
@@ -404,7 +363,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
                   >
                     <Link
-                      href={`/${user.role.replace('_', '-')}/settings`}
+                      href={`/${pathSegment}/settings`}
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />

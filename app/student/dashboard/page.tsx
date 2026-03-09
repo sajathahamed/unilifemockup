@@ -125,7 +125,8 @@ function StatCard({
   value,
   color,
 }: {
-  icon: LucideIcon
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: React.ComponentType<any>
   label: string
   value: string
   color: string

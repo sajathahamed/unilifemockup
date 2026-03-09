@@ -118,7 +118,8 @@ export default function AnnouncementsClient() {
               <option value="student">Students</option>
               <option value="lecturer">Lecturers</option>
               <option value="admin">Admins</option>
-              <option value="vendor">Vendors</option>
+              <option value="vendor-food">Food Vendors</option>
+              <option value="vendor-laundry">Laundry Vendors</option>
               <option value="delivery">Delivery</option>
             </select>
           </div>

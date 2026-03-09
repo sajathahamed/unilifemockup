@@ -31,7 +31,8 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
     const roleOptions = [
         { value: 'student', label: 'Student' },
         { value: 'lecturer', label: 'Lecturer' },
-        { value: 'vendor', label: 'Vendor Admin' },
+        { value: 'vendor-food', label: 'Food Vendor' },
+        { value: 'vendor-laundry', label: 'Laundry Vendor' },
         { value: 'delivery', label: 'Delivery Rider' },
         { value: 'admin', label: 'Admin' },
         { value: 'super_admin', label: 'Super Admin' },

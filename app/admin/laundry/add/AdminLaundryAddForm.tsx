@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Truck, Loader2, Save, Plus, Trash2, MapPin } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Truck, Loader2, Save, Plus, Trash2, MapPin, Edit2 } from 'lucide-react'
 
 const SECTION_STYLE = 'border-b border-gray-200 pb-6 last:border-0'
 const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1'
@@ -10,31 +10,115 @@ const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:
 const SERVICE_OPTIONS = ['Wash', 'Dry Clean', 'Iron', 'Express Service']
 
 type PriceItem = { service: string; price: string }
+type LaundryRow = { id: number; shop_name: string; owner_name: string; owner_email: string; phone?: string; address?: string }
+
+const emptyForm = () => ({
+  shop_name: '',
+  owner_name: '',
+  owner_email: '',
+  phone: '',
+  whatsapp: '',
+  address: '',
+  city: '',
+  area: '',
+  lat: '',
+  lng: '',
+  services: [] as string[],
+  pickup_delivery: true,
+  delivery_radius: '',
+  opening_time: '',
+  closing_time: '',
+  logo: '',
+  banner: '',
+  gallery: [] as string[],
+})
 
 export default function AdminLaundryAddForm() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [list, setList] = useState<LaundryRow[]>([])
+  const [loadingList, setLoadingList] = useState(true)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState({
-    shop_name: '',
-    owner_name: '',
-    owner_email: '',
-    phone: '',
-    whatsapp: '',
-    address: '',
-    city: '',
-    area: '',
-    lat: '',
-    lng: '',
-    services: [] as string[],
-    pickup_delivery: true,
-    delivery_radius: '',
-    opening_time: '',
-    closing_time: '',
-    logo: '',
-    banner: '',
-    gallery: [] as string[],
+    ...emptyForm(),
   })
   const [priceItems, setPriceItems] = useState<PriceItem[]>([{ service: 'Wash', price: '' }])
+
+  const fetchList = () => {
+    setLoadingList(true)
+    fetch('/api/admin/laundry')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setList(Array.isArray(data) ? data : []))
+      .catch(() => setList([]))
+      .finally(() => setLoadingList(false))
+  }
+
+  useEffect(() => {
+    fetchList()
+  }, [])
+
+  const resetForm = () => {
+    setForm(emptyForm())
+    setPriceItems([{ service: 'Wash', price: '' }])
+    setEditingId(null)
+  }
+
+  const handleEdit = async (id: number) => {
+    try {
+      const res = await fetch(`/api/admin/laundry/${id}`)
+      if (!res.ok) throw new Error('Failed to load')
+      const shop = await res.json()
+      const ot = shop.opening_time
+      const ct = shop.closing_time
+      setForm({
+        shop_name: shop.shop_name || '',
+        owner_name: shop.owner_name || '',
+        owner_email: shop.owner_email || '',
+        phone: shop.phone || '',
+        whatsapp: shop.whatsapp || '',
+        address: shop.address || '',
+        city: shop.city || '',
+        area: shop.area || '',
+        lat: shop.lat != null ? String(shop.lat) : '',
+        lng: shop.lng != null ? String(shop.lng) : '',
+        services: Array.isArray(shop.services) ? shop.services : [],
+        pickup_delivery: shop.pickup_delivery !== false,
+        delivery_radius: shop.delivery_radius != null ? String(shop.delivery_radius) : '',
+        opening_time: ot ? (typeof ot === 'string' ? ot.slice(0, 5) : '') : '',
+        closing_time: ct ? (typeof ct === 'string' ? ct.slice(0, 5) : '') : '',
+        logo: shop.logo || '',
+        banner: shop.banner || '',
+        gallery: Array.isArray(shop.gallery) ? shop.gallery : [],
+      })
+      const pl = shop.price_list
+      if (pl && typeof pl === 'object' && Object.keys(pl).length > 0) {
+        setPriceItems(Object.entries(pl).map(([service, price]) => ({ service, price: String(price ?? '') })))
+      } else {
+        setPriceItems([{ service: 'Wash', price: '' }])
+      }
+      setEditingId(id)
+      setMessage(null)
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to load laundry shop' })
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this laundry shop? This cannot be undone.')) return
+    try {
+      const res = await fetch(`/api/admin/laundry/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Laundry shop deleted.' })
+        resetForm()
+        fetchList()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setMessage({ type: 'error', text: data?.message || 'Delete failed' })
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error' })
+    }
+  }
 
   const toggleService = (s: string) => {
     setForm((p) => ({
@@ -73,24 +157,26 @@ export default function AdminLaundryAddForm() {
           if (!isNaN(val)) priceList[p.service.trim()] = val
         }
       })
-      const res = await fetch('/api/admin/laundry', {
-        method: 'POST',
+      const payload = {
+        ...form,
+        lat: form.lat ? parseFloat(form.lat) : null,
+        lng: form.lng ? parseFloat(form.lng) : null,
+        delivery_radius: form.delivery_radius ? parseFloat(form.delivery_radius) : null,
+        price_list: Object.keys(priceList).length ? priceList : null,
+      }
+      const url = editingId ? `/api/admin/laundry/${editingId}` : '/api/admin/laundry'
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          lat: form.lat ? parseFloat(form.lat) : null,
-          lng: form.lng ? parseFloat(form.lng) : null,
-          delivery_radius: form.delivery_radius ? parseFloat(form.delivery_radius) : null,
-          price_list: Object.keys(priceList).length ? priceList : null,
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        setMessage({ type: 'success', text: 'Laundry shop registered successfully.' })
-        setForm({ shop_name: '', owner_name: '', owner_email: '', phone: '', whatsapp: '', address: '', city: '', area: '', lat: '', lng: '', services: [], pickup_delivery: true, delivery_radius: '', opening_time: '', closing_time: '', logo: '', banner: '', gallery: [] })
-        setPriceItems([{ service: 'Wash', price: '' }])
+        setMessage({ type: 'success', text: editingId ? 'Laundry shop updated.' : 'Laundry shop registered successfully.' })
+        resetForm()
+        fetchList()
       } else {
-        setMessage({ type: 'error', text: data?.message || 'Failed to register' })
+        setMessage({ type: 'error', text: data?.message || 'Failed' })
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error' })
@@ -100,6 +186,7 @@ export default function AdminLaundryAddForm() {
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-4">
         <div className="flex items-center gap-3">
@@ -133,7 +220,7 @@ export default function AdminLaundryAddForm() {
             </div>
             <div>
               <label className={LABEL_STYLE}>Owner Email *</label>
-              <input type="email" value={form.owner_email} onChange={(e) => setForm((p) => ({ ...p, owner_email: e.target.value }))} placeholder="vendor@example.com (links to login)" required className={INPUT_STYLE} />
+              <input type="email" value={form.owner_email} onChange={(e) => setForm((p) => ({ ...p, owner_email: e.target.value }))} placeholder="vendor@example.com (links to login)" required className={INPUT_STYLE} suppressHydrationWarning />
             </div>
             <div>
               <label className={LABEL_STYLE}>Phone Number</label>
@@ -249,13 +336,63 @@ export default function AdminLaundryAddForm() {
           </div>
         </section>
 
-        <div className="pt-4">
+        <div className="pt-4 flex gap-3">
           <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50">
             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-            Register Laundry Shop
+            {editingId ? 'Update Laundry Shop' : 'Register Laundry Shop'}
           </button>
+          {editingId && (
+            <button type="button" onClick={resetForm} className="px-6 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50">
+              Create New
+            </button>
+          )}
         </div>
       </div>
     </form>
+
+    <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <h2 className="text-lg font-semibold text-gray-900">Assigned Laundry Shops (ID below)</h2>
+        <p className="text-sm text-gray-500">Edit or delete existing shops. IDs are shown for reference.</p>
+      </div>
+      {loadingList ? (
+        <div className="p-8 text-center text-gray-500"><Loader2 size={24} className="animate-spin mx-auto" /></div>
+      ) : list.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">No laundry shops yet. Create one above.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left py-3 px-4 font-medium text-gray-700">ID</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Shop Name</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Owner</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Email</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Address</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((row) => (
+                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-mono text-sm">{row.id}</td>
+                  <td className="py-3 px-4 font-medium">{row.shop_name}</td>
+                  <td className="py-3 px-4">{row.owner_name}</td>
+                  <td className="py-3 px-4 text-sm">{row.owner_email}</td>
+                  <td className="py-3 px-4 text-sm text-gray-500 truncate max-w-[180px]">{row.address || '—'}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => handleEdit(row.id)} className="p-2 text-primary hover:bg-primary/10 rounded-lg" title="Edit"><Edit2 size={16} /></button>
+                      <button type="button" onClick={() => handleDelete(row.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Delete"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+    </>
   )
 }

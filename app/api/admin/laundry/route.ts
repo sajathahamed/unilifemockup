@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
 
+/** GET /api/admin/laundry — list all laundry shops (admin/super_admin) */
+export async function GET() {
+  try {
+    const user = await verifyRole('admin')
+    if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+
+    const client = await createClient()
+    const { data, error } = await client
+      .from('laundry_shops')
+      .select('*')
+      .order('id', { ascending: false })
+
+    if (error) return NextResponse.json({ message: error.message }, { status: 400 })
+    return NextResponse.json(data ?? [])
+  } catch (e) {
+    console.error('Admin laundry GET error:', e)
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  }
+}
+
 function parseTime(v: unknown): string | null {
   if (v == null || v === '') return null
   const s = String(v).trim()
@@ -42,13 +62,21 @@ export async function POST(request: NextRequest) {
     if (!owner_name?.trim()) return NextResponse.json({ message: 'Owner name is required' }, { status: 400 })
     if (!owner_email?.trim()) return NextResponse.json({ message: 'Owner email is required (links to login)' }, { status: 400 })
 
+    const email = String(owner_email).trim().toLowerCase()
     const client = await createClient()
+
+    // One email cannot be assigned to both food and laundry — check food_stalls
+    const { data: existingFood } = await client.from('food_stalls').select('id').eq('owner_email', email).limit(1).maybeSingle()
+    if (existingFood) {
+      return NextResponse.json({ message: 'This email is already registered for a food stall. One email can only be food stall OR laundry — not both.' }, { status: 400 })
+    }
+
     const { data, error } = await client
       .from('laundry_shops')
       .insert({
         shop_name: String(shop_name).trim(),
         owner_name: String(owner_name).trim(),
-        owner_email: String(owner_email).trim().toLowerCase(),
+        owner_email: email,
         phone: phone ? String(phone).trim() : null,
         whatsapp: whatsapp ? String(whatsapp).trim() : null,
         address: address ? String(address).trim() : null,
@@ -70,6 +98,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ message: error.message }, { status: 400 })
+
+    // Update user role to vendor-laundry if user exists
+    await client.from('users').update({ role: 'vendor-laundry' }).eq('email', email)
+
     return NextResponse.json({ ok: true, id: data?.id })
   } catch (e) {
     console.error('Admin laundry POST error:', e)
