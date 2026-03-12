@@ -1,35 +1,57 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { CreateUserForm, UserList } from '@/components'
-import { ArrowLeft, Users } from 'lucide-react'
-import Link from 'next/link'
-import { fetchAllUsers } from '@/lib/supabase/admin'
+import { CreateUserForm } from '@/components'
+import SuperAdminUsersListSection from '@/components/super-admin/SuperAdminUsersListSection'
+import SuperAdminPageHeader from '@/components/super-admin/SuperAdminPageHeader'
+import { Users, AlertCircle } from 'lucide-react'
+import { fetchAllUsersForSuperAdmin } from '@/lib/supabase/admin'
+import { ROLES } from '@/lib/pages/registry'
+import { UserRole } from '@/lib/auth'
 
 export default async function SuperAdminUsersPage() {
     const userProfile = await requireRole('super_admin')
-    const users = await fetchAllUsers()
+    const { users, limited } = await fetchAllUsersForSuperAdmin()
+
+    const roleCounts = ROLES.map((role) => ({
+        role,
+        count: users.filter((u) => u.role === role).length,
+    }))
 
     return (
         <DashboardLayout user={userProfile}>
             <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/super-admin/dashboard"
-                            className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-primary transition-colors"
-                        >
-                            <ArrowLeft size={20} />
-                        </Link>
+                <SuperAdminPageHeader
+                    title="All Users"
+                    subtitle="Create and manage system-wide accounts. Edit roles and delete users."
+                    icon={Users}
+                    badge={<><span className="font-semibold text-lg">{users.length}</span><span className="text-sm">Total</span></>}
+                />
+
+                {limited && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                        <AlertCircle size={20} className="shrink-0" />
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                            <p className="text-sm text-gray-500">Create and manage system-wide accounts.</p>
+                            <p className="font-medium">Showing limited results</p>
+                            <p className="text-amber-700 mt-0.5">
+                                Add <code className="bg-amber-100 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> to your environment (e.g. in Supabase Dashboard: Project Settings → API → service_role secret) so all users are loaded. Right now only rows allowed by Row Level Security are shown.
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-xl">
-                        <Users size={20} />
-                        <span className="font-semibold text-lg">{users.length}</span>
-                        <span className="text-sm">Total</span>
+                )}
+
+                {/* All roles summary */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Users by role</h3>
+                    <div className="flex flex-wrap gap-3">
+                        {roleCounts.map(({ role, count }) => (
+                            <div
+                                key={role}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium ${getRoleCardClass(role)}`}
+                            >
+                                <span className="capitalize">{formatRoleLabel(role)}</span>
+                                <span className="bg-white/60 dark:bg-black/10 px-2 py-0.5 rounded-lg">{count}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -38,12 +60,8 @@ export default async function SuperAdminUsersPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <CreateUserForm currentUserRole="super_admin" />
 
-                        {/* User List */}
-                        <UserList
-                            users={users}
-                            title="System-wide User Directory"
-                            showActions={true}
-                        />
+                        {/* User List with vendor filter */}
+                        <SuperAdminUsersListSection users={users} title="System-wide User Directory" />
                     </div>
 
                     {/* User Stats / Info */}
@@ -83,4 +101,29 @@ function RoleInfo({ role, desc }: { role: string; desc: string }) {
             <p className="text-xs text-gray-500">{desc}</p>
         </div>
     )
+}
+
+function formatRoleLabel(role: string): string {
+    return role.replace(/_/g, ' ')
+}
+
+function getRoleCardClass(role: UserRole): string {
+    switch (role) {
+        case 'super_admin':
+            return 'bg-purple-50 text-purple-800 border-purple-200'
+        case 'admin':
+            return 'bg-blue-50 text-blue-800 border-blue-200'
+        case 'vendor-food':
+            return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+        case 'vendor-laundry':
+            return 'bg-teal-50 text-teal-800 border-teal-200'
+        case 'delivery':
+            return 'bg-orange-50 text-orange-800 border-orange-200'
+        case 'lecturer':
+            return 'bg-indigo-50 text-indigo-800 border-indigo-200'
+        case 'student':
+            return 'bg-sky-50 text-sky-800 border-sky-200'
+        default:
+            return 'bg-gray-50 text-gray-700 border-gray-200'
+    }
 }

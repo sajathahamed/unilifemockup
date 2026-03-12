@@ -36,11 +36,17 @@ export default async function SuperAdminDashboard() {
   return (
     <DashboardLayout user={user}>
       <div className="space-y-6">
-        {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl p-6 text-white">
-          <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
-          <p className="mt-1 text-red-100">Full system control and page permissions.</p>
-        </div>
+        {/* Page Header */}
+        <header className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-0.5">System overview, users by role, and quick actions.</p>
+          </div>
+          <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-xl border border-primary/20">
+            <Shield size={20} />
+            <span className="font-semibold text-sm">Super Admin</span>
+          </div>
+        </header>
 
         {/* Page Management – primary CTA */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -93,7 +99,7 @@ export default async function SuperAdminDashboard() {
                 positive
               />
               <MetricCard label="App Pages" value={String(pagesCount)} change="Controlled by permissions" />
-              <MetricCard label="Roles" value="6" change="student, lecturer, admin, vendor, delivery, super_admin" />
+              <MetricCard label="Roles" value="7" change="student, lecturer, admin, vendor-food, vendor-laundry, delivery, super_admin" />
               <MetricCard label="Page Permissions" value="DB-driven" change="Per-role toggles" positive />
             </div>
 
@@ -138,7 +144,6 @@ export default async function SuperAdminDashboard() {
                 <ActionButton href="/super-admin/pages" label="Page Management" icon={LayoutList} />
                 <ActionButton href="/super-admin/roles" label="Roles & Permissions" icon={Shield} />
                 <ActionButton href="/super-admin/settings" label="System Settings" icon={Settings} />
-                <ActionButton href="/super-admin/logs" label="View System Logs" icon={Activity} />
               </div>
             </div>
           </div>
@@ -168,8 +173,8 @@ export default async function SuperAdminDashboard() {
             />
             <RoleStatCard
               role="Vendors"
-              count={roleCounts.vendor ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.vendor ?? 0) / userCount) * 100) : 0}
+              count={(roleCounts['vendor-food'] ?? 0) + (roleCounts['vendor-laundry'] ?? 0)}
+              percentage={userCount ? Math.round((((roleCounts['vendor-food'] ?? 0) + (roleCounts['vendor-laundry'] ?? 0)) / userCount) * 100) : 0}
               color="bg-green-500"
             />
             <RoleStatCard

@@ -26,15 +26,14 @@ export function getRoleBasedRedirect(role: UserRole): string {
     delivery: '/delivery/dashboard',
     super_admin: '/super-admin/dashboard',
   }
-  
+
   return roleRoutes[role] || '/login'
 }
 
 /**
  * Check if a user has access to a specific role's routes
  */
-export function hasRoleAccess(userRole: UserRole, requiredRole: UserRole): boolean {
-  // Super admin has access to everything
+export function hasRoleAccess(userRole: UserRole, requiredRole: RequiredRole): boolean {
   if (userRole === 'super_admin') return true
   // vendor-food and vendor-laundry can access vendor routes
   if (userRole === 'vendor-food' || userRole === 'vendor-laundry') {
