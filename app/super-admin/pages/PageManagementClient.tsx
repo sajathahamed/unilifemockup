@@ -174,19 +174,15 @@ export function PageManagementClient({ roles }: PageManagementClientProps) {
     }
   }
 
-  const toggle = mode === 'user' ? toggleUser : toggleRole
-
-  const lookupByEmail = () => {
-    if (!userEmailInput.trim()) return
-    fetchJsonSafe(`/api/super-admin/pages?email=${encodeURIComponent(userEmailInput.trim())}`)
-      .then((data) => {
-        if (data.user) {
-          const u = data.user as UserRow
-          setSelectedUserId(u.id)
-          setSelectedRole(u.role as UserRole)
-          setUsers((prev) => (prev.some((x) => x.id === u.id) ? prev : [u, ...prev]))
-        }
-      })
+  const roleLabels: Record<UserRole, string> = {
+    student: 'Student',
+    lecturer: 'Lecturer',
+    admin: 'Admin',
+    vendor: 'Vendor',
+    'vendor-food': 'Food Vendor',
+    'vendor-laundry': 'Laundry Vendor',
+    delivery: 'Delivery',
+    super_admin: 'Super Admin',
   }
 
   return (

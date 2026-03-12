@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getGooglePlacesApiKey } from '@/lib/env'
 
 async function fetchLaundryFromGoogle(lat: string, lng: string) {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY
+    const apiKey = getGooglePlacesApiKey()
     if (!apiKey) return { results: [], error: 'Google API Key missing' }
 
     // Using Google Places API (New) - Search Nearby
