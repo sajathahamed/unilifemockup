@@ -1,7 +1,13 @@
 import { requireRole } from '@/lib/auth.server'
-import VendorLaundryOrdersClient from './VendorLaundryOrdersClient'
+import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import LaundryOrdersClient from './LaundryOrdersClient'
 
-export default async function VendorLaundryOrdersPage() {
-  const user = await requireRole('vendor-laundry')
-  return <VendorLaundryOrdersClient user={user} />
+export default async function LaundryOrdersPage() {
+    const user = await requireRole('vendor')
+
+    return (
+        <DashboardLayout user={user}>
+            <LaundryOrdersClient user={user} />
+        </DashboardLayout>
+    )
 }

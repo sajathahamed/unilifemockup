@@ -13,7 +13,7 @@ export default async function AdminUsersPage() {
     const stats = {
         students: users.filter(u => u.role === 'student').length,
         lecturers: users.filter(u => u.role === 'lecturer').length,
-        vendors: users.filter(u => u.role === 'vendor-food' || u.role === 'vendor-laundry').length,
+        vendors: users.filter(u => u.role === 'vendor').length,
         delivery: users.filter(u => u.role === 'delivery').length,
     }
 

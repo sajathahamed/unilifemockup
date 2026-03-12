@@ -1,79 +1,35 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { getAppPagesCount } from '@/lib/pages/permissions.server'
-import { fetchAllUsers } from '@/lib/supabase/admin'
-import {
-  Users,
-  Shield,
+import { 
+  Users, 
+  Shield, 
   Activity,
   Server,
   ArrowRight,
   AlertTriangle,
   CheckCircle,
   Database,
-  Settings,
-  LayoutList,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function SuperAdminDashboard() {
   const user = await requireRole('super_admin')
 
-  const [pagesCount, allUsers] = await Promise.all([
-    getAppPagesCount().catch(() => 35),
-    fetchAllUsers().catch(() => []),
-  ])
-
-  const userCount = allUsers.length
-  const roleCounts = allUsers.reduce(
-    (acc, u) => {
-      acc[u.role] = (acc[u.role] || 0) + 1
-      return acc
-    },
-    {} as Record<string, number>
-  )
-
   return (
     <DashboardLayout user={user}>
       <div className="space-y-6">
-        {/* Page Header */}
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-0.5">System overview, users by role, and quick actions.</p>
-          </div>
-          <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-xl border border-primary/20">
-            <Shield size={20} />
-            <span className="font-semibold text-sm">Super Admin</span>
-          </div>
-        </header>
-
-        {/* Page Management – primary CTA */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
-              <LayoutList className="w-7 h-7 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Page Management</h2>
-              <p className="text-sm text-gray-500">
-                {pagesCount} pages across all roles. Enable or disable sidebar pages per role.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/super-admin/pages"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors shrink-0"
-          >
-            Manage pages <ArrowRight size={18} />
-          </Link>
+        {/* Welcome Header */}
+        <div className="bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl p-6 text-white">
+          <h1 className="text-2xl font-bold">Super Admin Dashboard 🔐</h1>
+          <p className="mt-1 text-red-100">Full system control and monitoring.</p>
         </div>
 
         {/* System Health */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <HealthCard icon={Server} label="Server Status" status="healthy" value="99.9%" />
           <HealthCard icon={Database} label="Database" status="healthy" value="Normal" />
-          <HealthCard icon={Activity} label="API Latency" status="healthy" value="OK" />
+          <HealthCard icon={Activity} label="API Latency" status="warning" value="245ms" />
           <HealthCard icon={Shield} label="Security" status="healthy" value="Secure" />
         </div>
 
@@ -83,67 +39,71 @@ export default async function SuperAdminDashboard() {
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">System Overview</h2>
-              <Link
-                href="/super-admin/dashboard"
-                className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-              >
-                Dashboard <ArrowRight size={14} />
+              <Link href="/super-admin/analytics" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1">
+                Full analytics <ArrowRight size={14} />
               </Link>
             </div>
-
+            
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <MetricCard
-                label="Total Users"
-                value={userCount.toLocaleString()}
-                change="From database"
-                positive
-              />
-              <MetricCard label="App Pages" value={String(pagesCount)} change="Controlled by permissions" />
-              <MetricCard label="Roles" value="7" change="student, lecturer, admin, vendor-food, vendor-laundry, delivery, super_admin" />
-              <MetricCard label="Page Permissions" value="DB-driven" change="Per-role toggles" positive />
+              <MetricCard label="Total Users" value="2,456" change="+156 this week" positive />
+              <MetricCard label="Active Sessions" value="847" change="Peak: 1.2k" />
+              <MetricCard label="API Requests" value="1.2M" change="+23% vs last week" positive />
+              <MetricCard label="Error Rate" value="0.02%" change="-0.01%" positive />
             </div>
 
+            {/* Recent System Events */}
             <h3 className="font-medium text-gray-900 mb-3">Recent System Events</h3>
             <div className="space-y-3">
               <SystemEvent
                 type="success"
-                message="Page permissions loaded from database"
-                time="Just now"
+                message="Automatic backup completed successfully"
+                time="5 mins ago"
+              />
+              <SystemEvent
+                type="warning"
+                message="High API latency detected - investigating"
+                time="15 mins ago"
               />
               <SystemEvent
                 type="success"
-                message="App pages table synced (35 pages)"
-                time="Recently"
+                message="Security patch applied - v2.3.1"
+                time="1 hour ago"
               />
               <SystemEvent
                 type="info"
-                message="Super Admin can enable/disable pages per role in Page Management"
-                time="—"
+                message="New user role 'moderator' created"
+                time="2 hours ago"
               />
             </div>
           </div>
 
           {/* Quick Actions & Alerts */}
           <div className="space-y-6">
+            {/* Critical Alerts */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Alerts</h2>
               <div className="space-y-3">
                 <AlertItem
+                  type="warning"
+                  message="3 failed login attempts from IP 192.168.1.xxx"
+                  action="Block IP"
+                />
+                <AlertItem
                   type="info"
-                  message="Use Page Management to control which pages each role sees in the sidebar."
-                  action="Open Page Management"
-                  href="/super-admin/pages"
+                  message="5 pending vendor verifications"
+                  action="Review"
                 />
               </div>
             </div>
 
+            {/* Quick Actions */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
               <div className="space-y-3">
                 <ActionButton href="/super-admin/users" label="Manage All Users" icon={Users} />
-                <ActionButton href="/super-admin/pages" label="Page Management" icon={LayoutList} />
                 <ActionButton href="/super-admin/roles" label="Roles & Permissions" icon={Shield} />
                 <ActionButton href="/super-admin/settings" label="System Settings" icon={Settings} />
+                <ActionButton href="/super-admin/logs" label="View System Logs" icon={Activity} />
               </div>
             </div>
           </div>
@@ -153,42 +113,12 @@ export default async function SuperAdminDashboard() {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Platform Statistics</h2>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <RoleStatCard
-              role="Students"
-              count={roleCounts.student ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.student ?? 0) / userCount) * 100) : 0}
-              color="bg-blue-500"
-            />
-            <RoleStatCard
-              role="Lecturers"
-              count={roleCounts.lecturer ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.lecturer ?? 0) / userCount) * 100) : 0}
-              color="bg-purple-500"
-            />
-            <RoleStatCard
-              role="Admins"
-              count={roleCounts.admin ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.admin ?? 0) / userCount) * 100) : 0}
-              color="bg-orange-500"
-            />
-            <RoleStatCard
-              role="Vendors"
-              count={(roleCounts['vendor-food'] ?? 0) + (roleCounts['vendor-laundry'] ?? 0)}
-              percentage={userCount ? Math.round((((roleCounts['vendor-food'] ?? 0) + (roleCounts['vendor-laundry'] ?? 0)) / userCount) * 100) : 0}
-              color="bg-green-500"
-            />
-            <RoleStatCard
-              role="Delivery"
-              count={roleCounts.delivery ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.delivery ?? 0) / userCount) * 100) : 0}
-              color="bg-yellow-500"
-            />
-            <RoleStatCard
-              role="Super Admins"
-              count={roleCounts.super_admin ?? 0}
-              percentage={userCount ? Math.round(((roleCounts.super_admin ?? 0) / userCount) * 100) : 0}
-              color="bg-red-500"
-            />
+            <RoleStatCard role="Students" count={1850} percentage={75} color="bg-blue-500" />
+            <RoleStatCard role="Lecturers" count={245} percentage={10} color="bg-purple-500" />
+            <RoleStatCard role="Admins" count={16} percentage={1} color="bg-orange-500" />
+            <RoleStatCard role="Vendors" count={56} percentage={2} color="bg-green-500" />
+            <RoleStatCard role="Delivery" count={89} percentage={4} color="bg-yellow-500" />
+            <RoleStatCard role="Super Admins" count={3} percentage={0.1} color="bg-red-500" />
           </div>
         </div>
 
@@ -288,8 +218,8 @@ function SystemEvent({ type, message, time }: {
   )
 }
 
-function AlertItem({ type, message, action, href }: {
-  type: 'warning' | 'info'; message: string; action: string; href?: string;
+function AlertItem({ type, message, action }: {
+  type: 'warning' | 'info'; message: string; action: string;
 }) {
   const colors = {
     warning: 'bg-yellow-50 border-yellow-200',
@@ -299,11 +229,7 @@ function AlertItem({ type, message, action, href }: {
   return (
     <div className={`p-3 rounded-lg border ${colors[type]}`}>
       <p className="text-sm text-gray-700 mb-2">{message}</p>
-      {href ? (
-        <Link href={href} className="text-xs font-medium text-primary hover:underline">{action}</Link>
-      ) : (
-        <button className="text-xs font-medium text-primary hover:underline">{action}</button>
-      )}
+      <button className="text-xs font-medium text-primary hover:underline">{action}</button>
     </div>
   )
 }

@@ -4,35 +4,42 @@ import { createClient } from '@/lib/supabase/server'
 
 /**
  * GET /api/lecturer/students
- * Returns students (users with role student) for lecturer view
+ * Fetches all students for course selection (for timetable creation)
  */
 export async function GET(request: NextRequest) {
-  try {
-    const user = await verifyRole('lecturer')
-    if (!user) return NextResponse.json({ message: 'Please log in as a lecturer to view students.' }, { status: 401 })
+    try {
+        const user = await verifyRole('lecturer')
 
-    const client = await createClient()
-    const { data, error } = await client
-      .from('users')
-      .select('id, name, email, uni_id, created_at')
-      .eq('role', 'student')
-      .order('name', { ascending: true })
+        if (!user) {
+            return NextResponse.json(
+                { message: 'Unauthorized' },
+                { status: 401 }
+            )
+        }
 
-    if (error) {
-      console.error('Lecturer students error:', error)
-      // Table/column might not exist or RLS - return empty so UI still works
-      if (error.code === 'PGRST205' || error.code === 'PGRST116' || error.message?.includes('schema cache')) {
-        return NextResponse.json([], { status: 200 })
-      }
-      return NextResponse.json({ message: error.message || 'Failed to fetch students' }, { status: 400 })
+        const client = await createClient()
+
+        const { data, error } = await client
+            .from('users')
+            .select('id, name, email')
+            .eq('role', 'student')
+            .order('name', { ascending: true })
+
+        if (error) {
+            console.error('Supabase query error:', error)
+            return NextResponse.json(
+                { message: error.message || 'Failed to fetch students' },
+                { status: 400 }
+            )
+        }
+
+        return NextResponse.json(data || [], { status: 200 })
+    } catch (error) {
+        console.error('Get students error:', error)
+        const message = error instanceof Error ? error.message : 'Internal server error'
+        return NextResponse.json(
+            { message },
+            { status: 500 }
+        )
     }
-
-    return NextResponse.json(data || [], { status: 200 })
-  } catch (e) {
-    console.error('Lecturer students GET error:', e)
-    return NextResponse.json(
-      { message: e instanceof Error ? e.message : 'Internal server error' },
-      { status: 500 }
-    )
-  }
 }

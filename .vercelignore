@@ -1,0 +1,10 @@
+.next
+node_modules
+.git
+.gitignore
+README.md
+package-lock.json
+*.sql.txt
+.env
+.env.local
+.DS_Store

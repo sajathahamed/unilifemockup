@@ -4,37 +4,27 @@ import { createClient } from '@/lib/supabase/server'
 
 /**
  * GET /api/lecturer/assignments
- * Returns assignments with course info for lecturer view.
- * Query: ?academic_year=1|2|3|4 to filter by study year.
+ * List assignments created by the lecturer (optionally filter by course_id)
  */
 export async function GET(request: NextRequest) {
   try {
     const user = await verifyRole('lecturer')
-    if (!user) return NextResponse.json({ message: 'Please log in as a lecturer to view assignments.' }, { status: 401 })
+    if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
-    const { searchParams } = new URL(request.url)
-    const academicYearParam = searchParams.get('academic_year')
-    const academic_year = academicYearParam && /^[1-4]$/.test(academicYearParam) ? parseInt(academicYearParam, 10) : null
-
+    const courseId = request.nextUrl.searchParams.get('course_id')?.trim() || null
     const client = await createClient()
+
     let query = client
       .from('assignments')
       .select('*, courses(course_code, course_name)')
-      .order('due_date', { ascending: true, nullsFirst: false })
+      .eq('created_by', user.id)
       .order('created_at', { ascending: false })
 
-    if (academic_year != null) {
-      query = query.eq('academic_year', academic_year)
-    }
+    if (courseId) query = query.eq('course_id', parseInt(courseId, 10))
 
     const { data, error } = await query
-
     if (error) {
-      console.error('Lecturer assignments list error:', error)
-      // Table might not exist yet (e.g. PGRST205) - return empty so UI still works
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-        return NextResponse.json([], { status: 200 })
-      }
+      console.error('Assignments list error:', error)
       return NextResponse.json({ message: error.message || 'Failed to fetch assignments' }, { status: 400 })
     }
 
@@ -50,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(rows, { status: 200 })
   } catch (e) {
-    console.error('Lecturer assignments GET error:', e)
+    console.error('Assignments GET error:', e)
     return NextResponse.json(
       { message: e instanceof Error ? e.message : 'Internal server error' },
       { status: 500 }
@@ -65,52 +55,40 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyRole('lecturer')
-    if (!user) return NextResponse.json({ message: 'Please log in as a lecturer to create assignments.' }, { status: 401 })
+    if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
-    const body = await request.json().catch(() => ({}))
-    const title = typeof body.title === 'string' ? body.title.trim() : ''
-    const description = typeof body.description === 'string' ? body.description.trim() || null : null
-    const due_date = typeof body.due_date === 'string' && body.due_date ? body.due_date : null
-    const course_id = typeof body.course_id === 'number' ? body.course_id : (typeof body.course_id === 'string' && body.course_id ? parseInt(body.course_id, 10) : null)
-    if (Number.isNaN(course_id as number) || course_id == null) {
-      return NextResponse.json({ message: 'Valid course_id is required' }, { status: 400 })
-    }
-    const academic_year = body.academic_year != null && [1, 2, 3, 4].includes(Number(body.academic_year))
-      ? Number(body.academic_year)
-      : null
+    const body = await request.json()
+    const { course_id, title, description, due_date } = body
 
-    if (!title || title.length < 2) {
-      return NextResponse.json({ message: 'Title is required (at least 2 characters)' }, { status: 400 })
+    if (!course_id || !title || typeof title !== 'string' || !title.trim()) {
+      return NextResponse.json(
+        { message: 'Missing or invalid: course_id, title (required)' },
+        { status: 400 }
+      )
     }
 
     const client = await createClient()
-    const insertPayload: Record<string, unknown> = {
-      title,
-      description: description || null,
-      due_date: due_date || null,
-      course_id,
-      created_by: user.id,
-      updated_at: new Date().toISOString(),
-    }
-    if (academic_year != null) insertPayload.academic_year = academic_year
-
     const { data, error } = await client
       .from('assignments')
-      .insert(insertPayload)
-      .select('id, title, description, due_date, course_id, academic_year, created_at')
+      .insert({
+        course_id: Number(course_id),
+        title: String(title).trim(),
+        description: description != null ? String(description).trim() : null,
+        due_date: due_date || null,
+        created_by: user.id,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
       .single()
 
     if (error) {
-      console.error('Lecturer assignment create error:', error)
-      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
-        return NextResponse.json({ message: "Assignments table doesn't exist in the database. Please create it in Supabase." }, { status: 400 })
-      }
+      console.error('Assignment create error:', error)
       return NextResponse.json({ message: error.message || 'Failed to create assignment' }, { status: 400 })
     }
 
     return NextResponse.json(data, { status: 201 })
   } catch (e) {
-    console.error('Lecturer assignments POST error:', e)
+    console.error('Assignments POST error:', e)
     return NextResponse.json(
       { message: e instanceof Error ? e.message : 'Internal server error' },
       { status: 500 }

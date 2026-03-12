@@ -1,84 +1,127 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, CheckCircle } from 'lucide-react'
+import { X, CheckCircle, Zap, Check } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-
-interface Schedule {
-  id: string
-  courseCode: string
-  courseName: string
-  day: string
-  startTime: string
-  endTime: string
-  location: string
-  capacity: number
-  color: string
-  lecturer: string
-}
+import type { Schedule } from '@/components/lecturer/types'
 
 interface ScheduleFormProps {
-  schedule?: Schedule | null
-  onSubmit: (schedule: Schedule | Omit<Schedule, 'id'>) => void
+  schedule?: Schedule | null | undefined
+  onSubmit: (schedule: Omit<Schedule, 'id' | 'courseCode' | 'courseName' | 'color'> | Schedule) => void
   onClose: () => void
 }
 
+
 interface FormValues {
-  courseName: string
-  courseCode: string
-  day: string
-  startTime: string
-  endTime: string
+  academic_year: string
+  course_id: number | string
+  day_of_week: string
+  start_time: string
+  end_time: string
   location: string
-  capacity: number
-  color: string
+}
+
+interface Student {
+  id: number
+  name: string
+  email: string
+}
+
+interface Course {
+  id: number
+  course_code: string
+  course_name: string
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const COLORS = [
-  'bg-blue-500',
-  'bg-purple-500',
-  'bg-green-500',
-  'bg-orange-500',
-  'bg-red-500',
-  'bg-pink-500',
-  'bg-cyan-500',
-  'bg-yellow-500',
+  { name: 'Blue', value: 'bg-blue-500' },
+  { name: 'Purple', value: 'bg-purple-500' },
+  { name: 'Green', value: 'bg-green-500' },
+  { name: 'Orange', value: 'bg-orange-500' },
+  { name: 'Red', value: 'bg-red-500' },
+  { name: 'Pink', value: 'bg-pink-500' },
+  { name: 'Cyan', value: 'bg-cyan-500' },
+  { name: 'Yellow', value: 'bg-yellow-500' },
+]
+
+const LOCATIONS = [
+  'Hall A',
+  'Hall B',
+  'Hall C',
+  'Lab 1',
+  'Lab 2',
+  'Lab 3',
+  'Meeting Room',
+  'Auditorium',
 ]
 
 export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFormProps) {
   const [formData, setFormData] = useState<FormValues>({
-    courseName: schedule?.courseName || '',
-    courseCode: schedule?.courseCode || '',
-    day: schedule?.day || 'Monday',
-    startTime: schedule?.startTime || '09:00',
-    endTime: schedule?.endTime || '10:30',
+    academic_year: schedule?.academic_year || '',
+    course_id: schedule?.course_id || '',
+    day_of_week: schedule?.day_of_week || 'Monday',
+    start_time: schedule?.start_time || '09:00',
+    end_time: schedule?.end_time || '10:30',
     location: schedule?.location || '',
-    capacity: schedule?.capacity ?? 30,
-    color: schedule?.color || 'bg-blue-500',
   })
 
-  const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loadingCourses, setLoadingCourses] = useState(true)
+  const [courseError, setCourseError] = useState<string | null>(null)
+
+  // Fetch courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoadingCourses(true)
+        const coursesRes = await fetch('/api/lecturer/courses')
+        if (coursesRes.ok) {
+          const data = await coursesRes.json()
+          setCourses(data || [])
+        } else {
+          setCourseError('Failed to load courses')
+        }
+      } catch (err) {
+        setCourseError('Error loading courses')
+        console.error('Fetch courses error:', err)
+      } finally {
+        setLoadingCourses(false)
+      }
+    }
+    fetchCourses()
+  }, [])
 
   const validateForm = () => {
-    const newErrors: Partial<Record<keyof FormValues, string>> = {}
+    const newErrors: Record<string, string | undefined> = {}
 
-    if (!formData.courseName.trim()) newErrors.courseName = 'Course name is required'
-    if (!formData.courseCode.trim()) newErrors.courseCode = 'Course code is required'
+
+    if (!formData.academic_year) {
+      newErrors.academic_year = 'Academic year is required'
+    }
+
+    if (!formData.course_id) {
+      newErrors.course_id = 'Course is required'
+    }
+
     if (!formData.location.trim()) newErrors.location = 'Location is required'
-    if (formData.capacity < 1) newErrors.capacity = 'Capacity must be at least 1'
 
-    // Time validation
-    const [startHour, startMin] = formData.startTime.split(':').map(Number)
-    const [endHour, endMin] = formData.endTime.split(':').map(Number)
+    const [startHour, startMin] = formData.start_time.split(':').map(Number)
+    const [endHour, endMin] = formData.end_time.split(':').map(Number)
     const startInMinutes = startHour * 60 + startMin
     const endInMinutes = endHour * 60 + endMin
 
     if (startInMinutes >= endInMinutes) {
-      newErrors.endTime = 'End time must be after start time'
+      newErrors.end_time = 'End time must be after start time'
+    }
+
+    if ((endInMinutes - startInMinutes) < 30) {
+      newErrors.end_time = 'Minimum duration is 30 minutes'
     }
 
     setErrors(newErrors)
@@ -88,21 +131,13 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
 
-    if (name === 'capacity') {
-      setFormData((prev) => ({ ...prev, capacity: parseInt(value || '0', 10) }))
-      setErrors((prev) => ({ ...prev, capacity: undefined }))
-      return
-    }
-
-    setFormData((prev) => ({ ...(prev as any), [name]: value } as FormValues))
-    // Clear error for this field
-    setErrors((prev) => ({ ...(prev as any), [name]: undefined }))
-  }
-
-  const handleColorChange = (color: string) => {
     setFormData((prev) => ({
       ...prev,
-      color,
+      [name]: name === 'course_id' ? parseInt(value) || '' : value,
+    }))
+    setErrors((prev) => ({
+      ...prev,
+      [name]: undefined,
     }))
   }
 
@@ -114,21 +149,18 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
     setIsSubmitting(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 800))
+      setShowSuccess(true)
+      
+      onSubmit({
+        ...formData,
+        course_id: formData.course_id as number,
+      } as Omit<Schedule, 'id' | 'courseCode' | 'courseName' | 'color'>)
 
-      if (schedule?.id) {
-        onSubmit({
-          ...formData,
-          id: schedule.id,
-          lecturer: schedule.lecturer,
-        } as Schedule)
-      } else {
-        onSubmit({
-          ...formData,
-          lecturer: 'Dr. Smith', // Replace with actual user
-        })
-      }
+      setTimeout(() => {
+        setShowSuccess(false)
+        onClose()
+      }, 1000)
     } finally {
       setIsSubmitting(false)
     }
@@ -140,178 +172,204 @@ export default function ScheduleForm({ schedule, onSubmit, onClose }: ScheduleFo
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto"
         >
           {/* Modal Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-primary to-primary/80 px-6 py-4 flex items-center justify-between border-b border-primary/20">
-            <div>
-              <h2 className="text-2xl font-bold text-white">
-                {schedule ? 'Edit Schedule' : 'Add New Schedule'}
-              </h2>
-              <p className="text-white/80 text-sm mt-1">
-                {schedule ? 'Update the class details' : 'Create a new class schedule'}
+          <div className="sticky top-0 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 px-8 py-6 flex items-start justify-between border-b border-purple-400/20 shadow-lg">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                {schedule ? <Zap size={28} className="text-white" /> : <CheckCircle size={28} className="text-white" />}
+                <h2 className="text-2xl font-bold text-white">
+                  {schedule ? 'Edit Class Schedule' : 'Create Class Schedule'}
+                </h2>
+              </div>
+              <p className="text-purple-100 text-sm ml-11">
+                {schedule ? 'Update course and schedule details' : 'Add a new class to your teaching schedule'}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors ml-4"
             >
               <X size={24} className="text-white" />
             </button>
           </div>
 
-          {/* Form Content */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Course Information */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Course Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    label="Course Name"
-                    name="courseName"
-                    value={formData.courseName}
-                    onChange={handleChange}
-                    placeholder="e.g., Introduction to Computer Science"
-                    error={errors.courseName}
-                  />
-                </div>
-                <div>
-                  <Input
-                    label="Course Code"
-                    name="courseCode"
-                    value={formData.courseCode}
-                    onChange={handleChange}
-                    placeholder="e.g., CS101"
-                    error={errors.courseCode}
-                  />
-                </div>
-              </div>
-            </div>
+          {/* Success Message */}
+          <AnimatePresence>
+            {showSuccess && (
+              <motion.div
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 px-8 py-4 flex items-center gap-3 text-green-700 text-sm"
+              >
+                <Check size={20} className="text-green-600" />
+                <span className="font-medium">Schedule saved successfully!</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Schedule Information */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Schedule Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Form Content */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+            {/* Section 1: Selection */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">1</div>
+                <h3 className="text-lg font-semibold text-gray-900">Selection</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-11">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
                   <select
-                    name="day"
-                    value={formData.day}
+                    name="academic_year"
+                    value={formData.academic_year}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                      errors.academic_year ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                    }`}
                   >
-                    {DAYS.map((day) => (
-                      <option key={day} value={day}>
-                        {day}
+                    <option value="">Select academic year</option>
+                    <option value="Year 1">Year 1</option>
+                    <option value="Year 2">Year 2</option>
+                    <option value="Year 3">Year 3</option>
+                    <option value="Year 4">Year 4</option>
+                  </select>
+                  {errors.academic_year && <p className="text-red-500 text-xs mt-1">{errors.academic_year}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                  <select
+                    name="course_id"
+                    value={formData.course_id}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                      errors.course_id ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                    }`}
+                    disabled={loadingCourses}
+                  >
+                    <option value="">{loadingCourses ? 'Loading courses...' : 'Select course'}</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.course_code} - {course.course_name}
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <Input
-                    label="Location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="e.g., Hall A, Lab 1"
-                    error={errors.location}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  {errors.endTime && (
-                    <p className="text-red-500 text-xs mt-1">{errors.endTime}</p>
-                  )}
-                </div>
-                <div>
-                  <Input
-                    label="Capacity"
-                    name="capacity"
-                    type="number"
-                    value={formData.capacity.toString()}
-                    onChange={handleChange}
-                    placeholder="Student count"
-                    error={errors.capacity}
-                  />
+                  {errors.course_id && <p className="text-red-500 text-xs mt-1">{errors.course_id}</p>}
+                  {courseError && <p className="text-red-500 text-xs mt-1">{courseError}</p>}
                 </div>
               </div>
             </div>
 
-            {/* Color Selection */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Course Color</h3>
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
-                {COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => handleColorChange(color)}
-                    className={`w-10 h-10 rounded-lg ${color} transition-transform hover:scale-110 ${
-                      formData.color === color
-                        ? 'ring-2 ring-gray-900 ring-offset-2 scale-110'
-                        : ''
-                    }`}
-                  />
-                ))}
+            <div className="border-t border-gray-200" />
+
+            {/* Section 2: Schedule Details */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm">2</div>
+                <h3 className="text-lg font-semibold text-gray-900">Schedule Details</h3>
+              </div>
+
+              <div className="pl-11 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Day of Week</label>
+                    <select
+                      name="day_of_week"
+                      value={formData.day_of_week}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    >
+                      {DAYS.map((day) => (
+                        <option key={day} value={day}>
+                          {day}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <select
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                        errors.location ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                      }`}
+                    >
+                      <option value="">Select location</option>
+                      {LOCATIONS.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                    <input
+                      type="time"
+                      name="start_time"
+                      value={formData.start_time}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                    <input
+                      type="time"
+                      name="end_time"
+                      value={formData.end_time}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                        errors.end_time ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500/20 focus:border-purple-500'
+                      }`}
+                    />
+                    {errors.end_time && <p className="text-red-500 text-xs mt-1">{errors.end_time}</p>}
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div className="border-t border-gray-200" />
 
             {/* Form Actions */}
-            <div className="flex gap-3 pt-6 border-t border-gray-200">
+            <div className="border-t border-gray-200 pt-8 flex gap-3 justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-all"
               >
                 Cancel
               </button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 flex items-center justify-center gap-2"
+                className="px-8 py-3 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Saving...
+                    Saving
                   </>
                 ) : (
                   <>
                     <CheckCircle size={18} />
-                    {schedule ? 'Update Schedule' : 'Add Schedule'}
+                    {schedule ? 'Update Schedule' : 'Create Schedule'}
                   </>
                 )}
               </Button>

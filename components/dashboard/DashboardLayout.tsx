@@ -26,9 +26,6 @@ import {
   Shield,
   BarChart3,
   UserCog,
-  LayoutList,
-  MapPin,
-  UserPlus,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -73,28 +70,17 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
-    { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
+    { label: 'Courses', href: '/admin/courses', icon: BookOpen },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
-    { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
-  'vendor-food': [
+  vendor: [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
-    { label: 'Products', href: '/vendor/products', icon: Utensils },
-    { label: 'My Store', href: '/vendor/my-store', icon: Store },
-    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
-  ],
-  'vendor-laundry': [
-    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
     { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
-    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
-    { label: 'Products', href: '/vendor/products', icon: Utensils },
-    { label: 'My Store', href: '/vendor/my-store', icon: Store },
-    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+    { label: 'Menu', href: '/vendor/menu', icon: Utensils },
+    { label: 'Store Settings', href: '/vendor/settings', icon: Store },
+    { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
@@ -108,39 +94,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Roles & Permissions', href: '/super-admin/roles', icon: Shield },
     { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/super-admin/settings', icon: Settings },
-    { label: 'Page Management', href: '/super-admin/pages', icon: LayoutList },
-    // Admin pages (super_admin can access all admin features)
-    { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Admin Users', href: '/admin/users', icon: Users },
-    { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
-    { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
-    { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
   ],
-}
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutDashboard,
-  BookOpen,
-  Calendar,
-  Users,
-  ShoppingBag,
-  Utensils,
-  Car,
-  Bell,
-  Settings,
-  Package,
-  Briefcase,
-  Store,
-  Truck,
-  Shield,
-  BarChart3,
-  UserCog,
-  LayoutList,
-  MapPin,
-  UserPlus,
 }
 
 // Role display names and colors
@@ -148,17 +102,9 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
-  'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
-  'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
+  vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
-}
-
-/** Role segment used in URLs (vendor-food/vendor-laundry -> vendor) */
-function rolePathSegment(role: UserRole): string {
-  if (role === 'super_admin') return 'super-admin'
-  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
-  return role.replace('_', '-')
 }
 
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
@@ -167,35 +113,15 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isNavigating, setIsNavigating] = useState(false)
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const [supabase, setSupabase] = useState<any | null>(null)
-  const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
-  const pathSegment = rolePathSegment(user.role)
 
+  // Initialize Supabase client only on client runtime
   useEffect(() => {
     setSupabase(createClient())
   }, [])
-
-  // Clear navigation state when route changes
-  useEffect(() => {
-    setIsNavigating(false)
-    setNavigatingTo(null)
-  }, [pathname])
-
-  // Handle navigation with loading state
-  const handleNavigation = (href: string) => {
-    if (href !== pathname) {
-      setIsNavigating(true)
-      setNavigatingTo(href)
-    }
-    setIsSidebarOpen(false)
-  }
-
-  const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
-  const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
-  const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
+  const navItems = roleNavItems[user.role]
+  const roleInfo = roleConfig[user.role]
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -216,19 +142,6 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top navigation progress bar */}
-      <AnimatePresence>
-        {isNavigating && (
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 0.7 }}
-            exit={{ scaleX: 1 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left"
-          />
-        )}
-      </AnimatePresence>
-      
       {/* Mobile sidebar overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -254,7 +167,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3">
+            <Link href={`/${user.role.replace('_', '-')}/dashboard`} className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
@@ -277,11 +190,14 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
-                        isActive
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      onClick={() => setIsSidebarOpen(false)}
+                      className={`
+                        flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200
+                        ${isActive
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        }
+                      `}
                     >
                       <item.icon size={20} />
                       <span>{item.label}</span>
@@ -333,7 +249,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
                   >
                     <Link
-                      href={`/${pathSegment}/settings`}
+                      href={`/${user.role.replace('_', '-')}/settings`}
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />
@@ -395,29 +311,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6 relative">
-          {/* Navigation loading overlay */}
-          <AnimatePresence>
-            {isNavigating && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <GraduationCap size={24} className="text-primary" />
-                    </div>
-                  </div>
-                  <p className="text-gray-500 font-medium text-sm animate-pulse">Loading...</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
+        <main className="p-4 lg:p-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
