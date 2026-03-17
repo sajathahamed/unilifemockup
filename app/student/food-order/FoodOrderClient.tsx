@@ -144,6 +144,7 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         setRefreshing(true)
         setApiError(null)
         try {
+            // Merge DB stalls + nearby places (Google/OSM/etc)
             let url = '/api/student/food-stalls'
             if (lat != null && lng != null) {
                 url += `?lat=${lat}&lng=${lng}`
@@ -245,6 +246,7 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
             address: shop.vicinity ?? '',
             open: String(shop.opening_hours?.open_now ?? true),
         })
+        if (shop.tags?.length) q.set('tags', shop.tags.join(','))
         router.push(`/student/food-order/${encodeURIComponent(shop.place_id)}?${q}`)
     }
 

@@ -69,6 +69,44 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) =>
     )
 }
 
+type StoredCartItem = { id: string; name: string; price: number; emoji: string; qty: number }
+
+function getCartKey(shopId: string) {
+    return `unilife_food_cart:${shopId}`
+}
+
+function readCart(shopId: string): StoredCartItem[] {
+    try {
+        const raw = localStorage.getItem(getCartKey(shopId))
+        if (!raw) return []
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return []
+        return parsed
+            .map((i: any) => ({
+                id: String(i?.id ?? ''),
+                name: String(i?.name ?? ''),
+                price: Number(i?.price ?? 0),
+                emoji: String(i?.emoji ?? '🍽️'),
+                qty: Math.max(1, Number(i?.qty ?? 1)),
+            }))
+            .filter((i) => i.id && i.name)
+    } catch {
+        return []
+    }
+}
+
+function writeCart(shopId: string, cart: StoredCartItem[]) {
+    try {
+        localStorage.setItem(getCartKey(shopId), JSON.stringify(cart))
+    } catch {
+        // ignore
+    }
+}
+
+function countCart(cart: StoredCartItem[]) {
+    return cart.reduce((acc, i) => acc + (i.qty || 0), 0)
+}
+
 export default function ShopDetailClient({ user, shopId }: { user: UserProfile; shopId: string }) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -126,8 +164,29 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
         }
     }, [isDbStall, stallId])
 
+    useEffect(() => {
+        // Load persisted cart count for this shop
+        try {
+            const cart = readCart(shopId)
+            setCartCount(countCart(cart))
+        } catch {
+            setCartCount(0)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shopId])
+
+    const addToCart = (item: MenuItem) => {
+        const cart = readCart(shopId)
+        const idx = cart.findIndex((c) => c.id === item.id)
+        if (idx >= 0) cart[idx] = { ...cart[idx], qty: cart[idx].qty + 1 }
+        else cart.push({ id: item.id, name: item.name, price: item.price, emoji: item.emoji, qty: 1 })
+        writeCart(shopId, cart)
+        setCartCount(countCart(cart))
+    }
+
     const orderParams = new URLSearchParams({ name, photo })
     if (isDbStall && stallId) orderParams.set('stallId', stallId)
+    if (tags.length) orderParams.set('tags', tags.join(','))
     const orderUrl = `/student/food-order/${encodeURIComponent(shopId)}/order?${orderParams}`
 
     if (loading && isDbStall) {
@@ -241,7 +300,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
                         className="px-4"
                     >
                         {activeMenu?.items.map((item) => (
-                            <MenuItemCard key={item.id} item={item} onAdd={() => setCartCount((c) => c + 1)} />
+                            <MenuItemCard key={item.id} item={item} onAdd={addToCart} />
                         ))}
                     </motion.div>
                 </div>
