@@ -4,6 +4,7 @@
  */
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth.server'
+import { fetchStudents } from '@/lib/supabase/admin'
 
 export interface DashboardCourse {
   id: number
@@ -42,9 +43,9 @@ export async function getLecturerDashboardData(): Promise<LecturerDashboardData>
 
   const client = await createClient()
 
-  const [coursesRes, studentsRes, scheduleRes] = await Promise.all([
+  const [coursesRes, studentsList, scheduleRes] = await Promise.all([
     client.from('courses').select('id, course_code, course_name, colour').order('course_code', { ascending: true }),
-    client.from('users').select('id, name, email').eq('role', 'student').order('name', { ascending: true }),
+    fetchStudents(),
     client
       .from('timetable')
       .select('*, courses(course_code, course_name, colour)')
@@ -59,11 +60,7 @@ export async function getLecturerDashboardData(): Promise<LecturerDashboardData>
     colour: r.colour != null ? String(r.colour) : null,
   }))
 
-  const students: DashboardStudent[] = ((studentsRes.error ? [] : studentsRes.data) || []).map((r: Record<string, unknown>) => ({
-    id: Number(r.id),
-    name: String(r.name ?? ''),
-    email: String(r.email ?? ''),
-  }))
+  const students: DashboardStudent[] = studentsList
 
   const schedule: DashboardScheduleEntry[] = ((scheduleRes.error ? [] : scheduleRes.data) || []).map((row: Record<string, unknown>) => {
     const coursesRow = row.courses as { course_code?: string; course_name?: string } | null

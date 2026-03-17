@@ -13,6 +13,17 @@ function isValidServiceKey(key?: string): boolean {
 }
 
 /**
+ * Returns Supabase admin client (service role) for server-side operations that bypass RLS (e.g. storage upload).
+ * Returns null if service role key is not configured.
+ */
+export function getSupabaseAdmin() {
+    if (!isValidServiceKey(serviceRoleKey)) return null
+    return createSupabaseClient(supabaseUrl, serviceRoleKey!, {
+        auth: { autoRefreshToken: false, persistSession: false },
+    })
+}
+
+/**
  * Fetches all users for admin/super-admin pages.
  * - If a valid service role key exists: uses Auth Admin API (bypasses RLS entirely)
  * - Otherwise: falls back to a direct query via the current user's session
@@ -49,6 +60,50 @@ export async function fetchAllUsers(): Promise<{
         .order('created_at', { ascending: false })
 
     return data || []
+}
+
+export interface StudentRow {
+    id: number
+    name: string
+    email: string
+}
+
+/**
+ * Fetches all students (users with role 'student') for lecturer pages.
+ * Uses service role when available to bypass RLS so lecturers can see the list.
+ */
+export async function fetchStudents(): Promise<StudentRow[]> {
+    if (isValidServiceKey(serviceRoleKey)) {
+        const adminClient = createSupabaseClient(supabaseUrl, serviceRoleKey!, {
+            auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data, error } = await adminClient
+            .from('users')
+            .select('id, name, email')
+            .eq('role', 'student')
+            .order('name', { ascending: true })
+
+        if (!error && data) {
+            return data.map((r: { id: number; name: string | null; email: string | null }) => ({
+                id: r.id,
+                name: String(r.name ?? ''),
+                email: String(r.email ?? ''),
+            }))
+        }
+    }
+
+    const sessionClient = await createClient()
+    const { data } = await sessionClient
+        .from('users')
+        .select('id, name, email')
+        .eq('role', 'student')
+        .order('name', { ascending: true })
+
+    return (data || []).map((r: { id: number; name: string | null; email: string | null }) => ({
+        id: r.id,
+        name: String(r.name ?? ''),
+        email: String(r.email ?? ''),
+    }))
 }
 
 /**

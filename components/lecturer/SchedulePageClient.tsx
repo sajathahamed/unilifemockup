@@ -212,11 +212,12 @@ export default function SchedulePageClient() {
             <p className="text-white/90 text-lg mb-4">Manage your teaching schedule and timetable</p>
             <div className="flex gap-2">
               <Button
+                variant="secondary"
                 onClick={() => setIsFormOpen(true)}
-                className="bg-white text-violet-600 hover:bg-gray-50"
+                className="!bg-white !text-violet-600 hover:!bg-gray-50 border-0"
               >
-                <Plus size={18} className="mr-2" />
-                Add New Schedule
+                <Plus size={18} className="mr-2 shrink-0" />
+                <span>Add New Schedule</span>
               </Button>
             </div>
           </div>

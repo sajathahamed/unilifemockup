@@ -26,6 +26,7 @@ import {
   Shield,
   BarChart3,
   UserCog,
+  MapPin,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -55,6 +56,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
     { label: 'Courses', href: '/student/courses', icon: BookOpen },
     { label: 'Timetable', href: '/student/timetable', icon: Calendar },
+    { label: 'Assignments', href: '/student/assignments', icon: Briefcase },
+    { label: 'Trip Planner', href: '/trip-planner', icon: MapPin },
     { label: 'Study Groups', href: '/student/study-groups', icon: Users },
     { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
     { label: 'Food Order', href: '/student/food-order', icon: Utensils },

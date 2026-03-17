@@ -69,8 +69,12 @@ export async function middleware(request: NextRequest) {
 
   const allowedPrefixes = roleRoutes[userRole] || []
 
+  // Shared routes any authenticated user can access (e.g. Trip Planner)
+  const sharedRoutes = ['/trip-planner']
+  const isSharedRoute = sharedRoutes.some(route => pathname.startsWith(route))
+
   // Check if user has access to the requested route
-  const hasAccess = allowedPrefixes.some(prefix => pathname.startsWith(prefix))
+  const hasAccess = isSharedRoute || allowedPrefixes.some(prefix => pathname.startsWith(prefix))
 
   if (!hasAccess) {
     // Redirect to user's own dashboard

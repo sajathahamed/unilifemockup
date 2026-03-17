@@ -7,6 +7,8 @@ import type { Schedule } from '@/components/lecturer/types'
 
 interface TimetableViewProps {
   schedules: Schedule[]
+  /** Optional subtitle under "Weekly Timetable" (default: "Your teaching schedule for the week") */
+  subtitle?: string
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -70,7 +72,7 @@ function normalizeDay(day: string): string {
   return d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()
 }
 
-export default function TimetableView({ schedules }: TimetableViewProps) {
+export default function TimetableView({ schedules, subtitle = 'Your teaching schedule for the week' }: TimetableViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const weekDates = useMemo(() => getWeekDates(), [])
   const todayDayIndex = useMemo(() => {
@@ -120,7 +122,7 @@ export default function TimetableView({ schedules }: TimetableViewProps) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">Weekly Timetable</h2>
-            <p className="text-white/90 text-sm mt-0.5">Your teaching schedule for the week</p>
+            <p className="text-white/90 text-sm mt-0.5">{subtitle}</p>
           </div>
         </div>
       </div>

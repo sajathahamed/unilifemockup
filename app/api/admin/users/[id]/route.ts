@@ -8,7 +8,7 @@ import { deleteUser } from '@/lib/supabase/admin'
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         // Check authorization
@@ -21,7 +21,8 @@ export async function DELETE(
             )
         }
 
-        const userId = parseInt(params.id)
+        const { id } = await context.params
+        const userId = parseInt(id)
 
         if (isNaN(userId)) {
             return NextResponse.json(

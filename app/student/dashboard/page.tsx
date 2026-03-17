@@ -7,7 +7,8 @@ import {
   CheckCircle,
   ArrowRight,
   Calendar,
-  Bell
+  Bell,
+  Briefcase
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -23,45 +24,48 @@ export default async function StudentDashboard() {
           <p className="mt-1 text-indigo-100">Here's what's happening with your courses today.</p>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Courses, Timetable, Assignments */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={BookOpen}
-            label="Enrolled Courses"
-            value="6"
+            label="Courses"
+            value="View"
             color="bg-blue-500"
+            href="/student/courses"
           />
           <StatCard
-            icon={Clock}
-            label="Pending Tasks"
-            value="12"
+            icon={Calendar}
+            label="Timetable"
+            value="View"
+            color="bg-violet-500"
+            href="/student/timetable"
+          />
+          <StatCard
+            icon={Briefcase}
+            label="Assignments"
+            value="View"
             color="bg-orange-500"
+            href="/student/assignments"
           />
           <StatCard
             icon={Users}
             label="Study Groups"
-            value="3"
+            value="—"
             color="bg-green-500"
-          />
-          <StatCard
-            icon={CheckCircle}
-            label="Completed"
-            value="24"
-            color="bg-purple-500"
           />
         </div>
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Today's Schedule */}
+          {/* Timetable */}
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Today's Schedule</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Timetable</h2>
               <Link 
                 href="/student/timetable" 
                 className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
               >
-                View all <ArrowRight size={14} />
+                View weekly timetable <ArrowRight size={14} />
               </Link>
             </div>
             
@@ -117,6 +121,7 @@ export default async function StudentDashboard() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <QuickAction href="/student/food-order" icon="🍕" label="Order Food" />
+            <QuickAction href="/trip-planner" icon="🗺️" label="Trip Planner" />
             <QuickAction href="/student/rides" icon="🚗" label="Book Ride" />
             <QuickAction href="/student/marketplace" icon="📚" label="Marketplace" />
             <QuickAction href="/student/study-groups" icon="👥" label="Study Groups" />
@@ -128,19 +133,32 @@ export default async function StudentDashboard() {
 }
 
 // Component helpers
-function StatCard({ icon: Icon, label, value, color }: { 
-  icon: any; 
+function StatCard({ icon: Icon, label, value, color, href }: { 
+  icon: React.ComponentType<{ size?: number | string; className?: string }>; 
   label: string; 
   value: string;
   color: string;
+  href?: string;
 }) {
-  return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+  const content = (
+    <>
       <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3`}>
         <Icon size={20} className="text-white" />
       </div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-sm text-gray-500">{label}</p>
+    </>
+  )
+  if (href) {
+    return (
+      <Link href={href} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 block hover:border-primary/30 hover:shadow-md transition-all">
+        {content}
+      </Link>
+    )
+  }
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      {content}
     </div>
   )
 }

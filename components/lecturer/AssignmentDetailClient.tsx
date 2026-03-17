@@ -26,6 +26,8 @@ interface Submission {
   grade?: number | null
   feedback?: string | null
   status: string
+  file_url?: string | null
+  file_name?: string | null
 }
 
 interface AssignmentDetailClientProps {
@@ -213,6 +215,18 @@ export default function AssignmentDetailClient({ assignmentId }: AssignmentDetai
                 {sub.content && (
                   <div className="mt-3 p-4 bg-gray-50 rounded-lg text-sm text-gray-700 whitespace-pre-wrap">
                     {sub.content}
+                  </div>
+                )}
+                {sub.file_url && (
+                  <div className="mt-2">
+                    <a
+                      href={sub.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      📎 {sub.file_name || 'Download attached file'}
+                    </a>
                   </div>
                 )}
                 <div className="mt-4 flex flex-wrap items-end gap-3">
