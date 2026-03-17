@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Building2, Shield, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -13,6 +14,7 @@ interface CreateUserFormProps {
 }
 
 export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUserFormProps) {
+    const router = useRouter()
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -29,7 +31,8 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
     const roleOptions = [
         { value: 'student', label: 'Student' },
         { value: 'lecturer', label: 'Lecturer' },
-        { value: 'vendor', label: 'Vendor Admin' },
+        { value: 'vendor-food', label: 'Food Vendor' },
+        { value: 'vendor-laundry', label: 'Laundry Vendor' },
         { value: 'delivery', label: 'Delivery Rider' },
         { value: 'admin', label: 'Admin' },
         { value: 'super_admin', label: 'Super Admin' },
@@ -66,49 +69,55 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
 
         setIsLoading(true)
 
-        try {
-            const supabase = createClient()
+        const useApi = currentUserRole === 'super_admin' || currentUserRole === 'admin'
+        const apiUrl = currentUserRole === 'super_admin' ? '/api/super-admin/users' : '/api/admin/users'
 
-            // 1. Create Auth User (Note: In a real app, this should probably be a Server Action or API route to bypass rate limits or use service role)
+        try {
+            if (useApi) {
+                // Create user via API (service role) so current user's session is not replaced
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.fullName,
+                        email: formData.email,
+                        password: formData.password,
+                        role: formData.role,
+                        uni_id: formData.university || null,
+                    }),
+                })
+                const data = await res.json().catch(() => ({}))
+                if (!res.ok) throw new Error(data?.message || `Failed (${res.status})`)
+                setGeneralSuccess(`Account created successfully for ${formData.fullName}!`)
+                setFormData({ fullName: '', email: '', password: '', role: '', university: '' })
+                if (onSuccess) onSuccess()
+                router.refresh()
+                return
+            }
+
+            const supabase = createClient()
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
                 options: {
-                    data: {
-                        name: formData.fullName,
-                        role: formData.role,
-                    },
+                    data: { name: formData.fullName, role: formData.role },
                 },
             })
-
             if (authError) throw authError
-
             if (!authData.user) throw new Error('Failed to create account')
 
-            // 2. Insert into users table
-            const { error: profileError } = await supabase
-                .from('users')
-                .insert({
-                    auth_id: authData.user.id,
-                    email: formData.email,
-                    name: formData.fullName,
-                    role: formData.role,
-                    uni_id: formData.university ? parseInt(formData.university) : null,
-                })
-
+            const { error: profileError } = await supabase.from('users').insert({
+                auth_id: authData.user.id,
+                email: formData.email,
+                name: formData.fullName,
+                role: formData.role,
+                uni_id: formData.university ? parseInt(formData.university) : null,
+            })
             if (profileError) throw profileError
 
             setGeneralSuccess(`Account created successfully for ${formData.fullName}!`)
-            setFormData({
-                fullName: '',
-                email: '',
-                password: '',
-                role: '',
-                university: '',
-            })
-
+            setFormData({ fullName: '', email: '', password: '', role: '', university: '' })
             if (onSuccess) onSuccess()
-
         } catch (err) {
             setGeneralError(err instanceof Error ? err.message : 'An unexpected error occurred')
         } finally {

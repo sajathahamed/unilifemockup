@@ -19,11 +19,16 @@ interface UserListProps {
     users: User[]
     title?: string
     showActions?: boolean
+    /** When true, Delete action calls API and refreshes (super-admin only). */
+    enableDelete?: boolean
 }
 
-export default function UserList({ users, title = "User Directory", showActions = false }: UserListProps) {
+export default function UserList({ users, title = "User Directory", showActions = false, enableDelete = false }: UserListProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState('all')
+    const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null)
+    const [deleteLoading, setDeleteLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState<string | null>(null)
 
     const router = useRouter()
     const pathname = usePathname()
@@ -55,6 +60,34 @@ export default function UserList({ users, title = "User Directory", showActions 
         document.addEventListener('click', handleClickOutside)
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
+
+    const handleDeleteClick = (u: User) => {
+        setActiveMenu(null)
+        if (enableDelete) {
+            setDeleteError(null)
+            setDeleteConfirm(u)
+        }
+    }
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteConfirm || !enableDelete) return
+        setDeleteLoading(true)
+        setDeleteError(null)
+        try {
+            const res = await fetch(`/api/super-admin/users/${deleteConfirm.id}`, { method: 'DELETE' })
+            const data = await res.json().catch(() => ({}))
+            if (res.ok) {
+                setDeleteConfirm(null)
+                router.refresh()
+            } else {
+                setDeleteError(data?.message || `Failed to delete (${res.status})`)
+            }
+        } catch {
+            setDeleteError('Network error')
+        } finally {
+            setDeleteLoading(false)
+        }
+    }
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
@@ -200,7 +233,7 @@ export default function UserList({ users, title = "User Directory", showActions 
                                                             <div className="h-px bg-gray-50 my-1" />
                                                             <button
                                                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
-                                                                onClick={() => setActiveMenu(null)}
+                                                                onClick={() => handleDeleteClick(u)}
                                                             >
                                                                 <Trash2 size={14} className="text-red-400" />
                                                                 <span>Delete User</span>
@@ -217,6 +250,42 @@ export default function UserList({ users, title = "User Directory", showActions 
                     </tbody>
                 </table>
             </div>
+
+            {/* Delete confirmation modal */}
+            {deleteConfirm && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50" onClick={() => !deleteLoading && setDeleteConfirm(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="font-semibold text-gray-900">Delete user?</h3>
+                        <p className="text-sm text-gray-600">
+                            <span className="font-medium">{deleteConfirm.name}</span>
+                            {deleteConfirm.email && (
+                                <span className="text-gray-500"> ({deleteConfirm.email})</span>
+                            )}
+                            {' '}will be removed. This cannot be undone.
+                        </p>
+                        {deleteError && (
+                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{deleteError}</p>
+                        )}
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => !deleteLoading && setDeleteConfirm(null)}
+                                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteConfirm}
+                                disabled={deleteLoading}
+                                className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {deleteLoading ? 'Deleting…' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -238,9 +307,11 @@ function getRoleStyles(role: string): string {
             return 'bg-purple-50 text-purple-700 border-purple-100'
         case 'admin':
             return 'bg-blue-50 text-blue-700 border-blue-100'
-        case 'vendor':
+        case 'vendor-food':
         case 'vendor_admin':
             return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+        case 'vendor-laundry':
+            return 'bg-teal-50 text-teal-700 border-teal-100'
         case 'delivery':
         case 'delivery_rider':
             return 'bg-orange-50 text-orange-700 border-orange-100'
