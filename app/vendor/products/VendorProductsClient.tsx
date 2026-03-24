@@ -18,13 +18,13 @@ interface Product {
 
 const CATEGORIES = ['Main', 'Snacks', 'Sides', 'Drinks', 'Desserts']
 
-function dbToProduct(m: { id: number; name: string; food_category?: string; price: number; food_stall_id?: number; description?: string | null; image_url?: string | null }): Product {
+function dbToProduct(m: { id: number; name: string; food_category?: string; price: number; food_stall_id?: number; description?: string | null; image_url?: string | null; is_available?: boolean | null }): Product {
   return {
     id: String(m.id),
     name: m.name,
     category: m.food_category || 'Main',
     price: Number(m.price),
-    inStock: true,
+    inStock: m.is_available !== false,
     description: m.description || '',
     food_stall_id: m.food_stall_id,
     image_url: m.image_url || '',
@@ -129,6 +129,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           name: form.name.trim(),
           food_category: form.category,
           price: form.price,
+          is_available: form.inStock,
           image_url: form.image_url.trim() || null,
         }),
       })
@@ -161,6 +162,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           name: form.name.trim(),
           food_category: form.category,
           price: form.price,
+          is_available: form.inStock,
           image_url: form.image_url.trim() || null,
         }),
       })

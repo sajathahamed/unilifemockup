@@ -193,39 +193,6 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
     setIsSidebarOpen(false)
   }
 
-  const roleInfo = roleConfig[user.role]
-
-  // All roles sorted alphabetically for sidebar display
-  const allRoles: UserRole[] = ['admin', 'delivery', 'lecturer', 'student', 'super_admin', 'vendor']
-
-  // Role icons for sidebar headers
-  const roleIcons: Record<UserRole, LucideIcon> = {
-    admin: LayoutDashboard,
-    delivery: Truck,
-    lecturer: BookOpen,
-    student: GraduationCap,
-    super_admin: Shield,
-    vendor: Store,
-  }
-
-  // Toggle role section expansion
-  const toggleRoleExpansion = (role: string) => {
-    setExpandedRoles((prev) => {
-      const next = new Set(prev)
-      if (next.has(role)) {
-        next.delete(role)
-      } else {
-        next.add(role)
-      }
-      return next
-    })
-  }
-
-  // Auto-expand the current user's role on initial load
-  useEffect(() => {
-    setExpandedRoles(new Set([user.role]))
-  }, [])
-
   const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
   const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
   const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
@@ -307,11 +274,17 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
-                  <li key={role}>
-                    {/* Role group header */}
-                    <button
-                      onClick={() => toggleRoleExpansion(role)}
-                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-100 transition-all duration-200"
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => handleNavigation(item.href)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-primary text-white shadow-md'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      } ${
+                        isNavigating && navigatingTo === item.href ? 'opacity-75 cursor-wait' : ''
+                      }`}
                     >
                       <item.icon size={20} />
                       <span>{item.label}</span>

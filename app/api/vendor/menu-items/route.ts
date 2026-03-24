@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (!email) return NextResponse.json({ message: 'No email' }, { status: 400 })
 
     const body = await request.json()
-    const { food_stall_id, name, price, food_category, image_url } = body
+    const { food_stall_id, name, price, food_category, image_url, is_available } = body
 
     const client = await createClient()
     const { data: stall } = await client.from('food_stalls').select('id').eq('id', food_stall_id).eq('owner_email', email).single()
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         price: price != null ? parseFloat(String(price)) : 0,
         category_id,
         image_url: image_url ? String(image_url).trim() : null,
-        is_available: true,
+        is_available: typeof is_available === 'boolean' ? is_available : true,
       })
       .select()
       .single()

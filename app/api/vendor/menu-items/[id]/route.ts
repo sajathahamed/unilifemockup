@@ -34,7 +34,7 @@ export async function PUT(
     if (isNaN(numId)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 })
 
     const body = await request.json()
-    const { name, price, food_category, image_url } = body
+    const { name, price, food_category, image_url, is_available } = body
 
     const client = await createClient()
     const { data: item } = await client.from('food_items').select('*').eq('id', numId).single()
@@ -49,6 +49,7 @@ export async function PUT(
     if (price != null) updates.price = parseFloat(String(price))
     if (food_category != null) updates.category_id = await resolveCategoryId(client, stallId || 0, food_category)
     if (image_url != null) updates.image_url = image_url ? String(image_url).trim() : null
+    if (typeof is_available === 'boolean') updates.is_available = is_available
 
     const { error } = await client.from('food_items').update(updates).eq('id', numId)
 
