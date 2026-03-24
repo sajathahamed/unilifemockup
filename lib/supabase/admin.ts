@@ -83,3 +83,72 @@ export async function fetchAllUsersForSuperAdmin(): Promise<{ users: UserRow[]; 
         .order('created_at', { ascending: false })
     return { users: (data || []) as UserRow[], limited: true }
 }
+
+export type VendorAccountRow = { id: number; name: string; email: string }
+
+/**
+ * Vendor users for admin stall/shop assignment. Uses service role when configured (bypasses RLS).
+ */
+export async function fetchVendorAccountsForAdmin(
+    role: 'vendor-food' | 'vendor-laundry'
+): Promise<VendorAccountRow[]> {
+    if (isValidServiceKey(serviceRoleKey)) {
+        const adminClient = createSupabaseClient(supabaseUrl, serviceRoleKey!, {
+            auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data, error } = await adminClient
+            .from('users')
+            .select('id, name, email')
+            .eq('role', role)
+            .order('name', { ascending: true })
+        if (!error && data) return data as VendorAccountRow[]
+    }
+    const sessionClient = await createClient()
+    const { data } = await sessionClient
+        .from('users')
+        .select('id, name, email')
+        .eq('role', role)
+        .order('name', { ascending: true })
+    return (data || []) as VendorAccountRow[]
+}
+
+/**
+ * Ensures the email belongs to a user with the expected vendor role (for API validation).
+ */
+export async function assertUserHasVendorRole(
+    email: string,
+    role: 'vendor-food' | 'vendor-laundry'
+): Promise<{ ok: true } | { ok: false; message: string }> {
+    const normalized = email.trim().toLowerCase()
+    const label = role === 'vendor-food' ? 'food vendor' : 'laundry vendor'
+    const notFound = {
+        ok: false as const,
+        message: `Owner must be a ${label} account created in Super Admin.`,
+    }
+
+    if (isValidServiceKey(serviceRoleKey)) {
+        const adminClient = createSupabaseClient(supabaseUrl, serviceRoleKey!, {
+            auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data, error } = await adminClient
+            .from('users')
+            .select('id')
+            .eq('email', normalized)
+            .eq('role', role)
+            .maybeSingle()
+        if (error) return { ok: false, message: 'Could not verify owner account.' }
+        if (!data) return notFound
+        return { ok: true }
+    }
+
+    const sessionClient = await createClient()
+    const { data, error } = await sessionClient
+        .from('users')
+        .select('id')
+        .eq('email', normalized)
+        .eq('role', role)
+        .maybeSingle()
+    if (error) return { ok: false, message: 'Could not verify owner account.' }
+    if (!data) return notFound
+    return { ok: true }
+}

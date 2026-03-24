@@ -29,6 +29,25 @@ function parseTime(v: unknown): string | null {
   return s
 }
 
+async function resolveCategoryId(client: Awaited<ReturnType<typeof createClient>>, vendorId: number, categoryName?: string) {
+  const name = String(categoryName || '').trim()
+  if (!name) return null
+  const { data: existing } = await client
+    .from('food_categories')
+    .select('id')
+    .eq('vendor_id', vendorId)
+    .ilike('name', name)
+    .maybeSingle()
+  if (existing?.id) return existing.id as number
+
+  const { data: created } = await client
+    .from('food_categories')
+    .insert({ vendor_id: vendorId, name })
+    .select('id')
+    .single()
+  return (created?.id as number | undefined) ?? null
+}
+
 /** POST /api/admin/food-stalls — create food_stalls row + menu items */
 export async function POST(request: NextRequest) {
   try {
@@ -70,6 +89,11 @@ export async function POST(request: NextRequest) {
     if (existingLaundry) {
       return NextResponse.json({ message: 'This email is already registered for a laundry shop. One email can only be food stall OR laundry — not both.' }, { status: 400 })
     }
+    // One email can only own one food stall
+    const { data: existingFood } = await client.from('food_stalls').select('id').eq('owner_email', email).limit(1).maybeSingle()
+    if (existingFood) {
+      return NextResponse.json({ message: 'This account already has a food stall. One account can only have one shop.' }, { status: 400 })
+    }
 
     const { data: stall, error: stallError } = await client
       .from('food_stalls')
@@ -104,15 +128,22 @@ export async function POST(request: NextRequest) {
 
     const items = Array.isArray(menu_items) ? menu_items : []
     if (items.length > 0) {
-      const rows = items.map((m: { name?: string; price?: number | string; food_category?: string; image_url?: string }, i: number) => ({
-        food_stall_id: stall.id,
-        name: m.name ? String(m.name).trim() : 'Item',
-        price: m.price != null && String(m.price).trim() !== '' ? parseFloat(String(m.price)) : 0,
-        food_category: m.food_category ? String(m.food_category).trim() : null,
-        image_url: m.image_url ? String(m.image_url).trim() : null,
-        sort_order: i,
-      }))
-      await client.from('food_stall_menu_items').insert(rows)
+      const rows = []
+      for (const m of items as { name?: string; price?: number | string; food_category?: string; image_url?: string }[]) {
+        const category_id = await resolveCategoryId(client, stall.id, m.food_category)
+        rows.push({
+          vendor_id: stall.id,
+          name: m.name ? String(m.name).trim() : 'Item',
+          price: m.price != null && String(m.price).trim() !== '' ? parseFloat(String(m.price)) : 0,
+          category_id,
+          image_url: m.image_url ? String(m.image_url).trim() : null,
+          is_available: true,
+        })
+      }
+      const { error: menuError } = await client.from('food_items').insert(rows)
+      if (menuError) {
+        return NextResponse.json({ message: `Food stall created, but menu save failed: ${menuError.message}` }, { status: 400 })
+      }
     }
 
     return NextResponse.json({ ok: true, id: stall.id })

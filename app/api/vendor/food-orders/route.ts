@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
 
-/** GET /api/vendor/food-orders — food orders for vendor's stalls (vendor-food only) */
-export async function GET() {
+/** GET /api/vendor/food-orders — food orders for vendor's stalls (optionally filtered by stall) */
+export async function GET(request: NextRequest) {
   try {
     const user = await verifyRole('vendor-food')
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
@@ -16,10 +16,17 @@ export async function GET() {
     const stallIds = (stalls ?? []).map((s) => s.id)
     if (stallIds.length === 0) return NextResponse.json({ orders: [] })
 
+    const requestedStallId = Number(request.nextUrl.searchParams.get('food_stall_id') || '')
+    const hasRequestedStall = Number.isFinite(requestedStallId) && requestedStallId > 0
+    const scopedStallIds = hasRequestedStall
+      ? stallIds.filter((id) => id === requestedStallId)
+      : stallIds
+    if (scopedStallIds.length === 0) return NextResponse.json({ orders: [] })
+
     const { data } = await client
       .from('food_orders')
       .select('*')
-      .in('food_stall_id', stallIds)
+      .in('food_stall_id', scopedStallIds)
       .order('created_at', { ascending: false })
 
     return NextResponse.json({ orders: data ?? [] })

@@ -70,6 +70,11 @@ export async function POST(request: NextRequest) {
     if (existingFood) {
       return NextResponse.json({ message: 'This email is already registered for a food stall. One email can only be food stall OR laundry — not both.' }, { status: 400 })
     }
+    // One email can only own one laundry shop
+    const { data: existingLaundry } = await client.from('laundry_shops').select('id').eq('owner_email', email).limit(1).maybeSingle()
+    if (existingLaundry) {
+      return NextResponse.json({ message: 'This account already has a laundry shop. One account can only have one shop.' }, { status: 400 })
+    }
 
     const { data, error } = await client
       .from('laundry_shops')

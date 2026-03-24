@@ -11,7 +11,7 @@ export default async function AdminFoodStallsAddPage() {
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white">
           <h1 className="text-2xl font-bold">Add Food Stall</h1>
-          <p className="mt-1 text-orange-100">Register a new food vendor. Owner email links to vendor login.</p>
+          <p className="mt-1 text-orange-100">Assign a stall to a food vendor account created in Super Admin.</p>
         </div>
         <AdminFoodStallAddForm />
         <div className="flex justify-center">

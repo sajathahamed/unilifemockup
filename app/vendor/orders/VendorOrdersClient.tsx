@@ -30,6 +30,21 @@ interface Order {
   notes?: string
 }
 
+interface MenuItem {
+  id: number
+  name: string
+  price: number
+}
+
+function getApiError(data: unknown, status: number, fallback: string): string {
+  if (data && typeof data === 'object') {
+    const o = data as Record<string, unknown>
+    if (typeof o.message === 'string' && o.message.trim()) return o.message
+    if (typeof o.error === 'string' && o.error.trim()) return o.error
+  }
+  return status >= 500 ? 'Server error, try again.' : fallback
+}
+
 function timeAgo(dateStr: string): string {
   const d = new Date(dateStr).getTime()
   const diff = Math.floor((Date.now() - d) / 60000)
@@ -77,23 +92,18 @@ interface VendorOrdersClientProps {
   }
 }
 
-const SAMPLE_ITEMS = [
-  { name: 'Jollof Rice', price: 1200 },
-  { name: 'Fried Rice', price: 1500 },
-  { name: 'Chicken & Chips', price: 2000 },
-  { name: 'Shawarma', price: 1800 },
-  { name: 'Zobo Drink', price: 300 },
-]
-
 export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   const [orders, setOrders] = useState<Order[]>([])
   const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [selectedStallId, setSelectedStallId] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [newOrder, setNewOrder] = useState({
     customer: '',
     phone: '',
@@ -103,18 +113,70 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
     orderItems: [] as { name: string; quantity: number; price: number }[],
   })
 
+  const loadOrders = async (stallId?: number) => {
+    const qs = stallId ? `?food_stall_id=${stallId}` : ''
+    const r = await fetch(`/api/vendor/food-orders${qs}`)
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      setMessage({ type: 'error', text: getApiError(data, r.status, 'Failed to load orders.') })
+      return
+    }
+    setOrders((data.orders ?? []).map(dbToOrder))
+  }
+
+  const loadMenuItems = async (stallId?: number) => {
+    const qs = stallId ? `?food_stall_id=${stallId}` : ''
+    const r = await fetch(`/api/vendor/menu-items${qs}`)
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      setMessage({ type: 'error', text: getApiError(data, r.status, 'Failed to load menu items.') })
+      return
+    }
+    const items = Array.isArray(data.items) ? data.items : []
+    setMenuItems(
+      items.map((item: { id: number; name: string; price: number }) => ({
+        id: item.id,
+        name: item.name,
+        price: Number(item.price) || 0,
+      }))
+    )
+  }
+
   useEffect(() => {
-    Promise.all([
-      fetch('/api/vendor/food-orders').then((r) => (r.ok ? r.json() : { orders: [] })),
-      fetch('/api/vendor/shops').then((r) => (r.ok ? r.json() : { food_stalls: [] })),
-    ]).then(([ordRes, shopRes]) => {
-      const raw = ordRes.orders ?? []
-      setOrders(raw.map(dbToOrder))
-      const fs = shopRes.food_stalls ?? []
-      setStalls(fs.map((s: { id: number; shop_name: string }) => ({ id: s.id, shop_name: s.shop_name })))
-      if (fs.length > 0) setNewOrder((p) => ({ ...p, stall_id: p.stall_id || fs[0].id }))
-    }).finally(() => setLoading(false))
+    fetch('/api/vendor/shops')
+      .then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) }))
+      .then(async (shopRes) => {
+        if (!shopRes.ok) {
+          setMessage({ type: 'error', text: getApiError(shopRes.data, shopRes.status, 'Failed to load shops.') })
+          return
+        }
+        const fs = shopRes.data.food_stalls ?? []
+        const mapped = fs.map((s: { id: number; shop_name: string }) => ({ id: s.id, shop_name: s.shop_name }))
+        setStalls(mapped)
+        const firstStallId = mapped[0]?.id || 0
+        if (firstStallId) {
+          setSelectedStallId(firstStallId)
+          setNewOrder((p) => ({ ...p, stall_id: p.stall_id || firstStallId }))
+          await loadOrders(firstStallId)
+          await loadMenuItems(firstStallId)
+        } else {
+          setOrders([])
+          setMenuItems([])
+        }
+      })
+      .catch(() => {
+        setMessage({ type: 'error', text: 'Network error while loading orders.' })
+      })
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!selectedStallId) return
+    loadOrders(selectedStallId).catch(() => setMessage({ type: 'error', text: 'Network error while loading orders.' }))
+    loadMenuItems(selectedStallId).catch(() => setMessage({ type: 'error', text: 'Network error while loading menu items.' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStallId])
 
   const addOrderItem = (item: { name: string; price: number }) => {
     const existing = newOrder.orderItems.find((i) => i.name === item.name)
@@ -132,14 +194,20 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
+    setMessage(null)
     if (newOrder.orderItems.length === 0 || !newOrder.customer.trim()) return
+    const stallId = newOrder.stall_id || selectedStallId || stalls[0]?.id
+    if (!stallId) {
+      setMessage({ type: 'error', text: 'Select a stall first.' })
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/vendor/food-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          food_stall_id: newOrder.stall_id || stalls[0]?.id,
+          food_stall_id: stallId,
           customer_name: newOrder.customer,
           customer_phone: newOrder.phone,
           items: newOrder.orderItems,
@@ -148,25 +216,40 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
         }),
       })
       const data = await res.json().catch(() => null)
-      if (data?.id) {
-        const mapped = dbToOrder({ ...data, created_at: new Date().toISOString() })
-        setOrders((prev) => [mapped, ...prev])
-        setNewOrder({ customer: '', phone: '', location: '', notes: '', stall_id: newOrder.stall_id || stalls[0]?.id, orderItems: [] })
+      if (res.ok && data?.id) {
+        await loadOrders(stallId)
+        setNewOrder({ customer: '', phone: '', location: '', notes: '', stall_id: stallId, orderItems: [] })
         setShowCreateModal(false)
+        setMessage({ type: 'success', text: 'Order created successfully.' })
+      } else {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to create order.') })
       }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while creating order.' })
     } finally {
       setSaving(false)
     }
   }
 
   const handleStatusUpdate = async (id: string, status: Order['status']) => {
+    setMessage(null)
     const numId = id.replace('#ORD-', '')
-    const res = await fetch(`/api/vendor/food-orders/${numId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    })
-    if (res.ok) setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)))
+    try {
+      const res = await fetch(`/api/vendor/food-orders/${numId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json().catch(() => null)
+      if (res.ok) {
+        await loadOrders(selectedStallId || newOrder.stall_id || stalls[0]?.id)
+        setMessage({ type: 'success', text: 'Order status updated.' })
+      } else {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to update order status.') })
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while updating order status.' })
+    }
     setExpandedOrder(null)
   }
 
@@ -205,6 +288,12 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
           </button>
         </div>
 
+        {message && (
+          <div className={`px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+            {message.text}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <Search size={18} className="absolute left-3 top-3 text-gray-400" />
@@ -229,6 +318,22 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
                 <option value="ready">Ready</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div className="relative flex-1">
+              <select
+                value={selectedStallId || ''}
+                onChange={(e) => {
+                  const id = parseInt(e.target.value, 10) || 0
+                  setSelectedStallId(id)
+                  setNewOrder((p) => ({ ...p, stall_id: id || p.stall_id }))
+                }}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none bg-white"
+                disabled={stalls.length === 0}
+              >
+                {stalls.map((s) => (
+                  <option key={s.id} value={s.id}>{s.shop_name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -287,12 +392,15 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Add Items</label>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {SAMPLE_ITEMS.map((item) => (
+                  {menuItems.map((item) => (
                     <button key={item.name} type="button" onClick={() => addOrderItem(item)} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">
                       {item.name} (+RS {item.price})
                     </button>
                   ))}
                 </div>
+                {menuItems.length === 0 && (
+                  <p className="text-sm text-gray-500 mb-2">No menu items found for this stall.</p>
+                )}
                 {newOrder.orderItems.length > 0 && (
                   <div className="space-y-1 border rounded-lg p-2 bg-gray-50">
                     {newOrder.orderItems.map((i) => (
