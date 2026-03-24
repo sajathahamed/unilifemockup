@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, FileText, Loader2, Calendar, BookOpen, Send } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, BookOpen, Send } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { CardLoader } from '@/components/ui/LoadingSpinner'
 
 interface Assignment {
   id: number
@@ -48,9 +49,7 @@ export default function StudentAssignmentsClient() {
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
       )}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={32} className="text-blue-600 animate-spin" />
-        </div>
+        <CardLoader variant="academic" text="Loading assignments..." />
       ) : assignments.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
           <FileText size={48} className="mx-auto text-gray-300 mb-4" />

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { BookOpen, Loader2, ArrowRight } from 'lucide-react'
+import { BookOpen, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { CardLoader } from '@/components/ui/LoadingSpinner'
 
 interface Course {
   id: number
@@ -60,9 +61,7 @@ export default function LecturerCoursesClient({ initialCourses = [] }: LecturerC
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 size={32} className="text-violet-600 animate-spin" />
-        </div>
+        <CardLoader variant="academic" text="Loading courses..." />
       ) : courses.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm">
           <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
