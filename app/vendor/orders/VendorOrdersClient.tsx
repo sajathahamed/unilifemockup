@@ -14,6 +14,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  X,
 } from 'lucide-react'
 import { UserRole } from '@/lib/auth'
 
@@ -54,10 +55,26 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 1440)} days ago`
 }
 
-function dbToOrder(db: { id: number; customer_name: string; customer_phone: string | null; items: string | null; total_amount: number; status: string; address: string | null; created_at: string }): Order {
+function dbToOrder(db: {
+  id: number
+  customer_name: string
+  customer_phone: string | null
+  items: string | { name: string; quantity: number; price: number }[] | null
+  total: number
+  status: string
+  delivery_address: string | null
+  notes?: string | null
+  created_at: string
+}): Order {
   let itemsParsed: { name: string; quantity: number; price: number }[] = []
   try {
-    itemsParsed = db.items ? JSON.parse(db.items) : []
+    if (typeof db.items === 'string') {
+      itemsParsed = db.items ? JSON.parse(db.items) : []
+    } else if (Array.isArray(db.items)) {
+      itemsParsed = db.items
+    } else {
+      itemsParsed = []
+    }
   } catch {
     itemsParsed = []
   }
@@ -66,10 +83,11 @@ function dbToOrder(db: { id: number; customer_name: string; customer_phone: stri
     customer: db.customer_name,
     phone: db.customer_phone || '',
     items: itemsParsed,
-    totalAmount: Number(db.total_amount),
+    totalAmount: Number(db.total),
     status: db.status as Order['status'],
     time: timeAgo(db.created_at),
-    location: db.address || '',
+    location: db.delivery_address || '',
+    notes: db.notes || '',
   }
 }
 
@@ -92,6 +110,12 @@ interface VendorOrdersClientProps {
   }
 }
 
+interface DeliveryAgent {
+  id: number
+  name: string
+  email: string
+}
+
 export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   const [orders, setOrders] = useState<Order[]>([])
   const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
@@ -104,10 +128,25 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [deliveryAgents, setDeliveryAgents] = useState<DeliveryAgent[]>([])
+  const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
+  const [assignForm, setAssignForm] = useState<{
+    deliveryType: 'pickup' | 'delivery'
+    deliveryAgentId: number | 0
+    location: string
+    mapLink: string
+  }>({
+    deliveryType: 'pickup',
+    deliveryAgentId: 0,
+    location: '',
+    mapLink: '',
+  })
   const [newOrder, setNewOrder] = useState({
     customer: '',
     phone: '',
     location: '',
+    mapLink: '',
+    deliveryType: 'delivery' as 'delivery' | 'pickup',
     notes: '',
     stall_id: 0,
     orderItems: [] as { name: string; quantity: number; price: number }[],
@@ -125,7 +164,7 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   }
 
   const loadMenuItems = async (stallId?: number) => {
-    const qs = stallId ? `?food_stall_id=${stallId}` : ''
+    const qs = stallId ? `?food_stall_id=${stallId}&available_only=true` : '?available_only=true'
     const r = await fetch(`/api/vendor/menu-items${qs}`)
     const data = await r.json().catch(() => ({}))
     if (!r.ok) {
@@ -140,6 +179,16 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
         price: Number(item.price) || 0,
       }))
     )
+  }
+
+  const loadDeliveryAgents = async () => {
+    const r = await fetch('/api/vendor/delivery-agents')
+    const data = await r.json().catch(() => ({}))
+    if (!r.ok) {
+      setMessage({ type: 'error', text: getApiError(data, r.status, 'Failed to load delivery agents.') })
+      return
+    }
+    setDeliveryAgents(Array.isArray(data.agents) ? data.agents : [])
   }
 
   useEffect(() => {
@@ -159,6 +208,7 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
           setNewOrder((p) => ({ ...p, stall_id: p.stall_id || firstStallId }))
           await loadOrders(firstStallId)
           await loadMenuItems(firstStallId)
+          await loadDeliveryAgents()
         } else {
           setOrders([])
           setMenuItems([])
@@ -195,7 +245,38 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
-    if (newOrder.orderItems.length === 0 || !newOrder.customer.trim()) return
+    const customer = newOrder.customer.trim()
+    const phone = newOrder.phone.trim()
+    const location = newOrder.location.trim()
+    const mapLink = newOrder.mapLink.trim()
+    if (customer.length < 2) {
+      setMessage({ type: 'error', text: 'Customer name must be at least 2 characters.' })
+      return
+    }
+    if (!/^[+0-9][0-9\s-]{6,19}$/.test(phone)) {
+      setMessage({ type: 'error', text: 'Enter a valid customer phone number.' })
+      return
+    }
+    if (newOrder.deliveryType === 'delivery' && location.length < 4) {
+      setMessage({ type: 'error', text: 'Delivery location must be at least 4 characters.' })
+      return
+    }
+    if (mapLink && !/^https?:\/\/\S+$/i.test(mapLink)) {
+      setMessage({ type: 'error', text: 'Map link must be a valid URL.' })
+      return
+    }
+    if (newOrder.orderItems.length === 0) {
+      setMessage({ type: 'error', text: 'Add at least one item.' })
+      return
+    }
+    if (newOrder.orderItems.some((i) => !i.name.trim() || i.quantity <= 0 || i.price < 0)) {
+      setMessage({ type: 'error', text: 'Order items contain invalid values.' })
+      return
+    }
+    if (totalAmount <= 0) {
+      setMessage({ type: 'error', text: 'Order total must be greater than 0.' })
+      return
+    }
     const stallId = newOrder.stall_id || selectedStallId || stalls[0]?.id
     if (!stallId) {
       setMessage({ type: 'error', text: 'Select a stall first.' })
@@ -208,17 +289,29 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           food_stall_id: stallId,
-          customer_name: newOrder.customer,
-          customer_phone: newOrder.phone,
+          customer_name: customer,
+          customer_phone: phone,
           items: newOrder.orderItems,
-          total_amount: totalAmount,
-          address: newOrder.location,
+          total: totalAmount,
+          delivery_type: newOrder.deliveryType,
+          delivery_address: location || null,
+          map_link: mapLink || null,
+          notes: newOrder.notes.trim() || null,
         }),
       })
       const data = await res.json().catch(() => null)
       if (res.ok && data?.id) {
         await loadOrders(stallId)
-        setNewOrder({ customer: '', phone: '', location: '', notes: '', stall_id: stallId, orderItems: [] })
+        setNewOrder({
+          customer: '',
+          phone: '',
+          location: '',
+          mapLink: '',
+          deliveryType: 'delivery',
+          notes: '',
+          stall_id: stallId,
+          orderItems: [],
+        })
         setShowCreateModal(false)
         setMessage({ type: 'success', text: 'Order created successfully.' })
       } else {
@@ -251,6 +344,74 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
       setMessage({ type: 'error', text: 'Network error while updating order status.' })
     }
     setExpandedOrder(null)
+  }
+
+  const openAssignDeliveryModal = (order: Order) => {
+    setAssigningOrder(order)
+    setAssignForm({
+      deliveryType: 'pickup',
+      deliveryAgentId: 0,
+      location: order.location || '',
+      mapLink: '',
+    })
+  }
+
+  const handleConfirmDelivery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!assigningOrder) return
+
+    const numId = assigningOrder.id.replace('#ORD-', '')
+    const location = assignForm.location.trim()
+    const mapLink = assignForm.mapLink.trim()
+
+    if (assignForm.deliveryType === 'delivery') {
+      if (!assignForm.deliveryAgentId) {
+        setMessage({ type: 'error', text: 'Select a delivery person.' })
+        return
+      }
+      if (location.length < 4) {
+        setMessage({ type: 'error', text: 'Delivery location must be at least 4 characters.' })
+        return
+      }
+      if (mapLink && !/^https?:\/\/\S+$/i.test(mapLink)) {
+        setMessage({ type: 'error', text: 'Map link must be a valid URL.' })
+        return
+      }
+    }
+
+    setSaving(true)
+    setMessage(null)
+    try {
+      const res = await fetch(`/api/vendor/food-orders/${numId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          delivery_type: assignForm.deliveryType,
+          delivery_agent_id: assignForm.deliveryType === 'delivery' ? assignForm.deliveryAgentId : null,
+          delivery_address: location || null,
+          map_link: mapLink || null,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to confirm order.') })
+        return
+      }
+
+      await loadOrders(selectedStallId || newOrder.stall_id || stalls[0]?.id)
+      setAssigningOrder(null)
+      setMessage({
+        type: 'success',
+        text: assignForm.deliveryType === 'delivery'
+          ? 'Order confirmed and delivery person assigned.'
+          : 'Order confirmed as pickup.',
+      })
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while confirming order.' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const filteredOrders = orders.filter((order) => {
@@ -352,6 +513,7 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
                 isExpanded={expandedOrder === order.id}
                 onToggle={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
                 onStatusUpdate={handleStatusUpdate}
+                onConfirmDelivery={() => openAssignDeliveryModal(order)}
               />
             ))
           ) : (
@@ -386,8 +548,42 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Order Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewOrder((p) => ({ ...p, deliveryType: 'pickup' }))}
+                    className={`px-3 py-2 rounded-lg border text-sm ${newOrder.deliveryType === 'pickup' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-700'}`}
+                  >
+                    Pickup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewOrder((p) => ({ ...p, deliveryType: 'delivery' }))}
+                    className={`px-3 py-2 rounded-lg border text-sm ${newOrder.deliveryType === 'delivery' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-700'}`}
+                  >
+                    Delivery
+                  </button>
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Location</label>
-                <input required value={newOrder.location} onChange={(e) => setNewOrder((p) => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg" placeholder="Block 12, Hostel A" />
+                <input
+                  required={newOrder.deliveryType === 'delivery'}
+                  value={newOrder.location}
+                  onChange={(e) => setNewOrder((p) => ({ ...p, location: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="Nearby building mark (e.g. Block 12, Hostel A)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nearby Map Link (optional)</label>
+                <input
+                  value={newOrder.mapLink}
+                  onChange={(e) => setNewOrder((p) => ({ ...p, mapLink: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="https://maps.google.com/..."
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Add Items</label>
@@ -432,6 +628,88 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
           </div>
         </div>
       )}
+
+      {assigningOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAssigningOrder(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Delivery</h3>
+              <button onClick={() => setAssigningOrder(null)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleConfirmDelivery} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAssignForm((p) => ({ ...p, deliveryType: 'pickup' }))}
+                    className={`px-3 py-2 rounded-lg border ${assignForm.deliveryType === 'pickup' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-700'}`}
+                  >
+                    Pickup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignForm((p) => ({ ...p, deliveryType: 'delivery' }))}
+                    className={`px-3 py-2 rounded-lg border ${assignForm.deliveryType === 'delivery' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-700'}`}
+                  >
+                    Delivery
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location Address</label>
+                <input
+                  value={assignForm.location}
+                  onChange={(e) => setAssignForm((p) => ({ ...p, location: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="Delivery or pickup location"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nearby Map Link (optional)</label>
+                <input
+                  value={assignForm.mapLink}
+                  onChange={(e) => setAssignForm((p) => ({ ...p, mapLink: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="https://maps.google.com/..."
+                />
+              </div>
+
+              {assignForm.deliveryType === 'delivery' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Person</label>
+                  <select
+                    value={assignForm.deliveryAgentId || ''}
+                    onChange={(e) => setAssignForm((p) => ({ ...p, deliveryAgentId: parseInt(e.target.value, 10) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  >
+                    <option value="">Select delivery person</option>
+                    {deliveryAgents.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setAssigningOrder(null)} className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="flex-1 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : null}
+                  Confirm
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
@@ -441,11 +719,13 @@ function OrderItem({
   isExpanded,
   onToggle,
   onStatusUpdate,
+  onConfirmDelivery,
 }: {
   order: Order
   isExpanded: boolean
   onToggle: () => void
   onStatusUpdate: (id: string, status: Order['status']) => void
+  onConfirmDelivery: () => void
 }) {
   const config = statusConfig[order.status]
 
@@ -562,7 +842,7 @@ function OrderItem({
               </button>
             )}
             {order.status === 'ready' && (
-              <button onClick={() => onStatusUpdate(order.id, 'completed')} className="w-full py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors">
+              <button onClick={onConfirmDelivery} className="w-full py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors">
                 Confirm Delivery
               </button>
             )}

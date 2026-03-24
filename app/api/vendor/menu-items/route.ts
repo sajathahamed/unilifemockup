@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     if (stallIds.length === 0) return NextResponse.json({ items: [], stalls: [] })
 
     const requestedStallId = Number(request.nextUrl.searchParams.get('food_stall_id') || '')
+    const availableOnly = request.nextUrl.searchParams.get('available_only') === 'true'
     const hasRequestedStall = Number.isFinite(requestedStallId) && requestedStallId > 0
     const scopedStallIds = hasRequestedStall
       ? stallIds.filter((id) => id === requestedStallId)
@@ -43,11 +44,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ items: [], stalls: stalls ?? [] })
     }
 
-    const { data: items } = await client
+    let itemsQuery = client
       .from('food_items')
       .select('*')
       .in('vendor_id', scopedStallIds)
       .order('id', { ascending: false })
+    if (availableOnly) itemsQuery = itemsQuery.eq('is_available', true)
+    const { data: items } = await itemsQuery
     const catIds = (items ?? []).map((x) => x.category_id).filter((x): x is number => typeof x === 'number')
     const { data: cats } = catIds.length
       ? await client.from('food_categories').select('id, name').in('id', catIds)
