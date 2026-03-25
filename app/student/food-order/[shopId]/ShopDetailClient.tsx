@@ -11,7 +11,20 @@ import { UserProfile } from '@/lib/auth'
 import { getMenuForShop, MenuCategory, MenuItem } from '@/lib/food-utils'
 
 const PRICE_MAP: Record<number, string> = { 0: 'Free', 1: 'Rs', 2: 'Rs', 3: 'Rs', 4: 'Rs' }
-const CATEGORY_EMOJI: Record<string, string> = { mains: '🍛', drinks: '🥤', snacks: '🥐', desserts: '🍨', default: '🍽️' }
+const CATEGORY_EMOJI: Record<string, string> = {
+    mains: '🍛',
+    main: '🍛',
+    'fast food': '🍔',
+    fast_food: '🍔',
+    drinks: '🥤',
+    drink: '🥤',
+    snacks: '🥐',
+    sides: '🍟',
+    desserts: '🍨',
+    restaurant: '🍜',
+    canteen: '🍛',
+    default: '🍽️',
+}
 
 function formatTime(v: string | null): string {
     if (!v) return '—'
@@ -25,18 +38,21 @@ function mapDbMenuToCategories(menuItems: { id: number; name: string; price: num
     for (const m of menuItems) {
         const cat = m.food_category?.trim() || 'items'
         if (!byCat[cat]) byCat[cat] = []
+        const emojiKey = cat.toLowerCase().trim().replace(/\s+/g, ' ')
+        const emojiKeyNormalized = emojiKey.replace(/\s+/g, '_')
+        const emoji = CATEGORY_EMOJI[emojiKey] || CATEGORY_EMOJI[emojiKeyNormalized] || CATEGORY_EMOJI[cat.toLowerCase()] || CATEGORY_EMOJI.default
         byCat[cat].push({
             id: String(m.id),
             name: m.name,
             description: m.food_category || '',
             price: Number(m.price) || 0,
-            emoji: CATEGORY_EMOJI[cat.toLowerCase()] || CATEGORY_EMOJI.default,
+            emoji,
         })
     }
     return Object.entries(byCat).map(([id, items]) => ({
         id,
         label: id.charAt(0).toUpperCase() + id.slice(1),
-        emoji: CATEGORY_EMOJI[id.toLowerCase()] || CATEGORY_EMOJI.default,
+        emoji: CATEGORY_EMOJI[id.toLowerCase()] || CATEGORY_EMOJI[id.toLowerCase().replace(/\s+/g, '_')] || CATEGORY_EMOJI.default,
         items,
     }))
 }
@@ -71,13 +87,13 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) =>
 
 type StoredCartItem = { id: string; name: string; price: number; emoji: string; qty: number }
 
-function getCartKey(shopId: string) {
-    return `unilife_food_cart:${shopId}`
+function getCartKey(userId: number, shopId: string) {
+    return `unilife_food_cart:${userId}:${shopId}`
 }
 
-function readCart(shopId: string): StoredCartItem[] {
+function readCart(userId: number, shopId: string): StoredCartItem[] {
     try {
-        const raw = localStorage.getItem(getCartKey(shopId))
+        const raw = localStorage.getItem(getCartKey(userId, shopId))
         if (!raw) return []
         const parsed = JSON.parse(raw)
         if (!Array.isArray(parsed)) return []
@@ -95,9 +111,9 @@ function readCart(shopId: string): StoredCartItem[] {
     }
 }
 
-function writeCart(shopId: string, cart: StoredCartItem[]) {
+function writeCart(userId: number, shopId: string, cart: StoredCartItem[]) {
     try {
-        localStorage.setItem(getCartKey(shopId), JSON.stringify(cart))
+        localStorage.setItem(getCartKey(userId, shopId), JSON.stringify(cart))
     } catch {
         // ignore
     }
@@ -113,6 +129,17 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
 
     const isDbStall = shopId?.startsWith?.('db-') ?? false
     const stallId = isDbStall ? shopId?.replace?.('db-', '') ?? null : null
+    const queryStallId = searchParams.get('stallId')
+
+    // Normalize shop id so the cart key matches across pages.
+    // Examples:
+    // - `db-8` stays `db-8`
+    // - `8` becomes `db-8`
+    // - if a `stallId` query param exists, prefer `db-${stallId}`
+    const cartShopId =
+        shopId?.startsWith?.('db-') ? shopId
+            : (/^\d+$/.test(shopId) ? `db-${shopId}` : null) ??
+                (queryStallId && /^\d+$/.test(queryStallId) ? `db-${queryStallId}` : shopId)
 
     const [stallData, setStallData] = useState<{
         shop_name: string
@@ -157,7 +184,13 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
         if (isDbStall && stallId) {
             setLoading(true)
             fetch(`/api/student/food-stalls/${stallId}`)
-                .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Not found'))))
+                .then(async (r) => {
+                    if (!r.ok) {
+                        const text = await r.text().catch(() => '')
+                        throw new Error(`HTTP ${r.status}${text ? `: ${text.slice(0, 200)}` : ''}`)
+                    }
+                    return r.json()
+                })
                 .then(setStallData)
                 .catch((e) => setError(e?.message ?? 'Failed to load'))
                 .finally(() => setLoading(false))
@@ -167,20 +200,19 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
     useEffect(() => {
         // Load persisted cart count for this shop
         try {
-            const cart = readCart(shopId)
+            const cart = readCart(user.id, cartShopId)
             setCartCount(countCart(cart))
         } catch {
             setCartCount(0)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shopId])
+    }, [user.id, cartShopId])
 
     const addToCart = (item: MenuItem) => {
-        const cart = readCart(shopId)
+        const cart = readCart(user.id, cartShopId)
         const idx = cart.findIndex((c) => c.id === item.id)
         if (idx >= 0) cart[idx] = { ...cart[idx], qty: cart[idx].qty + 1 }
         else cart.push({ id: item.id, name: item.name, price: item.price, emoji: item.emoji, qty: 1 })
-        writeCart(shopId, cart)
+        writeCart(user.id, cartShopId, cart)
         setCartCount(countCart(cart))
     }
 

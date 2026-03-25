@@ -2,26 +2,54 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
 
+const CATEGORY_TO_ID: Record<string, number> = {
+  Main: 1,
+  Snacks: 2,
+  Sides: 3,
+  Drinks: 4,
+  Desserts: 5,
+}
+
+function toCategoryId(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value)
+  const s = typeof value === 'string' ? value.trim() : ''
+  if (!s) return null
+  if (/^\d+$/.test(s)) return parseInt(s, 10)
+  return CATEGORY_TO_ID[s] ?? null
+}
+
 /** GET /api/vendor/menu-items — list menu items for vendor's food stalls */
 export async function GET() {
   try {
-    const user = await verifyRole('vendor')
+    const user =
+      (await verifyRole('vendor')) ||
+      (await verifyRole('vendor-food')) ||
+      (await verifyRole('vendor-laundry'))
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const email = user.email?.toLowerCase()
-    if (!email) return NextResponse.json({ items: [] })
+    if (!email) return NextResponse.json({ items: [], stalls: [] })
+    if (!user.id || user.id < 1) return NextResponse.json({ message: 'Missing vendor profile (users table)' }, { status: 400 })
 
     const client = await createClient()
-    const { data: stalls } = await client.from('food_stalls').select('id').eq('owner_email', email)
-    const stallIds = (stalls ?? []).map((s) => s.id)
-    if (stallIds.length === 0) return NextResponse.json({ items: [], stalls: [] })
+    // Stalls are optional metadata for the UI. Items are sourced from `food_items`.
+    const { data: stalls, error: stallsError } = await client
+      .from('food_stalls')
+      .select('id, shop_name')
+      .ilike('owner_email', email)
+      .order('id', { ascending: true })
+    if (stallsError) {
+      // Don't fail listing items if stalls lookup fails
+      console.warn('[vendor/menu-items] stalls lookup failed:', stallsError.message)
+    }
 
-    const { data } = await client
-      .from('food_stall_menu_items')
+    const { data, error } = await client
+      .from('food_items')
       .select('*')
-      .in('food_stall_id', stallIds)
-      .order('sort_order')
+      .eq('vendor_id', user.id)
+      .order('id', { ascending: false })
 
+    if (error) return NextResponse.json({ message: error.message, items: [], stalls: stalls ?? [] }, { status: 400 })
     return NextResponse.json({ items: data ?? [], stalls: stalls ?? [] })
   } catch (e) {
     console.error('Vendor menu-items GET error:', e)
@@ -32,28 +60,39 @@ export async function GET() {
 /** POST /api/vendor/menu-items — create menu item */
 export async function POST(request: NextRequest) {
   try {
-    const user = await verifyRole('vendor')
+    const user =
+      (await verifyRole('vendor')) ||
+      (await verifyRole('vendor-food')) ||
+      (await verifyRole('vendor-laundry'))
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
-    const email = user.email?.toLowerCase()
-    if (!email) return NextResponse.json({ message: 'No email' }, { status: 400 })
+    if (!user.id || user.id < 1) return NextResponse.json({ message: 'Missing vendor profile (users table)' }, { status: 400 })
 
     const body = await request.json()
-    const { food_stall_id, name, price, food_category, image_url } = body
+    const { name, price, food_category, category_id, image_url, inStock, is_available } = body
 
     const client = await createClient()
-    const { data: stall } = await client.from('food_stalls').select('id').eq('id', food_stall_id).eq('owner_email', email).single()
-    if (!stall) return NextResponse.json({ message: 'Stall not found or not yours' }, { status: 400 })
+    const resolvedCategoryId = toCategoryId(category_id ?? food_category)
+    if (!resolvedCategoryId) {
+      return NextResponse.json({ message: 'Invalid category (category_id / food_category)' }, { status: 400 })
+    }
+
+    const available =
+      typeof is_available === 'boolean'
+        ? is_available
+        : typeof inStock === 'boolean'
+          ? inStock
+          : true
 
     const { data, error } = await client
-      .from('food_stall_menu_items')
+      .from('food_items')
       .insert({
-        food_stall_id,
+        vendor_id: user.id,
         name: String(name || '').trim() || 'Item',
         price: price != null ? parseFloat(String(price)) : 0,
-        food_category: food_category ? String(food_category).trim() : null,
+        category_id: resolvedCategoryId,
         image_url: image_url ? String(image_url).trim() : null,
-        sort_order: 0,
+        is_available: available,
       })
       .select()
       .single()

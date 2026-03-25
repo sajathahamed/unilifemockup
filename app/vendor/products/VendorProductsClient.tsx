@@ -12,18 +12,48 @@ interface Product {
   price: number
   inStock: boolean
   description?: string
-  food_stall_id?: number
+  vendor_id?: number
+  category_id?: number
+  image_url?: string
 }
 
 const CATEGORIES = ['Main', 'Snacks', 'Sides', 'Drinks', 'Desserts']
 
-function dbToProduct(m: { id: number; name: string; food_category?: string; price: number }): Product {
+type ProductFormState = {
+  name: string
+  category: string
+  price: number
+  inStock: boolean
+  description: string
+  stall_id: number
+}
+
+function categoryFromId(id?: number | null) {
+  const map = new Map<number, string>([
+    [1, 'Main'],
+    [2, 'Snacks'],
+    [3, 'Sides'],
+    [4, 'Drinks'],
+    [5, 'Desserts'],
+  ])
+  return id != null ? (map.get(Number(id)) || 'Main') : 'Main'
+}
+
+function categoryToId(label: string) {
+  const map: Record<string, number> = { Main: 1, Snacks: 2, Sides: 3, Drinks: 4, Desserts: 5 }
+  return map[label] ?? 1
+}
+
+function dbToProduct(m: { id: number; name: string; category_id?: number | null; price: number; is_available?: boolean | null; vendor_id?: number | null; image_url?: string | null }): Product {
   return {
     id: String(m.id),
     name: m.name,
-    category: m.food_category || 'Main',
+    category: categoryFromId(m.category_id ?? null),
     price: Number(m.price),
-    inStock: true,
+    inStock: m.is_available ?? true,
+    vendor_id: m.vendor_id ?? undefined,
+    category_id: m.category_id ?? undefined,
+    image_url: m.image_url ?? undefined,
   }
 }
 
@@ -31,127 +61,22 @@ interface VendorProductsClientProps {
   user: { id: number; auth_id: string; name: string; email: string; role: UserRole; avatar_url?: string }
 }
 
-export default function VendorProductsClient({ user }: VendorProductsClientProps) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: 0 })
-
-  useEffect(() => {
-    fetch('/api/vendor/menu-items')
-      .then((r) => (r.ok ? r.json() : { items: [], stalls: [] }))
-      .then((data) => {
-        const s = data.stalls ?? []
-        setProducts((data.items ?? []).map(dbToProduct))
-        setStalls(s)
-        if (s.length > 0) setForm((p) => ({ ...p, stall_id: p.stall_id || s[0].id }))
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  const categories = [...new Set(products.map((p) => p.category))]
-  const filtered = products.filter((p) => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
-    const matchCat = categoryFilter === 'all' || p.category === categoryFilter
-    return matchSearch && matchCat
-  })
-
-  const openAddModal = () => {
-    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: p.stall_id || stalls[0]?.id || 0 }))
-    setShowAddModal(true)
-  }
-
-  const openEditModal = (p: Product) => {
-    setForm((prev) => ({
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      inStock: p.inStock,
-      description: (p as Product & { description?: string }).description || '',
-      stall_id: (p as Product & { food_stall_id?: number }).food_stall_id ?? prev.stall_id ?? stalls[0]?.id ?? 0,
-    }))
-    setEditingProduct(p)
-  }
-
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.name.trim()) return
-    const stallId = form.stall_id || stalls[0]?.id
-    if (!stallId) return
-    setSaving(true)
-    try {
-      const res = await fetch('/api/vendor/menu-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          food_stall_id: stallId,
-          name: form.name.trim(),
-          food_category: form.category,
-          price: form.price,
-        }),
-      })
-      const data = await res.json().catch(() => null)
-      if (data?.id) {
-        setProducts((prev) => [dbToProduct(data), ...prev])
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: stallId })
-        setShowAddModal(false)
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleEditProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingProduct || !form.name.trim()) return
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/vendor/menu-items/${editingProduct.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          food_category: form.category,
-          price: form.price,
-        }),
-      })
-      if (res.ok) {
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === editingProduct.id
-              ? { ...p, name: form.name.trim(), category: form.category, price: form.price }
-              : p
-          )
-        )
-        setEditingProduct(null)
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDeleteProduct = async (id: string) => {
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/vendor/menu-items/${id}`, { method: 'DELETE' })
-      if (res.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== id))
-        setDeletingId(null)
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const ProductForm = ({ onSubmit, onCancel, title, disabled }: { onSubmit: (e: React.FormEvent) => void; onCancel: () => void; title: string; disabled?: boolean }) => (
+function ProductForm({
+  form,
+  setForm,
+  onSubmit,
+  onCancel,
+  title,
+  disabled,
+}: {
+  form: ProductFormState
+  setForm: React.Dispatch<React.SetStateAction<ProductFormState>>
+  onSubmit: (e: React.FormEvent) => void
+  onCancel: () => void
+  title: string
+  disabled?: boolean
+}) {
+  return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
@@ -181,7 +106,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           type="number"
           min={0}
           required
-          value={form.price || ''}
+          value={Number.isFinite(form.price) ? form.price : 0}
           onChange={(e) => setForm((p) => ({ ...p, price: parseInt(e.target.value) || 0 }))}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary"
         />
@@ -217,6 +142,147 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       </div>
     </form>
   )
+}
+
+export default function VendorProductsClient({ user }: VendorProductsClientProps) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [form, setForm] = useState<ProductFormState>({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: 0 })
+
+  useEffect(() => {
+    fetch('/api/vendor/menu-items')
+      .then((r) => (r.ok ? r.json() : { items: [], stalls: [] }))
+      .then((data) => {
+        const s = data.stalls ?? []
+        setProducts((data.items ?? []).map(dbToProduct))
+        setStalls(s)
+        if (s.length > 0) setForm((p) => ({ ...p, stall_id: p.stall_id || s[0].id }))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const categories = [...new Set(products.map((p) => p.category))]
+  const filtered = products.filter((p) => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
+    const matchCat = categoryFilter === 'all' || p.category === categoryFilter
+    return matchSearch && matchCat
+  })
+
+  const openAddModal = () => {
+    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: p.stall_id || stalls[0]?.id || 0 }))
+    setFormError(null)
+    setShowAddModal(true)
+  }
+
+  const openEditModal = (p: Product) => {
+    setForm((prev) => ({
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      inStock: p.inStock,
+      description: (p as Product & { description?: string }).description || '',
+      stall_id: prev.stall_id ?? stalls[0]?.id ?? 0,
+    }))
+    setEditingProduct(p)
+    setFormError(null)
+  }
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.name.trim()) return
+    setSaving(true)
+    setFormError(null)
+    try {
+      const res = await fetch('/api/vendor/menu-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          category_id: categoryToId(form.category),
+          price: form.price,
+          is_available: form.inStock,
+          image_url: null,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setFormError(data?.message || `Failed to add product (HTTP ${res.status})`)
+        return
+      }
+      if (data?.id) {
+        setProducts((prev) => [dbToProduct(data), ...prev])
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
+        setShowAddModal(false)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProduct || !form.name.trim()) return
+    setSaving(true)
+    setFormError(null)
+    try {
+      const res = await fetch(`/api/vendor/menu-items/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          category_id: categoryToId(form.category),
+          price: form.price,
+          is_available: form.inStock,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setFormError(data?.message || `Failed to update product (HTTP ${res.status})`)
+        return
+      }
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === editingProduct.id
+              ? { ...p, name: form.name.trim(), category: form.category, price: form.price }
+              : p
+          )
+        )
+        setEditingProduct(null)
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteProduct = async (id: string) => {
+    setSaving(true)
+    setFormError(null)
+    try {
+      const res = await fetch(`/api/vendor/menu-items/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setFormError(data?.message || `Failed to delete product (HTTP ${res.status})`)
+        return
+      }
+      if (res.ok) {
+        setProducts((prev) => prev.filter((p) => p.id !== id))
+        setDeletingId(null)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -323,6 +389,11 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
                 <X size={20} />
               </button>
             </div>
+            {formError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
             {stalls.length > 1 && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Food Stall</label>
@@ -331,7 +402,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
                 </select>
               </div>
             )}
-            <ProductForm onSubmit={handleAddProduct} onCancel={() => setShowAddModal(false)} title="Add Product" disabled={saving} />
+            <ProductForm form={form} setForm={setForm} onSubmit={handleAddProduct} onCancel={() => setShowAddModal(false)} title="Add Product" disabled={saving} />
           </div>
         </div>
       )}
@@ -345,7 +416,12 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
                 <X size={20} />
               </button>
             </div>
-            <ProductForm onSubmit={handleEditProduct} onCancel={() => setEditingProduct(null)} title="Save Changes" disabled={saving} />
+            {formError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
+            <ProductForm form={form} setForm={setForm} onSubmit={handleEditProduct} onCancel={() => setEditingProduct(null)} title="Save Changes" disabled={saving} />
           </div>
         </div>
       )}
@@ -355,6 +431,11 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product?</h3>
             <p className="text-gray-500 text-sm mb-4">This action cannot be undone.</p>
+            {formError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
             <div className="flex gap-3">
               <button onClick={() => setDeletingId(null)} className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700">Cancel</button>
               <button onClick={() => handleDeleteProduct(deletingId)} disabled={saving} className="flex-1 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2">

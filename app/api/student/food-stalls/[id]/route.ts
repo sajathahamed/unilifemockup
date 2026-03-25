@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
+import { getAdminClient } from '@/lib/supabase/admin'
 
 function normalizeMenuItem(row: Record<string, any>) {
   const name =
@@ -25,11 +26,37 @@ function normalizeMenuItem(row: Record<string, any>) {
     row.type ??
     null
 
+  // If this row comes from `food_items`, it uses `category_id` not a label.
+  const categoryId = row.category_id
+  const categoryFromId =
+    typeof categoryId === 'number'
+      ? ({
+          1: 'Main',
+          2: 'Snacks',
+          3: 'Sides',
+          4: 'Drinks',
+          5: 'Desserts',
+        } as Record<number, string>)[categoryId]
+      : null
+
+  const finalFoodCategory =
+    food_category != null
+      ? String(food_category)
+      : typeof categoryId === 'number'
+        ? ({
+            1: 'Main',
+            2: 'Snacks',
+            3: 'Sides',
+            4: 'Drinks',
+            5: 'Desserts',
+          } as Record<number, string>)[categoryId] ?? `Category ${categoryId}`
+        : null
+
   return {
     id: row.id ?? row.menu_item_id ?? row.item_id ?? null,
     name: typeof name === 'string' ? name : String(name ?? ''),
     price,
-    food_category: food_category != null ? String(food_category) : null,
+    food_category: finalFoodCategory,
   }
 }
 
@@ -42,147 +69,168 @@ export async function GET(
     await verifyRole('student').catch(() => null)
 
     const { id } = await context.params
-    const stallId = parseInt(id, 10)
-    if (Number.isNaN(stallId)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 })
+    // Support numeric IDs and UUIDs (your Supabase schema may use either).
+    const stallId = /^[0-9]+$/.test(id) ? parseInt(id, 10) : id
 
     const client = await createClient()
 
-    const fetchMenuFromTable = async (table: string) => {
-      // Try common FK column names for the stall reference.
-      const fkColumns = ['stall_id', 'food_stall_id', 'shop_id']
-      let last: unknown = null
-      for (const fk of fkColumns) {
-        const q = (client.from(table) as any).select('*').eq(fk, stallId).order('id', { ascending: true })
-        const { data, error } = await q
-        if (!error) return data ?? []
-        last = error
-      }
-      throw last ?? new Error(`No FK matched for ${table}`)
+    // 1) Always resolve the stall first.
+    const { data: stall, error: stallErr } = await client
+      .from('food_stalls')
+      .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time, owner_email')
+      .eq('id', stallId)
+      .single()
+
+    if (stallErr || !stall) {
+      return NextResponse.json({ message: 'Food stall not found' }, { status: 404 })
     }
 
-    // Try common schemas:
-    // 1) food_stalls with a relationship to menu_items
-    // 2) food_stalls alone, and menu items in a separate table
-    const attempts: Array<() => Promise<{
-      stall: any
-      menu: any[]
-    }>> = [
-      async () => {
-        const { data, error } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time, menu_items(id, name, price, food_category)')
-          .eq('id', stallId)
-          .single()
-        if (error || !data) throw error ?? new Error('Not found')
-        return { stall: data, menu: data.menu_items ?? [] }
-      },
-      async () => {
-        const { data, error } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time, food_menu_items(id, name, price, food_category)')
-          .eq('id', stallId)
-          .single()
-        if (error || !data) throw error ?? new Error('Not found')
-        return { stall: data, menu: data.food_menu_items ?? [] }
-      },
-      async () => {
-        const { data: stall, error: stallError } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time')
-          .eq('id', stallId)
-          .single()
-        if (stallError || !stall) throw stallError ?? new Error('Not found')
+    // 2) Then try to load menu items. If menu lookup fails, return empty menu.
+    let menu: any[] = []
+    let debugCategoryLookup: any = undefined
 
-        const { data: menu, error: menuError } = await client
-          .from('menu_items')
-          .select('id, name, price, food_category')
-          .eq('stall_id', stallId)
-          .order('id', { ascending: true })
-        if (menuError) throw menuError
-        return { stall, menu: menu ?? [] }
-      },
-      async () => {
-        const { data: stall, error: stallError } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time')
-          .eq('id', stallId)
-          .single()
-        if (stallError || !stall) throw stallError ?? new Error('Not found')
+    // A) food_stall_menu_items: (schema shows food_stall_id + name/price/food_category)
+    try {
+      const { data, error } = await client
+        .from('food_stall_menu_items')
+        .select('id, name, price, food_category, sort_order')
+        // NOTE: schema uses `food_stall_id` (uuid). Some schemas use `stall_id`.
+        .eq('food_stall_id', stallId)
+        .order('sort_order', { ascending: true })
+      if (!error && data) menu = data
+    } catch {
+      // ignore
+    }
 
-        const { data: menu, error: menuError } = await client
-          .from('food_stall_menu_items')
-          .select('id, name, price, food_category')
-          .eq('stall_id', stallId)
-          .order('id', { ascending: true })
-        if (menuError) throw menuError
-        return { stall, menu: menu ?? [] }
-      },
-      // Additional fallback tables used in some Supabase schemas
-      async () => {
-        const { data: stall, error: stallError } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time')
-          .eq('id', stallId)
-          .single()
-        if (stallError || !stall) throw stallError ?? new Error('Not found')
-        const menu = await fetchMenuFromTable('food_menu_items')
-        return { stall, menu }
-      },
-      async () => {
-        const { data: stall, error: stallError } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time')
-          .eq('id', stallId)
-          .single()
-        if (stallError || !stall) throw stallError ?? new Error('Not found')
-        const menu = await fetchMenuFromTable('food_menus')
-        return { stall, menu }
-      },
-      async () => {
-        const { data: stall, error: stallError } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time')
-          .eq('id', stallId)
-          .single()
-        if (stallError || !stall) throw stallError ?? new Error('Not found')
-        const menu = await fetchMenuFromTable('food_stall_menus')
-        return { stall, menu }
-      },
-      async () => {
-        const { data: stall, error: stallError } = await client
-          .from('food_stalls')
-          .select('id, shop_name, address, banner, logo, is_open, opening_time, closing_time')
-          .eq('id', stallId)
-          .single()
-        if (stallError || !stall) throw stallError ?? new Error('Not found')
-        const menu = await fetchMenuFromTable('food_stall_menu')
-        return { stall, menu }
-      },
-    ]
-
-    let resolved: { stall: any; menu: any[] } | null = null
-    let lastError: unknown = null
-    for (const run of attempts) {
+    // B) food_items: vendor_id keyed; derive vendor via stall.owner_email -> users.email -> users.id
+    if (!menu.length) {
       try {
-        resolved = await run()
-        break
-      } catch (e) {
-        lastError = e
+        const ownerEmail = String((stall as any).owner_email || '').trim().toLowerCase()
+        if (ownerEmail) {
+          const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(ownerEmail)
+          const numericLike = /^[0-9]+$/.test(ownerEmail) ? parseInt(ownerEmail, 10) : null
+
+          const ownerMatches = [
+            // email exact-ish
+            (await client.from('users').select('id').ilike('email', ownerEmail).maybeSingle()),
+            // email contains
+            (await client.from('users').select('id').ilike('email', `%${ownerEmail}%`).maybeSingle()),
+            // email strict
+            (await client.from('users').select('id').eq('email', ownerEmail).maybeSingle()),
+            // auth_id fallback (if owner_email is actually auth.users.id)
+            ...(uuidLike
+              ? [(await client.from('users').select('id').eq('auth_id', ownerEmail).maybeSingle())]
+              : []),
+            ...(numericLike != null ? [(await client.from('users').select('id').eq('id', numericLike).maybeSingle())] : []),
+          ]
+
+          const owner = (ownerMatches.map((r: any) => r.data).find((d: any) => d?.id) as any) ?? null
+
+          if (owner?.id) {
+            const { data: items, error: itemsErr } = await client
+              .from('food_items')
+              .select('id, name, price, is_available, category_id')
+              .eq('vendor_id', owner.id)
+              .order('id', { ascending: true })
+            if (!itemsErr && Array.isArray(items)) {
+              // Fetch category names by the category_id values present in the items.
+              // This works for both numeric IDs and UUID IDs.
+              const categoryIds = Array.from(
+                new Set(
+                  items
+                    .map((i: any) => i.category_id)
+                    .filter((v: any) => v != null)
+                )
+              )
+
+              // Normalize for numeric category IDs (avoid string/number mismatch in `.in` queries).
+              const normalizedCategoryIds = categoryIds
+                .map((v: any) => {
+                  if (typeof v === 'number' && Number.isFinite(v)) return v
+                  if (typeof v === 'string' && v.trim() && /^\d+$/.test(v.trim())) return parseInt(v.trim(), 10)
+                  return null
+                })
+                .filter((v: any) => v != null)
+
+              let catMap: Map<any, string> = new Map()
+              if (normalizedCategoryIds.length) {
+                let categories: any[] | null = null
+                try {
+                  const { data } = await client
+                    .from('food_categories')
+                    .select('id, name')
+                    .in('id', normalizedCategoryIds as any[])
+                  categories = data as any[] | null
+                } catch {
+                  // ignore; we'll fall back to admin below
+                }
+
+                if (categories && categories.length) {
+                  ;(categories ?? []).forEach((c: any) => catMap.set(String(c.id), String(c.name)))
+                }
+
+                // If RLS returned empty, try again with admin/service role.
+                if ((!categories || categories.length === 0 || catMap.size === 0) && normalizedCategoryIds.length) {
+                  try {
+                    const admin = getAdminClient()
+                    const { data: adminCategories } = await admin
+                      .from('food_categories')
+                      .select('id, name')
+                      .in('id', normalizedCategoryIds as any[])
+                    ;(adminCategories ?? []).forEach((c: any) => catMap.set(String(c.id), String(c.name)))
+                  } catch {
+                    // ignore
+                  }
+                }
+              }
+
+              menu = items.map((i: any) => ({
+                id: i.id,
+                name: i.name,
+                price: i.price,
+                category_id: i.category_id,
+                food_category: catMap.get(String(i.category_id)) ?? null,
+              }))
+
+              // Helpful debug when category names are not resolving.
+              debugCategoryLookup = {
+                categoryIds,
+                normalizedCategoryIds,
+                catMapSize: catMap.size,
+                catMapKeysSample: Array.from(catMap.keys()).slice(0, 10),
+                adminServiceKeyLen: process.env.SUPABASE_SERVICE_ROLE_KEY?.length ?? 0,
+                menuSample: menu
+                  .slice(0, 5)
+                  .map((m: any) => ({ category_id: m.category_id, food_category: m.food_category })),
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore
       }
     }
 
-    if (!resolved?.stall) {
-      const message =
-        lastError instanceof Error ? lastError.message : 'Food stall not found'
-      return NextResponse.json({ message }, { status: 404 })
+    // C) last-resort fallback: sometimes vendor_id is the same numeric value as stall.id in certain schemas
+    if (!menu.length && typeof stallId === 'number') {
+      try {
+        const { data: items, error: itemsErr } = await client
+          .from('food_items')
+          .select('id, name, price, is_available, category_id')
+          .eq('vendor_id', stallId)
+          .order('id', { ascending: true })
+        if (!itemsErr && Array.isArray(items) && items.length > 0) {
+          menu = items.map((i: any) => ({ id: i.id, name: i.name, price: i.price, category_id: i.category_id, food_category: null }))
+        }
+      } catch {
+        // ignore
+      }
     }
-
-    const stall = resolved.stall
-    const menu = resolved.menu ?? []
 
     return NextResponse.json(
       {
-        shop_name: stall.shop_name ?? stall.name ?? `Food Stall #${stallId}`,
+        // `stall.name` is not guaranteed to be selected from DB.
+        shop_name: stall.shop_name ?? `Food Stall #${stallId}`,
         address: stall.address ?? null,
         banner: stall.banner ?? null,
         logo: stall.logo ?? null,
@@ -192,6 +240,14 @@ export async function GET(
         menu_items: menu
           .map((m: any) => normalizeMenuItem(m))
           .filter((m: any) => m.id != null && m.name),
+        debugCategoryLookup,
+        debug_menu_empty:
+          menu.length === 0
+            ? {
+                stall_id: stallId,
+                owner_email: (stall as any)?.owner_email ?? null,
+              }
+            : undefined,
       },
       { status: 200 }
     )

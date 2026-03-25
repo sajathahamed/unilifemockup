@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { ArrowLeft, Plus, Minus, ShoppingBag, Bike, Store, Trash2, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Minus, ShoppingBag, Bike, Store, Trash2, CheckCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserProfile } from '@/lib/auth'
-import { getMenuForShop, type MenuCategory, type MenuItem } from '@/lib/food-utils'
 
 interface CartItem { id: string; name: string; price: number; emoji: string; qty: number }
 
@@ -77,41 +76,20 @@ function SuccessModal({ shopName, onClose }: { shopName: string; onClose: () => 
     )
 }
 
-function MenuItemRow({ item, onAdd }: { item: MenuItem; onAdd: (item: MenuItem) => void }) {
-    return (
-        <div className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
-            <div className="w-11 h-11 bg-orange-50 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                {item.emoji}
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 line-clamp-1">{item.name}</p>
-                <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
-                <p className="text-sm font-black text-gray-900 mt-0.5">Rs {item.price.toFixed(2)}</p>
-            </div>
-            <button
-                onClick={() => onAdd(item)}
-                className="w-9 h-9 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-colors"
-                aria-label={`Add ${item.name}`}
-            >
-                <Plus size={18} />
-            </button>
-        </div>
-    )
-}
-
 export default function OrderClient({ user, shopId }: { user: UserProfile; shopId: string }) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const shopName = searchParams.get('name') ?? 'Food Shop'
     const shopPhoto = searchParams.get('photo') ?? ''
-    const tags = useMemo(() => (searchParams.get('tags')?.split(',').map((s) => s.trim()).filter(Boolean) ?? []), [searchParams])
+    const queryStallId = searchParams.get('stallId')
 
-    const isDbStall = shopId?.startsWith?.('db-') ?? false
-    const stallId = isDbStall ? (searchParams.get('stallId') ?? shopId.replace('db-', '')) : null
-
-    const [menu, setMenu] = useState<MenuCategory[]>([])
-    const [menuLoading, setMenuLoading] = useState(false)
-    const [menuError, setMenuError] = useState<string | null>(null)
+    // Normalize shop id so the cart key matches the value used on the shop page.
+    // - `db-8` stays `db-8`
+    // - `8` becomes `db-8`
+    // - if `stallId` query param exists, prefer `db-${stallId}`
+    const cartShopId =
+        shopId?.startsWith?.('db-') ? shopId : (/^\d+$/.test(shopId) ? `db-${shopId}` : null) ??
+            (queryStallId && /^\d+$/.test(queryStallId) ? `db-${queryStallId}` : shopId)
 
     const [cart, setCart] = useState<CartItem[]>(DEFAULT_CART)
     const [deliveryMode, setDeliveryMode] = useState<'delivery' | 'pickup'>('delivery')
@@ -127,15 +105,9 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const dec = (id: string) => setCart((c) => c.map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i)).filter((i) => i.qty > 0))
     const remove = (id: string) => setCart((c) => c.filter((i) => i.id !== id))
 
-    const addToCart = (item: MenuItem) => {
-        setCart((prev) => {
-            const existing = prev.find((p) => p.id === item.id)
-            if (existing) return prev.map((p) => (p.id === item.id ? { ...p, qty: p.qty + 1 } : p))
-            return [...prev, { id: item.id, name: item.name, price: item.price, emoji: item.emoji, qty: 1 }]
-        })
-    }
-
-    const cartKey = useMemo(() => `unilife_food_cart:${shopId}`, [shopId])
+    // Cart key is tied to the logged-in user and the selected shop.
+    // This prevents cart items from one user/shp mixing with another.
+    const cartKey = useMemo(() => `unilife_food_cart:${user.id}:${cartShopId}`, [user.id, cartShopId])
 
     useEffect(() => {
         // Load persisted cart
@@ -146,7 +118,10 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
             if (!Array.isArray(parsed)) return
             const normalized: CartItem[] = parsed
                 .map((i: any) => ({
-                    id: String(i?.id ?? ''),
+                    id: (() => {
+                        const raw = String(i?.id ?? '')
+                        return raw.startsWith('dbm-') ? raw.replace('dbm-', '') : raw
+                    })(),
                     name: String(i?.name ?? ''),
                     price: Number(i?.price ?? 0),
                     emoji: String(i?.emoji ?? '🍽️'),
@@ -159,6 +134,28 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
         }
     }, [cartKey])
 
+    // Back-compat migration: older carts were stored as `unilife_food_cart:${shopId}`
+    // Migrate them once so the UI still works after this change.
+    useEffect(() => {
+        try {
+            const candidateOldKeys = [`unilife_food_cart:${shopId}`, `unilife_food_cart:${cartShopId}`]
+            const oldRaw = candidateOldKeys.map((k) => localStorage.getItem(k)).find(Boolean)
+            if (!oldRaw) return
+            if (localStorage.getItem(cartKey)) return
+            localStorage.setItem(cartKey, oldRaw)
+            // Best-effort cleanup: remove all legacy keys that might exist.
+            for (const k of candidateOldKeys) {
+                try {
+                    localStorage.removeItem(k)
+                } catch {
+                    // ignore
+                }
+            }
+        } catch {
+            // ignore
+        }
+    }, [cartKey, shopId, cartShopId])
+
     useEffect(() => {
         // Persist cart changes
         try {
@@ -167,59 +164,6 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
             // ignore
         }
     }, [cartKey, cart])
-
-    useEffect(() => {
-        let mounted = true
-        const load = async () => {
-            setMenuError(null)
-            setMenuLoading(true)
-            try {
-                if (isDbStall && stallId) {
-                    const res = await fetch(`/api/student/food-stalls/${encodeURIComponent(stallId)}`)
-                    if (!res.ok) throw new Error(`Failed to load menu (HTTP ${res.status})`)
-                    const data = await res.json().catch(() => null)
-                    const items = (data?.menu_items ?? []) as Array<{ id: number; name: string; price: number | string; food_category?: string | null }>
-
-                    const byCat: Record<string, MenuItem[]> = {}
-                    for (const m of items) {
-                        const cat = (m.food_category?.trim() || 'items').toLowerCase()
-                        const emoji =
-                            cat.includes('drink') ? '🥤'
-                                : cat.includes('dessert') ? '🍨'
-                                    : cat.includes('snack') ? '🥐'
-                                        : '🍽️'
-                        const menuItem: MenuItem = {
-                            id: `dbm-${m.id}`,
-                            name: m.name,
-                            description: m.food_category || '',
-                            price: Number(m.price) || 0,
-                            emoji,
-                        }
-                        if (!byCat[cat]) byCat[cat] = []
-                        byCat[cat].push(menuItem)
-                    }
-                    const categories: MenuCategory[] = Object.entries(byCat).map(([id, items]) => ({
-                        id,
-                        label: id.charAt(0).toUpperCase() + id.slice(1),
-                        emoji: id.includes('drink') ? '🥤' : id.includes('dessert') ? '🍨' : id.includes('snack') ? '🥐' : '🍽️',
-                        items,
-                    }))
-                    if (mounted) setMenu(categories.length ? categories : getMenuForShop(shopName, tags))
-                } else {
-                    if (mounted) setMenu(getMenuForShop(shopName, tags))
-                }
-            } catch (e) {
-                if (mounted) {
-                    setMenuError(e instanceof Error ? e.message : 'Failed to load menu')
-                    setMenu(getMenuForShop(shopName, tags))
-                }
-            } finally {
-                if (mounted) setMenuLoading(false)
-            }
-        }
-        load()
-        return () => { mounted = false }
-    }, [isDbStall, stallId, shopName, tags])
 
     const placeOrder = async () => {
         if (cart.length === 0) return
@@ -278,42 +222,6 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                     </div>
                 </div>
 
-                {/* Menu */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                        <h2 className="font-semibold text-gray-900">Menu</h2>
-                        {menuLoading ? (
-                            <span className="flex items-center gap-2 text-xs text-gray-400">
-                                <Loader2 size={14} className="animate-spin" /> Loading…
-                            </span>
-                        ) : null}
-                    </div>
-                    {menuError ? (
-                        <div className="px-4 pb-3 text-xs text-amber-600">{menuError}</div>
-                    ) : null}
-                    <div className="px-4 pb-4 space-y-4">
-                        {menu.length === 0 ? (
-                            <div className="py-8 text-center text-sm text-gray-400">No menu items found.</div>
-                        ) : (
-                            menu.map((cat) => (
-                                <div key={cat.id} className="border border-gray-100 rounded-xl overflow-hidden">
-                                    <div className="px-4 py-2.5 bg-gray-50 flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-gray-700">
-                                            {cat.emoji} {cat.label}
-                                        </span>
-                                        <span className="text-xs text-gray-400">{cat.items.length} item(s)</span>
-                                    </div>
-                                    <div className="px-4">
-                                        {cat.items.map((item) => (
-                                            <MenuItemRow key={item.id} item={item} onAdd={addToCart} />
-                                        ))}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
                 {/* Cart */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
                     <div className="flex items-center justify-between px-4 pt-4 pb-2">
@@ -326,7 +234,7 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                                 <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                                 <p className="text-gray-400 text-sm">Your cart is empty</p>
                                 <button onClick={() => router.back()} className="mt-3 text-sm text-orange-500 hover:underline">
-                                    Add items from menu
+                                    Add items from shop
                                 </button>
                             </div>
                         ) : (
