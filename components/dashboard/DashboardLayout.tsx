@@ -82,16 +82,11 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
     { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
-  'vendor-food': [
+  vendor: [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
     { label: 'Orders', href: '/vendor/orders', icon: Package },
-    { label: 'Products', href: '/vendor/products', icon: Utensils },
-    { label: 'My Store', href: '/vendor/my-store', icon: Store },
-    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
-  ],
-  'vendor-laundry': [
-    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
     { label: 'Products', href: '/vendor/products', icon: Utensils },
     { label: 'My Store', href: '/vendor/my-store', icon: Store },
     { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
