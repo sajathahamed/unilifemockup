@@ -44,8 +44,10 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
 
     return null
   } catch (e) {
-    // Avoid breaking RSC payload: log and return null so requireAuth can redirect to login
-    if (process.env.NODE_ENV === 'development') {
+    // Avoid breaking RSC payload: return null so requireAuth can redirect to login.
+    // Skip logging for stale refresh token (middleware clears cookies; no need to spam logs).
+    const code = e && typeof e === 'object' && 'code' in e ? (e as { code?: string }).code : undefined
+    if (process.env.NODE_ENV === 'development' && code !== 'refresh_token_not_found') {
       console.error('[getCurrentUser]', e)
     }
     return null

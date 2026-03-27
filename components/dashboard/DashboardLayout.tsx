@@ -279,10 +279,13 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={() => handleNavigation(item.href)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
                         isActive
-                          ? 'bg-primary text-white'
+                          ? 'bg-primary text-white shadow-md'
                           : 'text-gray-700 hover:bg-gray-100'
+                      } ${
+                        isNavigating && navigatingTo === item.href ? 'opacity-75 cursor-wait' : ''
                       }`}
                     >
                       <item.icon size={20} />

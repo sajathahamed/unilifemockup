@@ -77,6 +77,15 @@ export async function PUT(
     // One email cannot be in both food and laundry
     const { data: inFood } = await client.from('food_stalls').select('id').eq('owner_email', email).limit(1).maybeSingle()
     if (inFood) return NextResponse.json({ message: 'This email is already used for a food stall. One email can only be food stall OR laundry.' }, { status: 400 })
+    // One email can only own one laundry shop (exclude current shop while editing)
+    const { data: inLaundry } = await client
+      .from('laundry_shops')
+      .select('id')
+      .eq('owner_email', email)
+      .neq('id', numId)
+      .limit(1)
+      .maybeSingle()
+    if (inLaundry) return NextResponse.json({ message: 'This account already has a laundry shop. One account can only have one shop.' }, { status: 400 })
     const { error } = await client
       .from('laundry_shops')
       .update({
