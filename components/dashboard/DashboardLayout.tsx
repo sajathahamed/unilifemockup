@@ -91,6 +91,21 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'My Store', href: '/vendor/my-store', icon: Store },
     { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
   ],
+  'vendor-food': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
+  'vendor-laundry': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
     { label: 'Food Deliveries', href: '/delivery/active', icon: Package },
@@ -113,8 +128,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
     { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
     { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
-  ],
-  vendor: []
+  ]
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {

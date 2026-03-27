@@ -1,5 +1,3 @@
-// Alias for required role type
-export type RequiredRole = UserRole
 // User roles as defined in the database
 export type UserRole = 'student' | 'lecturer' | 'admin' | 'vendor' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
 

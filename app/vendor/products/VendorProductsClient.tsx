@@ -165,7 +165,30 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [form, setForm] = useState<ProductFormState>({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: 0 })
+
+  const loadProducts = async (_stallId?: number) => {
+    const res = await fetch('/api/vendor/menu-items')
+    const data = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(data?.message || `Failed to load products (HTTP ${res.status})`)
+
+    const nextProducts: Product[] = Array.isArray(data?.items)
+      ? data.items.map((row: any) => dbToProduct(row))
+      : []
+    const nextStalls: { id: number; shop_name: string }[] = Array.isArray(data?.stalls)
+      ? data.stalls
+          .map((s: any) => ({ id: Number(s?.id), shop_name: String(s?.shop_name ?? 'Store') }))
+          .filter((s: { id: number }) => Number.isFinite(s.id) && s.id > 0)
+      : []
+
+    setProducts(nextProducts)
+    setStalls(nextStalls)
+
+    if (!selectedStallId && nextStalls.length > 0) {
+      setSelectedStallId(nextStalls[0].id)
+    }
+  }
 
   useEffect(() => {
     loadProducts().catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
@@ -268,10 +291,8 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       if (res.ok) {
         await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
         setEditingProduct(null)
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
         setMessage({ type: 'success', text: 'Product updated successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to update product.') })
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error while updating product.' })
@@ -295,8 +316,6 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
         setDeletingId(null)
         setMessage({ type: 'success', text: 'Product deleted successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to delete product.') })
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error while deleting product.' })

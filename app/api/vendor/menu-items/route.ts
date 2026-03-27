@@ -84,7 +84,6 @@ export async function POST(request: NextRequest) {
           ? inStock
           : true
 
-    const category_id = await resolveCategoryId(client, food_stall_id, food_category)
     const { data, error } = await client
       .from('food_items')
       .insert({
