@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { ArrowLeft, Plus, Minus, ShoppingBag, Bike, Store, Trash2, CheckCircle } from 'lucide-react'
@@ -81,6 +81,15 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const searchParams = useSearchParams()
     const shopName = searchParams.get('name') ?? 'Food Shop'
     const shopPhoto = searchParams.get('photo') ?? ''
+    const queryStallId = searchParams.get('stallId')
+
+    // Normalize shop id so the cart key matches the value used on the shop page.
+    // - `db-8` stays `db-8`
+    // - `8` becomes `db-8`
+    // - if `stallId` query param exists, prefer `db-${stallId}`
+    const cartShopId =
+        shopId?.startsWith?.('db-') ? shopId : (/^\d+$/.test(shopId) ? `db-${shopId}` : null) ??
+            (queryStallId && /^\d+$/.test(queryStallId) ? `db-${queryStallId}` : shopId)
 
     const [cart, setCart] = useState<CartItem[]>(DEFAULT_CART)
     const [deliveryMode, setDeliveryMode] = useState<'delivery' | 'pickup'>('delivery')
@@ -96,12 +105,81 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const dec = (id: string) => setCart((c) => c.map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i)).filter((i) => i.qty > 0))
     const remove = (id: string) => setCart((c) => c.filter((i) => i.id !== id))
 
+    // Cart key is tied to the logged-in user and the selected shop.
+    // This prevents cart items from one user/shp mixing with another.
+    const cartKey = useMemo(() => `unilife_food_cart:${user.id}:${cartShopId}`, [user.id, cartShopId])
+
+    useEffect(() => {
+        // Load persisted cart
+        try {
+            const raw = localStorage.getItem(cartKey)
+            if (!raw) return
+            const parsed = JSON.parse(raw)
+            if (!Array.isArray(parsed)) return
+            const normalized: CartItem[] = parsed
+                .map((i: any) => ({
+                    id: (() => {
+                        const raw = String(i?.id ?? '')
+                        return raw.startsWith('dbm-') ? raw.replace('dbm-', '') : raw
+                    })(),
+                    name: String(i?.name ?? ''),
+                    price: Number(i?.price ?? 0),
+                    emoji: String(i?.emoji ?? '🍽️'),
+                    qty: Math.max(1, Number(i?.qty ?? 1)),
+                }))
+                .filter((i) => i.id && i.name)
+            setCart(normalized)
+        } catch {
+            // ignore
+        }
+    }, [cartKey])
+
+    // Back-compat migration: older carts were stored as `unilife_food_cart:${shopId}`
+    // Migrate them once so the UI still works after this change.
+    useEffect(() => {
+        try {
+            const candidateOldKeys = [`unilife_food_cart:${shopId}`, `unilife_food_cart:${cartShopId}`]
+            const oldRaw = candidateOldKeys.map((k) => localStorage.getItem(k)).find(Boolean)
+            if (!oldRaw) return
+            if (localStorage.getItem(cartKey)) return
+            localStorage.setItem(cartKey, oldRaw)
+            // Best-effort cleanup: remove all legacy keys that might exist.
+            for (const k of candidateOldKeys) {
+                try {
+                    localStorage.removeItem(k)
+                } catch {
+                    // ignore
+                }
+            }
+        } catch {
+            // ignore
+        }
+    }, [cartKey, shopId, cartShopId])
+
+    useEffect(() => {
+        // Persist cart changes
+        try {
+            localStorage.setItem(cartKey, JSON.stringify(cart))
+        } catch {
+            // ignore
+        }
+    }, [cartKey, cart])
+
     const placeOrder = async () => {
         if (cart.length === 0) return
         setPlacing(true)
         await new Promise((r) => setTimeout(r, 1500))
         setPlacing(false)
         setSuccess(true)
+    }
+
+    const finish = () => {
+        try {
+            localStorage.removeItem(cartKey)
+        } catch {
+            // ignore
+        }
+        router.push('/student/food-order')
     }
 
     return (
@@ -156,7 +234,7 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                                 <ShoppingBag className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                                 <p className="text-gray-400 text-sm">Your cart is empty</p>
                                 <button onClick={() => router.back()} className="mt-3 text-sm text-orange-500 hover:underline">
-                                    Add items from menu
+                                    Add items from shop
                                 </button>
                             </div>
                         ) : (
@@ -215,7 +293,7 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
             </div>
 
             <AnimatePresence>
-                {success && <SuccessModal shopName={shopName} onClose={() => router.push('/student/food-order')} />}
+                {success && <SuccessModal shopName={shopName} onClose={finish} />}
             </AnimatePresence>
         </DashboardLayout>
     )

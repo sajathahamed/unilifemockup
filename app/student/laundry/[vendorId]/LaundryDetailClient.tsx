@@ -30,6 +30,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
     const [weight, setWeight] = useState(1)
     const [submitting, setSubmitting] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
+    const [formError, setFormError] = useState<string | null>(null)
 
     const [formData, setFormData] = useState({
         customerName: user.name,
@@ -79,8 +80,65 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
         fetchVendor()
     }, [vendorId])
 
+    const todayLocalDateStr = (() => {
+        const d = new Date()
+        const yyyy = d.getFullYear()
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        return `${yyyy}-${mm}-${dd}`
+    })()
+
+    function validateSriLankaPhone(raw: string): boolean {
+        // Only digits are allowed for phone number.
+        const s = String(raw ?? '').trim().replace(/[^\d]/g, '')
+        if (!s) return false
+
+        // Accept:
+        // - 0 + (mobile 7XXXXXXXX / landline 1XXXXXXXX / 2XXXXXXXX) => 10 digits total
+        const mobileOrLandlineWithZero = /^0(7\d{8}|1\d{8}|2\d{8})$/
+        return mobileOrLandlineWithZero.test(s)
+    }
+
     const handleOrder = async (e: React.FormEvent) => {
         e.preventDefault()
+        setFormError(null)
+
+        if (!validateSriLankaPhone(formData.contact)) {
+            setFormError('Enter a valid Sri Lanka phone number (digits only, e.g. 0712345678).')
+            return
+        }
+
+        if (!formData.pickupAddress?.trim()) {
+            setFormError('Pickup address is required.')
+            return
+        }
+
+        if (!formData.pickupDate) {
+            setFormError('Pickup date is required.')
+            return
+        }
+
+        // block past dates (YYYY-MM-DD compares lexicographically)
+        if (formData.pickupDate < todayLocalDateStr) {
+            setFormError('Pickup date cannot be in the past.')
+            return
+        }
+
+        if (!Number.isFinite(weight) || weight < 0) {
+            setFormError('Weight cannot be below 0 kg.')
+            return
+        }
+
+        if (weight === 0) {
+            setFormError('Weight must be at least 1 kg.')
+            return
+        }
+
+        if (!formData.serviceType) {
+            setFormError('Please select a service type.')
+            return
+        }
+
         setSubmitting(true)
         await new Promise(resolve => setTimeout(resolve, 1500))
         setSubmitting(false)
@@ -198,8 +256,13 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                         type="tel"
                                         required
                                         placeholder="+94 7X XXX XXXX"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         value={formData.contact}
-                                        onChange={e => setFormData({ ...formData, contact: e.target.value })}
+                                        onChange={(e) => {
+                                            const next = e.target.value.replace(/[^\d]/g, '')
+                                            setFormData({ ...formData, contact: next })
+                                        }}
                                         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -230,6 +293,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                             required
                                             value={formData.pickupDate}
                                             onChange={e => setFormData({ ...formData, pickupDate: e.target.value })}
+                                            min={todayLocalDateStr}
                                             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                                         />
                                     </div>
@@ -239,7 +303,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                     <div className="flex items-center gap-2 p-1 bg-gray-50 rounded-xl border border-gray-100">
                                         <button
                                             type="button"
-                                            onClick={() => setWeight(Math.max(1, weight - 1))}
+                                            onClick={() => setWeight(Math.max(0, weight - 1))}
                                             className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-gray-500 hover:text-blue-600 shadow-sm border border-gray-100 transition-all active:scale-95"
                                         >
                                             <Minus size={16} />
@@ -294,6 +358,12 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                     <>Order Now</>
                                 )}
                             </motion.button>
+
+                            {formError ? (
+                                <p className="text-sm text-red-600 font-semibold bg-red-50 border border-red-200 rounded-xl p-3">
+                                    {formError}
+                                </p>
+                            ) : null}
 
                             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
                                 <Info size={16} className="text-blue-500 flex-shrink-0" />

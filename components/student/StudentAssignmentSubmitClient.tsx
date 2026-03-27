@@ -48,7 +48,7 @@ export default function StudentAssignmentSubmitClient({ assignmentId }: StudentA
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch(`/api/student/assignments/${assignmentId}/submit`, {
+      const res = await fetch(`/api/student/assignments/${assignmentId}/submission`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content.trim() }),
