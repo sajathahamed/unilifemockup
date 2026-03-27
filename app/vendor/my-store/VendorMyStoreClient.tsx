@@ -78,6 +78,7 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
           description: form.description ?? store.description,
           opening_time: form.opening_time ?? store.opening_time,
           closing_time: form.closing_time ?? store.closing_time,
+          logo: form.logo ?? store.logo,
         }),
       })
       const data = await res.json()
@@ -165,7 +166,12 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
               <div className="h-32 bg-gradient-to-r from-emerald-500 to-teal-600" />
               <div className="p-6 -mt-12 relative">
                 <div className="w-24 h-24 rounded-xl bg-white border-4 border-white shadow-lg flex items-center justify-center">
-                  <Store className="w-12 h-12 text-emerald-600" />
+                  {store.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={store.logo} alt={store.name} className="w-full h-full rounded-xl object-cover" />
+                  ) : (
+                    <Store className="w-12 h-12 text-emerald-600" />
+                  )}
                 </div>
                 <div className="mt-4 flex items-start justify-between">
                   <div>
@@ -261,12 +267,18 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Store Image</h3>
-              <div className="aspect-video rounded-lg bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-200">
-                <div className="text-center text-gray-400">
-                  <Image size={40} className="mx-auto mb-2" />
-                  <p className="text-sm">Upload store photo</p>
+              {store.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={store.logo} alt={store.name} className="aspect-video w-full rounded-lg object-cover border border-gray-200" />
+              ) : (
+                <div className="aspect-video rounded-lg bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-200">
+                  <div className="text-center text-gray-400">
+                    <Image size={40} className="mx-auto mb-2" />
+                    <p className="text-sm">No store image</p>
+                  </div>
                 </div>
-              </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2">You can set one store image from Edit Store.</p>
             </div>
           </div>
         </div>
@@ -355,6 +367,15 @@ export default function VendorMyStoreClient({ user }: VendorMyStoreClientProps) 
                   value={form.closing_time ?? ''}
                   onChange={(e) => setForm((p) => ({ ...p, closing_time: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Store Image URL</label>
+                <input
+                  value={form.logo ?? ''}
+                  onChange={(e) => setForm((p) => ({ ...p, logo: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="https://example.com/store-image.jpg"
                 />
               </div>
               {shopType === 'food' && (

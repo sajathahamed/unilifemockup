@@ -60,7 +60,6 @@ export default async function SuperAdminUsersPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <CreateUserForm currentUserRole="super_admin" />
 
-                        {/* User List with vendor filter */}
                         <SuperAdminUsersListSection users={users} title="System-wide User Directory" />
                     </div>
 

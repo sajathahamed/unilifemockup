@@ -15,14 +15,20 @@ export default async function HomePage() {
 
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: { id: string } | null = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Stale refresh token etc.; middleware clears cookies — treat as unauthenticated
+  }
 
   if (user) {
     // Fetch user role
     const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('auth_id', user.id)
       .single()
 
     if (userData?.role) {

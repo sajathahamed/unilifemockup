@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, MoreVertical, X, Edit2, UserCog, Shield, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
+import { ROLES } from '@/lib/pages/registry'
 
 interface User {
     id: number
@@ -49,10 +50,8 @@ export default function UserList({ users, title = "User Directory", showActions 
         })
     }, [users, searchTerm, roleFilter])
 
-    const roles = useMemo(() => {
-        const uniqueRoles = Array.from(new Set(users.map(u => u.role).filter(Boolean)))
-        return uniqueRoles.sort()
-    }, [users])
+    /** Always show every system role so filters work even when a role has zero users. */
+    const roleFilterOptions = ROLES
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -130,7 +129,7 @@ export default function UserList({ users, title = "User Directory", showActions 
                             className="w-full appearance-none pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                         >
                             <option value="all">All Roles</option>
-                            {roles.map(role => (
+                            {roleFilterOptions.map((role) => (
                                 <option key={role} value={role}>
                                     {formatRole(role)}
                                 </option>

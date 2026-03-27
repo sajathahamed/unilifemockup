@@ -57,6 +57,15 @@ function dbToProduct(m: { id: number; name: string; category_id?: number | null;
   }
 }
 
+function getApiError(data: unknown, status: number, fallback: string): string {
+  if (data && typeof data === 'object') {
+    const o = data as Record<string, unknown>
+    if (typeof o.message === 'string' && o.message.trim()) return o.message
+    if (typeof o.error === 'string' && o.error.trim()) return o.error
+  }
+  return status >= 500 ? 'Server error, try again.' : fallback
+}
+
 interface VendorProductsClientProps {
   user: { id: number; auth_id: string; name: string; email: string; role: UserRole; avatar_url?: string }
 }
@@ -147,6 +156,7 @@ function ProductForm({
 export default function VendorProductsClient({ user }: VendorProductsClientProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
+  const [selectedStallId, setSelectedStallId] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -158,17 +168,16 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   const [form, setForm] = useState<ProductFormState>({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: 0 })
 
   useEffect(() => {
-    fetch('/api/vendor/menu-items')
-      .then((r) => (r.ok ? r.json() : { items: [], stalls: [] }))
-      .then((data) => {
-        const s = data.stalls ?? []
-        setProducts((data.items ?? []).map(dbToProduct))
-        setStalls(s)
-        if (s.length > 0) setForm((p) => ({ ...p, stall_id: p.stall_id || s[0].id }))
-      })
-      .catch(() => {})
+    loadProducts().catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
       .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!selectedStallId) return
+    loadProducts(selectedStallId).catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStallId])
 
   const categories = [...new Set(products.map((p) => p.category))]
   const filtered = products.filter((p) => {
@@ -198,6 +207,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault()
+    setMessage(null)
     if (!form.name.trim()) return
     setSaving(true)
     setFormError(null)
@@ -222,7 +232,12 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         setProducts((prev) => [dbToProduct(data), ...prev])
         setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
         setShowAddModal(false)
+        setMessage({ type: 'success', text: 'Product created successfully.' })
+      } else {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to create product.') })
       }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while creating product.' })
     } finally {
       setSaving(false)
     }
@@ -230,6 +245,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault()
+    setMessage(null)
     if (!editingProduct || !form.name.trim()) return
     setSaving(true)
     setFormError(null)
@@ -250,22 +266,22 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         return
       }
       if (res.ok) {
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === editingProduct.id
-              ? { ...p, name: form.name.trim(), category: form.category, price: form.price }
-              : p
-          )
-        )
+        await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
         setEditingProduct(null)
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
+        setMessage({ type: 'success', text: 'Product updated successfully.' })
+      } else {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to update product.') })
       }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while updating product.' })
     } finally {
       setSaving(false)
     }
   }
 
   const handleDeleteProduct = async (id: string) => {
+    setMessage(null)
     setSaving(true)
     setFormError(null)
     try {
@@ -276,9 +292,14 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         return
       }
       if (res.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== id))
+        await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
         setDeletingId(null)
+        setMessage({ type: 'success', text: 'Product deleted successfully.' })
+      } else {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to delete product.') })
       }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while deleting product.' })
     } finally {
       setSaving(false)
     }
@@ -310,6 +331,12 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           </button>
         </div>
 
+        {message && (
+          <div className={`px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+            {message.text}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3 top-3 text-gray-400" />
@@ -331,6 +358,15 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          <select
+            value={selectedStallId || ''}
+            onChange={(e) => setSelectedStallId(parseInt(e.target.value, 10) || 0)}
+            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white min-w-[220px]"
+          >
+            {stalls.map((s) => (
+              <option key={s.id} value={s.id}>{s.shop_name}</option>
+            ))}
+          </select>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -341,7 +377,12 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
             >
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <Utensils className="w-7 h-7 text-gray-400" />
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image_url} alt={p.name} className="w-full h-full object-cover rounded-lg" />
+                  ) : (
+                    <Utensils className="w-7 h-7 text-gray-400" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">{p.name}</p>
@@ -382,7 +423,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add Product</h3>
               <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -409,7 +450,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
       {editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingProduct(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
               <button onClick={() => setEditingProduct(null)} className="p-1 hover:bg-gray-100 rounded-lg">

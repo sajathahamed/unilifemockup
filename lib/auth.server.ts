@@ -1,6 +1,7 @@
 import { createClient } from './supabase/server'
 import { redirect } from 'next/navigation'
-import { UserProfile, UserRole, RequiredRole, getRoleBasedRedirect, hasRoleAccess } from './auth'
+import { UserProfile, UserRole, getRoleBasedRedirect, hasRoleAccess } from './auth'
+import { RequiredRole } from './auth'
 
 /**
  * Get the currently authenticated user with their profile
@@ -43,8 +44,10 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
 
     return null
   } catch (e) {
-    // Avoid breaking RSC payload: log and return null so requireAuth can redirect to login
-    if (process.env.NODE_ENV === 'development') {
+    // Avoid breaking RSC payload: return null so requireAuth can redirect to login.
+    // Skip logging for stale refresh token (middleware clears cookies; no need to spam logs).
+    const code = e && typeof e === 'object' && 'code' in e ? (e as { code?: string }).code : undefined
+    if (process.env.NODE_ENV === 'development' && code !== 'refresh_token_not_found') {
       console.error('[getCurrentUser]', e)
     }
     return null

@@ -1,6 +1,28 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
+/** Supabase session refresh / cookie clearing happens on `sessionResponse`; copy onto redirects or those headers are lost. */
+function redirectWithSessionCookies(
+  sessionResponse: NextResponse,
+  url: URL | string
+): NextResponse {
+  const redirect = NextResponse.redirect(url)
+  sessionResponse.cookies.getAll().forEach((c) => {
+    redirect.cookies.set(c.name, c.value, {
+      domain: c.domain,
+      expires: c.expires,
+      httpOnly: c.httpOnly,
+      maxAge: c.maxAge,
+      path: c.path,
+      partitioned: c.partitioned,
+      priority: c.priority,
+      sameSite: c.sameSite,
+      secure: c.secure,
+    })
+  })
+  return redirect
+}
+
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/reset-password']
 
@@ -25,7 +47,10 @@ export async function middleware(request: NextRequest) {
       const role = (user.user_metadata?.role as string) || ''
       if (role) {
         const rolePrefix = normalizeRolePrefix(role)
-        return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
+        return redirectWithSessionCookies(
+          supabaseResponse,
+          new URL(`/${rolePrefix}/dashboard`, request.url)
+        )
       }
     }
     return supabaseResponse
@@ -35,7 +60,7 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(loginUrl)
+    return redirectWithSessionCookies(supabaseResponse, loginUrl)
   }
 
   let userRole: string = (user.user_metadata?.role as string) || ''
@@ -51,7 +76,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!userRole) {
-    return NextResponse.redirect(new URL('/login?error=profile_not_found', request.url))
+    return redirectWithSessionCookies(
+      supabaseResponse,
+      new URL('/login?error=profile_not_found', request.url)
+    )
   }
 
   const allowedPrefixes = roleRoutes[userRole] || []
@@ -68,12 +96,18 @@ export async function middleware(request: NextRequest) {
 
   if (!hasAccess) {
     const rolePrefix = normalizeRolePrefix(userRole)
-    return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
+    return redirectWithSessionCookies(
+      supabaseResponse,
+      new URL(`/${rolePrefix}/dashboard`, request.url)
+    )
   }
 
   if (pathname === '/') {
     const rolePrefix = normalizeRolePrefix(userRole)
-    return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
+    return redirectWithSessionCookies(
+      supabaseResponse,
+      new URL(`/${rolePrefix}/dashboard`, request.url)
+    )
   }
 
   return supabaseResponse

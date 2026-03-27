@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
           ? inStock
           : true
 
+    const category_id = await resolveCategoryId(client, food_stall_id, food_category)
     const { data, error } = await client
       .from('food_items')
       .insert({
@@ -96,9 +97,12 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single()
-
     if (error) return NextResponse.json({ message: error.message }, { status: 400 })
-    return NextResponse.json(data)
+    return NextResponse.json({
+      ...data,
+      food_stall_id: data.vendor_id,
+      food_category: food_category || '',
+    })
   } catch (e) {
     console.error('Vendor menu-items POST error:', e)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })

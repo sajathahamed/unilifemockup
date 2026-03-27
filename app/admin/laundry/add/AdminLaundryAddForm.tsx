@@ -1,16 +1,35 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { apiErrorMessage } from '@/lib/admin/form-feedback'
 import { Truck, Loader2, Save, Plus, Trash2, MapPin, Edit2 } from 'lucide-react'
 
 const SECTION_STYLE = 'border-b border-gray-200 pb-6 last:border-0'
 const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1'
 const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+const SELECT_STYLE = `${INPUT_STYLE} bg-white cursor-pointer`
+
+const feedbackBoxClass = (type: 'success' | 'error') =>
+  type === 'success'
+    ? 'bg-green-50 text-green-900 border border-green-200'
+    : 'bg-red-50 text-red-900 border border-red-200'
 
 const SERVICE_OPTIONS = ['Wash', 'Dry Clean', 'Iron', 'Express Service']
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[+\d][\d\s-]{6,19}$/
+
+function isValidUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 type PriceItem = { service: string; price: string }
 type LaundryRow = { id: number; shop_name: string; owner_name: string; owner_email: string; phone?: string; address?: string }
+type VendorAccount = { id: number; name: string; email: string }
 
 const emptyForm = () => ({
   shop_name: '',
@@ -43,6 +62,17 @@ export default function AdminLaundryAddForm() {
     ...emptyForm(),
   })
   const [priceItems, setPriceItems] = useState<PriceItem[]>([{ service: 'Wash', price: '' }])
+  const [vendors, setVendors] = useState<VendorAccount[]>([])
+  const [loadingVendors, setLoadingVendors] = useState(true)
+  const feedbackRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!message) return
+    const id = requestAnimationFrame(() => {
+      feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [message])
 
   const fetchList = () => {
     setLoadingList(true)
@@ -53,9 +83,31 @@ export default function AdminLaundryAddForm() {
       .finally(() => setLoadingList(false))
   }
 
+  const fetchVendors = () => {
+    setLoadingVendors(true)
+    fetch('/api/admin/vendor-accounts')
+      .then((r) => (r.ok ? r.json() : { accounts: [] }))
+      .then((data) => setVendors(Array.isArray(data?.accounts) ? data.accounts : []))
+      .catch(() => setVendors([]))
+      .finally(() => setLoadingVendors(false))
+  }
+
   useEffect(() => {
     fetchList()
+    fetchVendors()
   }, [])
+
+  const ownerEmailInVendorList = (email: string) =>
+    vendors.some((v) => v.email.toLowerCase() === email.trim().toLowerCase())
+
+  const onOwnerEmailSelect = (email: string) => {
+    const match = vendors.find((v) => v.email.toLowerCase() === email.toLowerCase())
+    setForm((p) => ({
+      ...p,
+      owner_email: email,
+      owner_name: match?.name ?? p.owner_name,
+    }))
+  }
 
   const resetForm = () => {
     setForm(emptyForm())
@@ -136,18 +188,49 @@ export default function AdminLaundryAddForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
-    if (!form.shop_name.trim()) {
-      setMessage({ type: 'error', text: 'Shop name is required' })
-      return
+    const shopName = form.shop_name.trim()
+    const ownerName = form.owner_name.trim()
+    const ownerEmail = form.owner_email.trim().toLowerCase()
+    const phone = form.phone.trim()
+    const whatsapp = form.whatsapp.trim()
+    const latStr = form.lat.trim()
+    const lngStr = form.lng.trim()
+    const deliveryRadius = form.delivery_radius.trim()
+    const opening = form.opening_time.trim()
+    const closing = form.closing_time.trim()
+
+    if (!shopName || shopName.length < 2) return setMessage({ type: 'error', text: 'Laundry shop name must be at least 2 characters.' })
+    if (!ownerName || ownerName.length < 2) return setMessage({ type: 'error', text: 'Owner name must be at least 2 characters.' })
+    if (!ownerEmail) return setMessage({ type: 'error', text: 'Select a laundry vendor account from the list.' })
+    if (!EMAIL_RE.test(ownerEmail)) return setMessage({ type: 'error', text: 'Owner email format is invalid.' })
+    if (phone && !PHONE_RE.test(phone)) return setMessage({ type: 'error', text: 'Phone number format is invalid.' })
+    if (whatsapp && !PHONE_RE.test(whatsapp)) return setMessage({ type: 'error', text: 'WhatsApp number format is invalid.' })
+    if ((latStr && !lngStr) || (!latStr && lngStr)) return setMessage({ type: 'error', text: 'Provide both latitude and longitude together.' })
+    if (latStr) {
+      const latNum = Number(latStr)
+      const lngNum = Number(lngStr)
+      if (Number.isNaN(latNum) || latNum < -90 || latNum > 90) return setMessage({ type: 'error', text: 'Latitude must be between -90 and 90.' })
+      if (Number.isNaN(lngNum) || lngNum < -180 || lngNum > 180) return setMessage({ type: 'error', text: 'Longitude must be between -180 and 180.' })
     }
-    if (!form.owner_name.trim()) {
-      setMessage({ type: 'error', text: 'Owner name is required' })
-      return
+    if ((opening && !closing) || (!opening && closing)) return setMessage({ type: 'error', text: 'Provide both opening and closing time together.' })
+    if (opening && closing && opening >= closing) return setMessage({ type: 'error', text: 'Closing time must be after opening time.' })
+    if (deliveryRadius && (Number.isNaN(Number(deliveryRadius)) || Number(deliveryRadius) < 0)) {
+      return setMessage({ type: 'error', text: 'Delivery radius must be a valid non-negative number.' })
     }
-    if (!form.owner_email.trim()) {
-      setMessage({ type: 'error', text: 'Owner email is required (links to vendor login)' })
-      return
+    if (form.logo.trim() && !isValidUrl(form.logo.trim())) return setMessage({ type: 'error', text: 'Logo URL is invalid.' })
+    if (form.banner.trim() && !isValidUrl(form.banner.trim())) return setMessage({ type: 'error', text: 'Banner URL is invalid.' })
+    if (form.gallery.some((g) => g?.trim() && !isValidUrl(String(g).trim()))) {
+      return setMessage({ type: 'error', text: 'One or more gallery URLs are invalid.' })
     }
+    for (const [i, p] of priceItems.entries()) {
+      const hasAny = p.service.trim() || p.price.trim()
+      if (!hasAny) continue
+      if (!p.service.trim()) return setMessage({ type: 'error', text: `Price row #${i + 1}: service is required.` })
+      if (p.price.trim() === '' || Number.isNaN(Number(p.price)) || Number(p.price) < 0) {
+        return setMessage({ type: 'error', text: `Price row #${i + 1}: price must be a valid non-negative number.` })
+      }
+    }
+
     setSaving(true)
     try {
       const priceList: Record<string, number> = {}
@@ -159,9 +242,14 @@ export default function AdminLaundryAddForm() {
       })
       const payload = {
         ...form,
-        lat: form.lat ? parseFloat(form.lat) : null,
-        lng: form.lng ? parseFloat(form.lng) : null,
-        delivery_radius: form.delivery_radius ? parseFloat(form.delivery_radius) : null,
+        shop_name: shopName,
+        owner_name: ownerName,
+        owner_email: ownerEmail,
+        phone: phone || '',
+        whatsapp: whatsapp || '',
+        lat: latStr ? parseFloat(latStr) : null,
+        lng: lngStr ? parseFloat(lngStr) : null,
+        delivery_radius: deliveryRadius ? parseFloat(deliveryRadius) : null,
         price_list: Object.keys(priceList).length ? priceList : null,
       }
       const url = editingId ? `/api/admin/laundry/${editingId}` : '/api/admin/laundry'
@@ -176,7 +264,7 @@ export default function AdminLaundryAddForm() {
         resetForm()
         fetchList()
       } else {
-        setMessage({ type: 'error', text: data?.message || 'Failed' })
+        setMessage({ type: 'error', text: apiErrorMessage(data, res) })
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error' })
@@ -187,7 +275,7 @@ export default function AdminLaundryAddForm() {
 
   return (
     <>
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <form noValidate onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
@@ -195,14 +283,18 @@ export default function AdminLaundryAddForm() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-white">Laundry Shop Registration</h2>
-            <p className="text-blue-100 text-sm">Complete business information. Owner email links to vendor login.</p>
+            <p className="text-blue-100 text-sm">Owner email: choose a laundry vendor account created in Super Admin.</p>
           </div>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
         {message && (
-          <div className={`px-4 py-3 rounded-xl text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+          <div
+            role="alert"
+            aria-live="polite"
+            className={`px-4 py-3 rounded-xl text-sm font-medium ${feedbackBoxClass(message.type)}`}
+          >
             {message.text}
           </div>
         )}
@@ -212,15 +304,35 @@ export default function AdminLaundryAddForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={LABEL_STYLE}>Laundry Shop Name *</label>
-              <input type="text" value={form.shop_name} onChange={(e) => setForm((p) => ({ ...p, shop_name: e.target.value }))} placeholder="e.g. Fresh Laundry Hub" required className={INPUT_STYLE} />
+              <input type="text" value={form.shop_name} onChange={(e) => setForm((p) => ({ ...p, shop_name: e.target.value }))} placeholder="e.g. Fresh Laundry Hub" className={INPUT_STYLE} />
             </div>
             <div>
               <label className={LABEL_STYLE}>Owner Name *</label>
-              <input type="text" value={form.owner_name} onChange={(e) => setForm((p) => ({ ...p, owner_name: e.target.value }))} placeholder="Full name" required className={INPUT_STYLE} />
+              <input type="text" value={form.owner_name} onChange={(e) => setForm((p) => ({ ...p, owner_name: e.target.value }))} placeholder="Full name" className={INPUT_STYLE} />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Owner Email *</label>
-              <input type="email" value={form.owner_email} onChange={(e) => setForm((p) => ({ ...p, owner_email: e.target.value }))} placeholder="vendor@example.com (links to login)" required className={INPUT_STYLE} suppressHydrationWarning />
+              <label className={LABEL_STYLE}>Owner (vendor account) *</label>
+              <select
+                value={form.owner_email}
+                onChange={(e) => onOwnerEmailSelect(e.target.value)}
+                disabled={loadingVendors}
+                className={SELECT_STYLE}
+              >
+                <option value="">{loadingVendors ? 'Loading vendor accounts…' : 'Select laundry vendor account'}</option>
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.email}>
+                    {v.name} — {v.email}
+                  </option>
+                ))}
+                {form.owner_email && !ownerEmailInVendorList(form.owner_email) && (
+                  <option value={form.owner_email}>
+                    {form.owner_email} (current — not in vendor list)
+                  </option>
+                )}
+              </select>
+              {!loadingVendors && vendors.length === 0 && (
+                <p className="mt-1 text-sm text-sky-800">No laundry vendor accounts yet. Create users with role &quot;Laundry Vendor&quot; in Super Admin first.</p>
+              )}
             </div>
             <div>
               <label className={LABEL_STYLE}>Phone Number</label>
@@ -335,6 +447,17 @@ export default function AdminLaundryAddForm() {
             </div>
           </div>
         </section>
+
+        {message && (
+          <div
+            ref={feedbackRef}
+            role="alert"
+            aria-live="polite"
+            className={`px-4 py-3 rounded-xl text-sm font-medium ${feedbackBoxClass(message.type)}`}
+          >
+            {message.text}
+          </div>
+        )}
 
         <div className="pt-4 flex gap-3">
           <button type="submit" disabled={saving} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50">

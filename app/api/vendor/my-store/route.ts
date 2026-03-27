@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest) {
     if (!email) return NextResponse.json({ message: 'No email' }, { status: 400 })
 
     const body = await request.json()
-    const { id, shopType, name, owner_name, phone, whatsapp, address, city, area, description, opening_time, closing_time, is_open } = body
+    const { id, shopType, name, owner_name, phone, whatsapp, address, city, area, description, opening_time, closing_time, logo, is_open } = body
 
     if (!id || !shopType) return NextResponse.json({ message: 'Missing id or shopType' }, { status: 400 })
 
@@ -104,6 +104,7 @@ export async function PUT(request: NextRequest) {
       if (description != null) updates.description = description ? String(description).trim() : null
       if (opening_time != null) updates.opening_time = opening_time !== '' ? String(opening_time) : null
       if (closing_time != null) updates.closing_time = closing_time !== '' ? String(closing_time) : null
+      if (logo != null) updates.logo = logo ? String(logo).trim() : null
       if (typeof is_open === 'boolean') updates.is_open = is_open
 
       const { error } = await client.from('food_stalls').update(updates).eq('id', id).eq('owner_email', email)
@@ -126,6 +127,7 @@ export async function PUT(request: NextRequest) {
       if (area != null) updates.area = area ? String(area).trim() : null
       if (opening_time != null) updates.opening_time = opening_time !== '' ? String(opening_time) : null
       if (closing_time != null) updates.closing_time = closing_time !== '' ? String(closing_time) : null
+      if (logo != null) updates.logo = logo ? String(logo).trim() : null
       if (typeof is_open === 'boolean') updates.is_open = is_open
 
       const { error } = await client.from('laundry_shops').update(updates).eq('id', id).eq('owner_email', email)

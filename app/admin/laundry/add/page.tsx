@@ -11,7 +11,7 @@ export default async function AdminLaundryAddPage() {
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-2xl p-6 text-white">
           <h1 className="text-2xl font-bold">Add Laundry Shop</h1>
-          <p className="mt-1 text-blue-100">Register a new laundry service. Owner email links to vendor login.</p>
+          <p className="mt-1 text-blue-100">Assign a shop to a laundry vendor account created in Super Admin.</p>
         </div>
         <AdminLaundryAddForm />
         <div className="flex justify-center">
