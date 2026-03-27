@@ -36,7 +36,7 @@ function formatTime(v: string | null): string {
 type MenuItemWithStock = MenuItem & { available?: boolean }
 
 function mapDbMenuToCategories(menuItems: { id: number; name: string; price: number | string; food_category?: string | null; is_available?: boolean }[]): MenuCategory[] {
-    const byCat: Record<string, MenuItem[]> = {}
+    const byCat: Record<string, MenuItemWithStock[]> = {}
     for (const m of menuItems) {
         const cat = m.food_category?.trim() || 'items'
         if (!byCat[cat]) byCat[cat] = []
