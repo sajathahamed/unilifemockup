@@ -27,7 +27,8 @@ export const PAGE_REGISTRY: PageRecord[] = [
   { id: 6, path: '/student/marketplace', label: 'Marketplace', role: 'student', icon: 'ShoppingBag', sort_order: 6 },
   { id: 7, path: '/student/food-order', label: 'Food Order', role: 'student', icon: 'Utensils', sort_order: 7 },
   { id: 8, path: '/student/laundry', label: 'Laundry', role: 'student', icon: 'Truck', sort_order: 8 },
-  { id: 9, path: '/student/rides', label: 'Rides', role: 'student', icon: 'Car', sort_order: 9 },
+  { id: 9, path: '/student/trips', label: 'Trips', role: 'student', icon: 'MapPin', sort_order: 9 },
+  { id: 42, path: '/student/rides', label: 'Rides', role: 'student', icon: 'Car', sort_order: 10 },
   // Lecturer (10–14)
   { id: 10, path: '/lecturer/dashboard', label: 'Dashboard', role: 'lecturer', icon: 'LayoutDashboard', sort_order: 1 },
   { id: 11, path: '/lecturer/courses', label: 'My Courses', role: 'lecturer', icon: 'BookOpen', sort_order: 2 },

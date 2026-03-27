@@ -29,6 +29,7 @@ interface Shop {
     photo_url: string
     distance: string | null
     tags: string[]
+    menu_items?: { id: number; name: string; price: number | string; food_category?: string | null }[]
 }
 
 const CATEGORIES = [
@@ -115,6 +116,11 @@ function ShopCard({ shop, onClick }: { shop: Shop; onClick: () => void }) {
                         </span>
                     ))}
                 </div>
+                {shop.menu_items && shop.menu_items.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-2">
+                        📋 {shop.menu_items.length} menu item{shop.menu_items.length !== 1 ? 's' : ''}
+                    </p>
+                )}
             </div>
         </motion.div>
     )
@@ -130,7 +136,7 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
     const [search, setSearch] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
     const [budgetOnly, setBudgetOnly] = useState(false)
-    const [dataSource, setDataSource] = useState<'mixed' | 'mock'>('mock')
+    const [dataSource, setDataSource] = useState<'mixed' | 'database' | 'google' | 'empty' | 'error'>('database')
     const [locationGranted, setLocationGranted] = useState<boolean | null>(null)
     const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
     const [apiError, setApiError] = useState<string | null>(null)
@@ -138,24 +144,20 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         setRefreshing(true)
         setApiError(null)
         try {
-            const url = lat && lng ? `/api/places?lat=${lat}&lng=${lng}` : '/api/places'
-            console.log('[FoodOrder] fetching:', url)
+            let url = '/api/student/food-stalls'
+            if (lat != null && lng != null) {
+                url += `?lat=${lat}&lng=${lng}`
+            }
             const res = await fetch(url)
             if (!res.ok) throw new Error(`API responded with HTTP ${res.status}`)
             const data = await res.json()
-            console.log('[FoodOrder] response:', data.source, data.results?.length, 'results', data.error ? `Error: ${data.error}` : '')
-
-            if (data.error) {
-                setApiError(`API Error: ${data.error}`)
-            }
-
             const results = data.results ?? []
-            if (results.length > 0) {
-                setShops(results)
-                setDataSource(data.source ?? 'mock')
-            } else if (!data.error) {
-                setApiError('API returned 0 places — showing demo data. Check if Woosmap API is enabled/key provided.')
-            }
+
+            if (data.error) setApiError(data.error)
+            else if (data.google_error) setApiError(data.google_error)
+
+            setShops(results)
+            setDataSource(data.source ?? 'database')
         } catch (err: any) {
             console.warn('[FoodOrder] fetch failed:', err)
             setApiError(`Fetch error: ${err?.message ?? err}`)
@@ -190,24 +192,23 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         if (hasFetched.current) return
         hasFetched.current = true
 
+        // Fetch DB food stores immediately (no location needed)
+        fetchShops()
+
+        // Try to add Google Places when location is available
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const { latitude, longitude } = pos.coords
-                    console.log('[FoodOrder] location granted:', latitude, longitude)
                     setLocationGranted(true)
                     setCoords({ lat: latitude, lng: longitude })
                     fetchShops(latitude, longitude)
                 },
-                (err) => {
-                    console.warn('[FoodOrder] location denied:', err.message)
-                    setLocationGranted(false)
-                    fetchShops()
-                },
+                () => setLocationGranted(false),
                 { timeout: 10000, maximumAge: 60000 }
             )
         } else {
-            fetchShops()
+            setLocationGranted(false)
         }
     }, [fetchShops])
 
@@ -265,15 +266,11 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                                 <Loader2 size={12} className="animate-spin" /> Updating…
                             </span>
                         )}
-                        {!refreshing && dataSource === 'mixed' ? (
+                        {!refreshing && (dataSource === 'mixed' || dataSource === 'database' || dataSource === 'google') ? (
                             <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
-                                <Wifi size={12} /> Multi-source Live Data
+                                <Wifi size={12} /> Live Data
                             </span>
-                        ) : !refreshing && (
-                            <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
-                                <WifiOff size={12} /> Demo data
-                            </span>
-                        )}
+                        ) : null}
                         <button
                             onClick={handleRefresh}
                             className="flex items-center gap-1.5 text-xs bg-white text-orange-600 px-3 py-1 rounded-full font-bold hover:bg-orange-50 transition-colors"
@@ -288,9 +285,17 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                     <div className="flex flex-wrap gap-3 items-center">
                         <span>📍 {coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : locationGranted === false ? 'Location denied' : 'Waiting for location…'}</span>
                         <span>•</span>
-                        <span>Source: <strong className={dataSource === 'mixed' ? 'text-emerald-600' : 'text-amber-600'}>{dataSource === 'mixed' ? '🌐 Mixed (Woosmap/OSM/Chains)' : '📦 Demo data'}</strong></span>
+                        <span>Source: <strong className={['mixed', 'database', 'google'].includes(dataSource) ? 'text-emerald-600' : 'text-amber-600'}>{dataSource === 'mixed' ? '🌐 DB + Google' : dataSource === 'database' ? '📦 Database' : dataSource === 'google' ? '🗺️ Google Places' : dataSource}</strong></span>
                         <span>•</span>
-                        <span>{shops.length} places loaded</span>
+                        <span>{shops.length} places</span>
+                        {(shops.some((s) => (s as any).source === 'google') || apiError) && (
+                            <>
+                                <span>•</span>
+                                <span className={shops.some((s) => (s as any).source === 'google') ? 'text-emerald-600' : 'text-amber-600'}>
+                                    Google: {shops.filter((s) => (s as any).source === 'google').length} restaurants
+                                </span>
+                            </>
+                        )}
                     </div>
                     {apiError && (
                         <div className="text-red-500 font-medium mt-1">⚠️ {apiError.replace('Google', 'API')}</div>
@@ -340,10 +345,13 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                 </div>
 
                 {/* Results */}
-                {loading ? (
+                {loading || (locationGranted === null && shops.length === 0) ? (
                     <div className="flex flex-col items-center justify-center py-24 gap-4">
                         <Loader2 className="w-10 h-10 text-orange-400 animate-spin" />
-                        <p className="text-gray-500 text-sm">Finding food near you…</p>
+                        <p className="text-gray-500 text-sm">
+                            {locationGranted === null ? 'Getting your location to find nearby shops…' : 'Finding food near you…'}
+                        </p>
+                        <p className="text-xs text-gray-400">Allow location access for the best results</p>
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="text-center py-20">
