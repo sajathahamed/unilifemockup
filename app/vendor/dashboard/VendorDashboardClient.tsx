@@ -19,7 +19,17 @@ import Link from 'next/link'
 type FoodStall = { id: number; shop_name: string; owner_email: string }
 type LaundryShop = { id: number; shop_name: string; owner_email: string }
 type FoodOrder = { id: number; customer_name: string; items: string; total_amount: number; status: string; created_at: string }
-type LaundryOrder = { id: number; customer_name: string; service: string; items_count?: number; total_amount: number; status: string; created_at: string }
+type LaundryOrder = {
+  id: number
+  customer_name: string
+  items_description?: string | null
+  service?: string | null
+  items_count?: number | null
+  total?: number | null
+  total_amount?: number | null
+  status: string
+  created_at: string
+}
 
 function timeAgo(dateStr: string): string {
   const d = new Date(dateStr).getTime()
@@ -28,6 +38,15 @@ function timeAgo(dateStr: string): string {
   if (diff < 60) return `${diff} mins ago`
   if (diff < 1440) return `${Math.floor(diff / 60)} hrs ago`
   return `${Math.floor(diff / 1440)} days ago`
+}
+
+function normalizeLaundryStatus(raw: string): 'new' | 'preparing' | 'ready' | 'completed' | 'cancelled' {
+  const s = String(raw || '').toLowerCase()
+  if (s === 'completed' || s === 'delivered') return 'completed'
+  if (s === 'cancelled' || s === 'canceled' || s === 'rejected') return 'cancelled'
+  if (s === 'ready' || s === 'ready_for_delivery' || s === 'out_for_delivery') return 'ready'
+  if (s === 'washing' || s === 'ironing' || s === 'in_progress' || s === 'processing') return 'preparing'
+  return 'new'
 }
 
 export default function VendorDashboardClient({ userName, userRole }: { userName: string; userRole?: string }) {
@@ -54,6 +73,18 @@ export default function VendorDashboardClient({ userName, userRole }: { userName
     }).catch(() => {}).finally(() => setLoading(false))
   }, [userRole])
 
+  const handleLaundryStatusUpdate = async (id: number, nextStatus: 'washing' | 'cancelled') => {
+    const res = await fetch(`/api/vendor/laundry-orders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: nextStatus }),
+    })
+    if (!res.ok) return
+    const data = await res.json().catch(() => null)
+    const appliedStatus = String(data?.status || nextStatus)
+    setLaundryOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: appliedStatus } : o)))
+  }
+
   const hasFood = foodStalls.length > 0
   const hasLaundry = laundryShops.length > 0
   const hasShops = hasFood || hasLaundry
@@ -62,14 +93,27 @@ export default function VendorDashboardClient({ userName, userRole }: { userName
   const foodToday = foodOrders.filter((o) => o.created_at?.slice(0, 10) === today)
   const laundryToday = laundryOrders.filter((o) => o.created_at?.slice(0, 10) === today)
   const todayOrderCount = foodToday.length + laundryToday.length
-  const pendingCount = [...foodOrders, ...laundryOrders].filter((o) => !['completed', 'cancelled'].includes(o.status)).length
-  const todayRevenue = foodToday.reduce((s, o) => s + Number(o.total_amount), 0) + laundryToday.reduce((s, o) => s + Number(o.total_amount), 0)
-  const weekRevenue = [...foodOrders, ...laundryOrders]
+  const pendingCount =
+    foodOrders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length +
+    laundryOrders.filter((o) => {
+      const normalized = normalizeLaundryStatus(o.status)
+      return normalized !== 'completed' && normalized !== 'cancelled'
+    }).length
+  const todayRevenue =
+    foodToday.reduce((s, o) => s + Number(o.total_amount), 0) +
+    laundryToday.reduce((s, o) => s + Number(o.total ?? o.total_amount ?? 0), 0)
+  const weekRevenue = foodOrders
     .filter((o) => {
       const d = new Date(o.created_at).getTime()
       return d > Date.now() - 7 * 24 * 60 * 60 * 1000
     })
-    .reduce((s, o) => s + Number(o.total_amount), 0)
+    .reduce((s, o) => s + Number(o.total_amount ?? 0), 0)
+    + laundryOrders
+      .filter((o) => {
+        const d = new Date(o.created_at).getTime()
+        return d > Date.now() - 7 * 24 * 60 * 60 * 1000
+      })
+      .reduce((s, o) => s + Number(o.total ?? o.total_amount ?? 0), 0)
 
   if (loading) {
     return (
@@ -146,10 +190,25 @@ export default function VendorDashboardClient({ userName, userRole }: { userName
               Your shops: {laundryShops.map((s) => s.shop_name).join(', ')}
             </p>
             <div className="space-y-3">
-              {laundryOrders.slice(0, 5).filter((o) => !['completed', 'cancelled'].includes(o.status)).map((o) => (
-                <OrderCard key={o.id} id={`#LND-${o.id}`} items={`${o.service} (${o.items_count ?? 1} items)`} customer={o.customer_name} time={timeAgo(o.created_at)} status={(o.status === 'washing' || o.status === 'ironing' ? 'preparing' : o.status === 'ready' ? 'ready' : 'new') as 'new' | 'preparing' | 'ready'} />
+              {laundryOrders.slice(0, 5).filter((o) => {
+                const normalized = normalizeLaundryStatus(o.status)
+                return normalized !== 'completed' && normalized !== 'cancelled'
+              }).map((o) => (
+                <OrderCard
+                  key={o.id}
+                  id={`#LND-${o.id}`}
+                  items={o.items_description || `${o.service || 'Laundry'} (${o.items_count ?? 1} items)`}
+                  customer={o.customer_name}
+                  time={timeAgo(o.created_at)}
+                  status={(normalizeLaundryStatus(o.status) === 'ready' ? 'ready' : normalizeLaundryStatus(o.status) === 'preparing' ? 'preparing' : 'new') as 'new' | 'preparing' | 'ready'}
+                  onAccept={normalizeLaundryStatus(o.status) === 'new' ? () => handleLaundryStatusUpdate(o.id, 'washing') : undefined}
+                  onReject={normalizeLaundryStatus(o.status) === 'new' ? () => handleLaundryStatusUpdate(o.id, 'cancelled') : undefined}
+                />
               ))}
-              {laundryOrders.filter((o) => !['completed', 'cancelled'].includes(o.status)).length === 0 && (
+              {laundryOrders.filter((o) => {
+                const normalized = normalizeLaundryStatus(o.status)
+                return normalized !== 'completed' && normalized !== 'cancelled'
+              }).length === 0 && (
                 <p className="text-sm text-gray-500 py-4">No active orders</p>
               )}
             </div>
@@ -242,12 +301,16 @@ function OrderCard({
   customer,
   time,
   status,
+  onAccept,
+  onReject,
 }: {
   id: string
   items: string
   customer: string
   time: string
   status: 'new' | 'preparing' | 'ready'
+  onAccept?: () => void
+  onReject?: () => void
 }) {
   const config = {
     new: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'New' },
@@ -267,10 +330,10 @@ function OrderCard({
       </div>
       {status === 'new' && (
         <div className="flex gap-2 mt-3">
-          <button type="button" className="flex-1 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 flex items-center justify-center gap-1">
+          <button type="button" onClick={onAccept} className="flex-1 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 flex items-center justify-center gap-1">
             <CheckCircle size={14} /> Accept
           </button>
-          <button type="button" className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg">
+          <button type="button" onClick={onReject} className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg">
             <XCircle size={14} />
           </button>
         </div>

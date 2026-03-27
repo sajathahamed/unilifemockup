@@ -33,7 +33,9 @@ function formatTime(v: string | null): string {
     return match ? `${match[1]}:${match[2]} AM` : s
 }
 
-function mapDbMenuToCategories(menuItems: { id: number; name: string; price: number | string; food_category?: string | null }[]): MenuCategory[] {
+type MenuItemWithStock = MenuItem & { available?: boolean }
+
+function mapDbMenuToCategories(menuItems: { id: number; name: string; price: number | string; food_category?: string | null; is_available?: boolean }[]): MenuCategory[] {
     const byCat: Record<string, MenuItem[]> = {}
     for (const m of menuItems) {
         const cat = m.food_category?.trim() || 'items'
@@ -47,6 +49,7 @@ function mapDbMenuToCategories(menuItems: { id: number; name: string; price: num
             description: m.food_category || '',
             price: Number(m.price) || 0,
             emoji,
+            available: m.is_available !== false,
         })
     }
     return Object.entries(byCat).map(([id, items]) => ({
@@ -57,7 +60,8 @@ function mapDbMenuToCategories(menuItems: { id: number; name: string; price: num
     }))
 }
 
-function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) => void }) {
+function MenuItemCard({ item, onAdd }: { item: MenuItemWithStock; onAdd: (i: MenuItemWithStock) => void }) {
+    const available = item.available !== false
     return (
         <div className="flex items-center gap-4 py-4 border-b border-gray-50 last:border-0">
             <div className="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-2xl flex-shrink-0">
@@ -74,10 +78,14 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) =>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.description}</p>
                 <p className="text-sm font-bold text-gray-900 mt-1">Rs {item.price.toFixed(2)}</p>
+                <p className={`text-xs mt-1 font-semibold ${available ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {available ? 'Available' : 'This item is not available'}
+                </p>
             </div>
             <button
                 onClick={() => onAdd(item)}
-                className="w-9 h-9 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-sm"
+                disabled={!available}
+                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-sm ${available ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
                 <Plus size={18} />
             </button>
@@ -149,7 +157,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
         is_open?: boolean
         opening_time?: string | null
         closing_time?: string | null
-        menu_items: { id: number; name: string; price: number | string; food_category?: string | null }[]
+        menu_items: { id: number; name: string; price: number | string; food_category?: string | null; is_available?: boolean }[]
     } | null>(null)
     const [loading, setLoading] = useState(isDbStall)
     const [error, setError] = useState<string | null>(null)
@@ -166,6 +174,21 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
 
     const [activeCategory, setActiveCategory] = useState('mains')
     const [cartCount, setCartCount] = useState(0)
+
+    const refreshCartCount = async () => {
+        try {
+            const res = await fetch(`/api/student/cart-items?cart_type=food&shop_ref=${encodeURIComponent(cartShopId)}`)
+            const data = await res.json().catch(() => null)
+            if (!res.ok || !Array.isArray(data?.items)) {
+                setCartCount(0)
+                return
+            }
+            const total = data.items.reduce((acc: number, i: any) => acc + Math.max(0, Number(i?.qty ?? 0)), 0)
+            setCartCount(total)
+        } catch {
+            setCartCount(0)
+        }
+    }
 
     // Menu: from DB if available, else mock
     const tags = searchParams.get('tags')?.split(',') ?? []
@@ -198,22 +221,26 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
     }, [isDbStall, stallId])
 
     useEffect(() => {
-        // Load persisted cart count for this shop
-        try {
-            const cart = readCart(user.id, cartShopId)
-            setCartCount(countCart(cart))
-        } catch {
-            setCartCount(0)
-        }
+        refreshCartCount()
     }, [user.id, cartShopId])
 
-    const addToCart = (item: MenuItem) => {
-        const cart = readCart(user.id, cartShopId)
-        const idx = cart.findIndex((c) => c.id === item.id)
-        if (idx >= 0) cart[idx] = { ...cart[idx], qty: cart[idx].qty + 1 }
-        else cart.push({ id: item.id, name: item.name, price: item.price, emoji: item.emoji, qty: 1 })
-        writeCart(user.id, cartShopId, cart)
-        setCartCount(countCart(cart))
+    const addToCart = async (item: MenuItemWithStock) => {
+        if (item.available === false) return
+        await fetch('/api/student/cart-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cart_type: 'food',
+                shop_ref: cartShopId,
+                item_ref: item.id,
+                item_name: item.name,
+                item_description: item.description || '',
+                item_emoji: item.emoji || '🍽️',
+                unit_price: Number(item.price) || 0,
+                qty_delta: 1,
+            }),
+        })
+        await refreshCartCount()
     }
 
     const orderParams = new URLSearchParams({ name, photo })

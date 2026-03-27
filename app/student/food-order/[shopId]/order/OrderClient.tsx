@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Minus, ShoppingBag, Bike, Store, Trash2, CheckCircle }
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserProfile } from '@/lib/auth'
 
-interface CartItem { id: string; name: string; price: number; emoji: string; qty: number }
+interface CartItem { id: string; dbId?: string; name: string; price: number; emoji: string; qty: number }
 
 const DEFAULT_CART: CartItem[] = []
 const DELIVERY_FEE = 150.0 // Rs
@@ -16,6 +16,64 @@ const DELIVERY_OPTIONS = [
     { id: 'delivery', label: 'Delivery', icon: Bike, eta: '15–25 min' },
     { id: 'pickup', label: 'Pick Up', icon: Store, eta: '10 min' },
 ]
+
+const PAYMENT_OPTIONS = [
+    { id: 'cod', label: 'Cash on Delivery' },
+    { id: 'card', label: 'Visa / Mastercard' },
+    { id: 'wallet', label: 'Online Wallet' },
+]
+
+function isLuhnValid(digits: string): boolean {
+    let sum = 0
+    let shouldDouble = false
+    for (let i = digits.length - 1; i >= 0; i--) {
+        let d = Number(digits[i])
+        if (shouldDouble) {
+            d *= 2
+            if (d > 9) d -= 9
+        }
+        sum += d
+        shouldDouble = !shouldDouble
+    }
+    return sum % 10 === 0
+}
+
+function isVisaOrMastercard(digits: string): boolean {
+    const visa = /^4\d{12}(\d{3}){0,2}$/
+    const mastercard = /^(5[1-5]\d{14}|2(2[2-9]\d{12}|[3-6]\d{13}|7[01]\d{12}|720\d{12}))$/
+    return visa.test(digits) || mastercard.test(digits)
+}
+
+function isValidCardholderName(name: string): boolean {
+    const clean = name.trim().replace(/\s+/g, ' ')
+    if (clean.length < 3 || clean.length > 60) return false
+    return /^[A-Za-z][A-Za-z\s.'-]*$/.test(clean)
+}
+
+function isValidExpiry(expiry: string): boolean {
+    const raw = String(expiry || '').trim()
+    const withSlash = raw.includes('/') ? raw : raw.replace(/\D/g, '').replace(/^(\d{2})(\d{0,2}).*$/, '$1/$2')
+    const m = withSlash.match(/^(\d{2})\/(\d{2})$/)
+    if (!m) return false
+    const month = Number(m[1])
+    const year = 2000 + Number(m[2])
+    if (month < 1 || month > 12) return false
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+    if (year < currentYear) return false
+    if (year === currentYear && month < currentMonth) return false
+    if (year > currentYear + 15) return false
+    return true
+}
+
+function formatExpiryInput(raw: string): string {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 4)
+    const mm = digits.slice(0, 2)
+    const yy = digits.slice(2, 4)
+    if (digits.length <= 2) return mm
+    return `${mm}/${yy}`
+}
 
 function CartItemRow({ item, onInc, onDec, onRemove }: { item: CartItem; onInc: () => void; onDec: () => void; onRemove: () => void }) {
     return (
@@ -76,6 +134,21 @@ function SuccessModal({ shopName, onClose }: { shopName: string; onClose: () => 
     )
 }
 
+function sanitizeCart(parsed: any[]): CartItem[] {
+    return parsed
+        .map((i: any) => ({
+            id: (() => {
+                const raw = String(i?.id ?? '')
+                return raw.startsWith('dbm-') ? raw.replace('dbm-', '') : raw
+            })(),
+            name: String(i?.name ?? ''),
+            price: Number(i?.price ?? 0),
+            emoji: String(i?.emoji ?? '🍽️'),
+            qty: Math.max(1, Number(i?.qty ?? 1)),
+        }))
+        .filter((i) => i.id && i.name && Number.isFinite(i.price) && i.price >= 0)
+}
+
 export default function OrderClient({ user, shopId }: { user: UserProfile; shopId: string }) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -96,90 +169,140 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const [notes, setNotes] = useState('')
     const [placing, setPlacing] = useState(false)
     const [success, setSuccess] = useState(false)
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'wallet'>('cod')
+    const [cardNumber, setCardNumber] = useState('')
+    const [cardName, setCardName] = useState('')
+    const [cardExpiry, setCardExpiry] = useState('')
+    const [cardCvv, setCardCvv] = useState('')
+    const [contactNumber, setContactNumber] = useState('')
+    const [deliveryAddress, setDeliveryAddress] = useState('')
+    const [mapLink, setMapLink] = useState('')
+    const [formError, setFormError] = useState<string | null>(null)
 
     const subtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0)
     const fee = deliveryMode === 'delivery' ? DELIVERY_FEE : 0
     const total = subtotal + fee
 
-    const inc = (id: string) => setCart((c) => c.map((i) => (i.id === id ? { ...i, qty: i.qty + 1 } : i)))
-    const dec = (id: string) => setCart((c) => c.map((i) => (i.id === id ? { ...i, qty: i.qty - 1 } : i)).filter((i) => i.qty > 0))
-    const remove = (id: string) => setCart((c) => c.filter((i) => i.id !== id))
-
-    // Cart key is tied to the logged-in user and the selected shop.
-    // This prevents cart items from one user/shp mixing with another.
     const cartKey = useMemo(() => `unilife_food_cart:${user.id}:${cartShopId}`, [user.id, cartShopId])
 
-    useEffect(() => {
-        // Load persisted cart
-        try {
-            const raw = localStorage.getItem(cartKey)
-            if (!raw) return
-            const parsed = JSON.parse(raw)
-            if (!Array.isArray(parsed)) return
-            const normalized: CartItem[] = parsed
-                .map((i: any) => ({
-                    id: (() => {
-                        const raw = String(i?.id ?? '')
-                        return raw.startsWith('dbm-') ? raw.replace('dbm-', '') : raw
-                    })(),
-                    name: String(i?.name ?? ''),
-                    price: Number(i?.price ?? 0),
-                    emoji: String(i?.emoji ?? '🍽️'),
-                    qty: Math.max(1, Number(i?.qty ?? 1)),
-                }))
-                .filter((i) => i.id && i.name)
-            setCart(normalized)
-        } catch {
-            // ignore
+    const loadCartFromDb = async () => {
+        const res = await fetch(`/api/student/cart-items?cart_type=food&shop_ref=${encodeURIComponent(cartShopId)}`)
+        const data = await res.json().catch(() => null)
+        if (!res.ok || !Array.isArray(data?.items)) {
+            setCart([])
+            return
         }
+        const mapped: CartItem[] = data.items.map((row: any) => ({
+            id: String(row.item_ref ?? ''),
+            dbId: String(row.id ?? ''),
+            name: String(row.item_name ?? 'Item'),
+            price: Number(row.unit_price ?? 0),
+            emoji: String(row.item_emoji ?? '🍽️'),
+            qty: Math.max(1, Number(row.qty ?? 1)),
+        })).filter((i: CartItem) => i.id)
+        setCart(mapped)
+    }
+
+    const inc = async (dbId: string, qty: number) => {
+        await fetch('/api/student/cart-items', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: dbId, qty: qty + 1 }),
+        })
+        await loadCartFromDb()
+    }
+
+    const dec = async (dbId: string, qty: number) => {
+        await fetch('/api/student/cart-items', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: dbId, qty: Math.max(0, qty - 1) }),
+        })
+        await loadCartFromDb()
+    }
+
+    const remove = async (dbId: string) => {
+        await fetch(`/api/student/cart-items?id=${encodeURIComponent(dbId)}`, { method: 'DELETE' })
+        await loadCartFromDb()
+    }
+
+    useEffect(() => {
+        loadCartFromDb().catch(() => setCart([]))
     }, [cartKey])
 
-    // Back-compat migration: older carts were stored as `unilife_food_cart:${shopId}`
-    // Migrate them once so the UI still works after this change.
-    useEffect(() => {
-        try {
-            const candidateOldKeys = [`unilife_food_cart:${shopId}`, `unilife_food_cart:${cartShopId}`]
-            const oldRaw = candidateOldKeys.map((k) => localStorage.getItem(k)).find(Boolean)
-            if (!oldRaw) return
-            if (localStorage.getItem(cartKey)) return
-            localStorage.setItem(cartKey, oldRaw)
-            // Best-effort cleanup: remove all legacy keys that might exist.
-            for (const k of candidateOldKeys) {
-                try {
-                    localStorage.removeItem(k)
-                } catch {
-                    // ignore
-                }
-            }
-        } catch {
-            // ignore
-        }
-    }, [cartKey, shopId, cartShopId])
-
-    useEffect(() => {
-        // Persist cart changes
-        try {
-            localStorage.setItem(cartKey, JSON.stringify(cart))
-        } catch {
-            // ignore
-        }
-    }, [cartKey, cart])
-
     const placeOrder = async () => {
+        setFormError(null)
         if (cart.length === 0) return
+        if (!/^[+0-9][0-9\s-]{6,19}$/.test(contactNumber.trim())) {
+            setFormError('Enter a valid contact number.')
+            return
+        }
+        if (deliveryMode === 'delivery' && deliveryAddress.trim().length < 4) {
+            setFormError('Enter a valid delivery address.')
+            return
+        }
+        if (paymentMethod === 'card') {
+            const cardDigits = cardNumber.replace(/\D/g, '')
+            if (!isVisaOrMastercard(cardDigits) || !isLuhnValid(cardDigits)) {
+                setFormError('Enter a valid Visa/Mastercard card number.')
+                return
+            }
+            if (!isValidCardholderName(cardName)) {
+                setFormError('Enter a valid cardholder name.')
+                return
+            }
+            if (!isValidExpiry(cardExpiry)) {
+                setFormError('Enter a valid expiry date (MM/YY).')
+                return
+            }
+            if (!/^\d{3}$/.test(cardCvv.trim())) {
+                setFormError('Enter a valid CVV (3 digits).')
+                return
+            }
+        }
+
+        const stallRaw = queryStallId || shopId.replace(/^db-/, '')
+        const foodStallId = /^\d+$/.test(stallRaw) ? parseInt(stallRaw, 10) : stallRaw
+        if (!foodStallId) {
+            setFormError('Could not resolve stall ID for this order.')
+            return
+        }
+
         setPlacing(true)
-        await new Promise((r) => setTimeout(r, 1500))
-        setPlacing(false)
-        setSuccess(true)
+        try {
+            const res = await fetch('/api/student/food-orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    food_stall_id: foodStallId,
+                    customer_name: user.name,
+                    customer_phone: contactNumber.trim(),
+                    items: cart.map((i) => ({ name: i.name, quantity: i.qty, price: i.price })),
+                    total,
+                    delivery_type: deliveryMode,
+                    delivery_address: deliveryMode === 'delivery' ? deliveryAddress.trim() : '',
+                    map_link: mapLink.trim(),
+                    payment_method: paymentMethod,
+                    notes: [
+                        notes.trim(),
+                        paymentMethod === 'card' ? `Card: **** **** **** ${cardNumber.replace(/\D/g, '').slice(-4)}` : '',
+                    ].filter(Boolean).join(' | '),
+                }),
+            })
+            const data = await res.json().catch(() => null)
+            if (!res.ok) {
+                setFormError(data?.message || `Failed to place order (HTTP ${res.status})`)
+                return
+            }
+            await fetch(`/api/student/cart-items?cart_type=food&shop_ref=${encodeURIComponent(cartShopId)}`, { method: 'DELETE' })
+            setSuccess(true)
+        } finally {
+            setPlacing(false)
+        }
     }
 
     const finish = () => {
-        try {
-            localStorage.removeItem(cartKey)
-        } catch {
-            // ignore
-        }
-        router.push('/student/food-order')
+        router.push('/student/food-order/cart')
     }
 
     return (
@@ -240,7 +363,13 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                         ) : (
                             <AnimatePresence initial={false}>
                                 {cart.map((item) => (
-                                    <CartItemRow key={item.id} item={item} onInc={() => inc(item.id)} onDec={() => dec(item.id)} onRemove={() => remove(item.id)} />
+                                    <CartItemRow
+                                        key={`${item.dbId || item.id}`}
+                                        item={item}
+                                        onInc={() => item.dbId ? inc(item.dbId, item.qty) : Promise.resolve()}
+                                        onDec={() => item.dbId ? dec(item.dbId, item.qty) : Promise.resolve()}
+                                        onRemove={() => item.dbId ? remove(item.dbId) : Promise.resolve()}
+                                    />
                                 ))}
                             </AnimatePresence>
                         )}
@@ -255,6 +384,107 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                         placeholder="e.g. Less spicy, no onions…" rows={3}
                         className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
                     />
+                </div>
+
+                {/* Payment */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+                    <label className="text-sm font-semibold text-gray-700 mb-3 block">Payment Method</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {PAYMENT_OPTIONS.map((p) => (
+                            <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => setPaymentMethod(p.id as 'cod' | 'card' | 'wallet')}
+                                className={`px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${paymentMethod === p.id ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-200 text-gray-600 hover:border-orange-300'}`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {paymentMethod === 'card' && (
+                    <div className="bg-[#f2f7ff] rounded-2xl shadow-sm border border-[#d7e6ff] p-4 mb-4 space-y-4">
+                        <div>
+                            <label className="text-sm font-bold text-gray-600 mb-2 block uppercase tracking-wide">Card Number</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={cardNumber}
+                                onChange={(e) => setCardNumber(e.target.value.replace(/[^\d ]/g, '').slice(0, 23))}
+                                placeholder="4111 1111 1111 1111"
+                                className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-3sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-gray-600 mb-2 block uppercase tracking-wide">Cardholder Name</label>
+                            <input
+                                type="text"
+                                value={cardName}
+                                onChange={(e) => setCardName(e.target.value)}
+                                placeholder="Name on card"
+                                className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-3sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-sm font-bold text-gray-600 mb-2 block uppercase tracking-wide">Expiry</label>
+                                <input
+                                    type="text"
+                                    value={cardExpiry}
+                                    onChange={(e) => setCardExpiry(formatExpiryInput(e.target.value))}
+                                    placeholder="MM/YY"
+                                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-3sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-bold text-gray-600 mb-2 block uppercase tracking-wide">CVV</label>
+                                <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    value={cardCvv}
+                                    onChange={(e) => setCardCvv(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
+                                    placeholder="123"
+                                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-3sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Checkout contact/details */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4 space-y-3">
+                    <div>
+                        <label className="text-sm font-semibold text-gray-700 mb-1 block">Contact Number</label>
+                        <input
+                            value={contactNumber}
+                            onChange={(e) => setContactNumber(e.target.value)}
+                            placeholder="0712345678"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                    </div>
+                    {deliveryMode === 'delivery' && (
+                        <>
+                            <div>
+                                <label className="text-sm font-semibold text-gray-700 mb-1 block">Delivery Address</label>
+                                <textarea
+                                    value={deliveryAddress}
+                                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                                    rows={2}
+                                    placeholder="Hostel / Room / Street..."
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-semibold text-gray-700 mb-1 block">Map Link (optional)</label>
+                                <input
+                                    value={mapLink}
+                                    onChange={(e) => setMapLink(e.target.value)}
+                                    placeholder="https://maps.google.com/..."
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Summary */}
@@ -290,6 +520,9 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                         `Place Order · Rs ${total.toFixed(2)}`
                     )}
                 </motion.button>
+                {formError ? (
+                    <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{formError}</p>
+                ) : null}
             </div>
 
             <AnimatePresence>

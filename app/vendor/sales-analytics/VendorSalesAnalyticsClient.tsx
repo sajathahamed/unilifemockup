@@ -14,11 +14,22 @@ const iconMap = { DollarSign, Package, TrendingUp, Users }
 const statusColors: Record<string, string> = {
   completed: 'bg-green-500',
   delivered: 'bg-green-500',
+  done: 'bg-green-500',
   preparing: 'bg-amber-500',
+  washing: 'bg-amber-500',
+  ironing: 'bg-amber-500',
+  in_progress: 'bg-amber-500',
+  processing: 'bg-amber-500',
   ready: 'bg-blue-500',
+  ready_for_delivery: 'bg-blue-500',
+  out_for_delivery: 'bg-blue-500',
   pending: 'bg-blue-500',
   new: 'bg-blue-500',
+  confirmed: 'bg-blue-500',
+  accepted: 'bg-blue-500',
   cancelled: 'bg-red-500',
+  canceled: 'bg-red-500',
+  rejected: 'bg-red-500',
 }
 
 export default function VendorSalesAnalyticsClient({ user }: VendorSalesAnalyticsClientProps) {
@@ -26,6 +37,7 @@ export default function VendorSalesAnalyticsClient({ user }: VendorSalesAnalytic
   const [chartData, setChartData] = useState<{ day: string; revenue: number; orders: number }[]>([])
   const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number }[]>([])
   const [statusDistribution, setStatusDistribution] = useState<{ label: string; count: number; pct: number }[]>([])
+  const [shopType, setShopType] = useState<'food' | 'laundry' | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,6 +49,7 @@ export default function VendorSalesAnalyticsClient({ user }: VendorSalesAnalytic
         if (data.chartData) setChartData(data.chartData)
         if (data.topProducts) setTopProducts(data.topProducts)
         if (data.statusDistribution) setStatusDistribution(data.statusDistribution)
+        if (data.shopType === 'food' || data.shopType === 'laundry') setShopType(data.shopType)
       } catch (e) {
         console.error('Analytics fetch error:', e)
       } finally {
@@ -62,7 +75,11 @@ export default function VendorSalesAnalyticsClient({ user }: VendorSalesAnalytic
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Sales & Analysis</h1>
-          <p className="text-gray-500 mt-1">Track revenue, orders, and performance from your store</p>
+          <p className="text-gray-500 mt-1">
+            {shopType === 'laundry'
+              ? 'Track laundry revenue, order flow, and top services from your shop'
+              : 'Track revenue, orders, and performance from your store'}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -107,7 +124,7 @@ export default function VendorSalesAnalyticsClient({ user }: VendorSalesAnalytic
 
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Top Products This Week</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{shopType === 'laundry' ? 'Top Laundry Services This Week' : 'Top Products This Week'}</h3>
             <div className="space-y-3">
               {topProducts.length ? (
                 topProducts.map((p, i) => (
@@ -123,7 +140,7 @@ export default function VendorSalesAnalyticsClient({ user }: VendorSalesAnalytic
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500">No product sales yet</p>
+                <p className="text-gray-500">{shopType === 'laundry' ? 'No laundry orders yet' : 'No product sales yet'}</p>
               )}
             </div>
           </div>

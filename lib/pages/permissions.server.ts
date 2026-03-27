@@ -12,6 +12,17 @@ import {
   type PageRecord,
 } from './registry'
 
+const REMOVED_STUDENT_PATHS = new Set([
+  '/student/courses',
+  '/student/study-groups',
+  '/student/marketplace',
+])
+
+function isVisiblePagePath(path: unknown): boolean {
+  const p = String(path || '')
+  return !REMOVED_STUDENT_PATHS.has(p)
+}
+
 export interface NavItemPayload {
   label: string
   href: string
@@ -44,7 +55,7 @@ export async function getAllowedNavItemsForRole(role: UserRole, userId?: number)
   // Super_admin sees their own pages plus all admin pages (dashboard, users, timetable, reports, announcements, add laundry/food/timetable/trip/user/vendor)
   const rolePages = (allPagesData || []).filter(
     (p: any) => p.role === role || (role === 'super_admin' && p.role === 'admin')
-  )
+  ).filter((p: any) => isVisiblePagePath(p.path))
   const allowedRolePages = rolePages.filter((p: any) => {
     const userOverride = userPermMap.get(p.id)
     if (userOverride !== undefined) return userOverride
@@ -55,11 +66,18 @@ export async function getAllowedNavItemsForRole(role: UserRole, userId?: number)
 
   const crossRoleGranted = (allPagesData || []).filter((p: any) => {
     if (p.role === role) return false
+    if (!isVisiblePagePath(p.path)) return false
     const rp = rolePermMap.get(p.id)
     return rp === true
   })
 
-  const userGranted = userId ? (allPagesData || []).filter((p: any) => userPermMap.get(p.id) === true && !allowedRolePages.some((r: any) => r.id === p.id) && !crossRoleGranted.some((r: any) => r.id === p.id)) : []
+  const userGranted = userId
+    ? (allPagesData || []).filter((p: any) =>
+      isVisiblePagePath(p.path) &&
+      userPermMap.get(p.id) === true &&
+      !allowedRolePages.some((r: any) => r.id === p.id) &&
+      !crossRoleGranted.some((r: any) => r.id === p.id))
+    : []
 
   const combined = [...allowedRolePages, ...crossRoleGranted, ...userGranted]
   const seen = new Set<number>()
@@ -79,7 +97,7 @@ export async function getAllowedNavItemsForRole(role: UserRole, userId?: number)
     return (a.role || '').localeCompare(b.role || '') || (a.sort_order || 0) - (b.sort_order || 0)
   })
 
-  if (deduped.length === 0) return getDefaultNavItemsForRole(role)
+  if (deduped.length === 0) return getDefaultNavItemsForRole(role).filter((p) => isVisiblePagePath(p.href))
   return deduped.map((p: any) => ({ label: p.label, href: p.path, icon: p.icon }))
 }
 
@@ -108,7 +126,7 @@ export async function getPagesWithPermissionsForUser(userId: number): Promise<
   const roleMap = new Map((rolePerms || []).map((r: any) => [r.page_id, r.enabled]))
   const userMap = new Map(userPerms.map((r) => [r.page_id, r.enabled]))
 
-  return (allPages as any[]).map((p) => {
+  return (allPages as any[]).filter((p) => isVisiblePagePath(p.path)).map((p) => {
     const userOverride = userMap.get(p.id)
     const effective = userOverride !== undefined ? userOverride : (roleMap.get(p.id) ?? (p.role === role))
     return {
@@ -130,7 +148,7 @@ export async function getPagesWithPermissionsForRole(role: UserRole): Promise<
   const supabase = await createClient()
   const { data: pages } = await supabase.from('app_pages').select('*').eq('role', role).order('sort_order')
   if (!pages?.length) {
-    return getAllPagesForRole(role).map((p) => ({
+    return getAllPagesForRole(role).filter((p) => isVisiblePagePath(p.path)).map((p) => ({
       page_id: p.id,
       path: p.path,
       label: p.label,
@@ -145,7 +163,7 @@ export async function getPagesWithPermissionsForRole(role: UserRole): Promise<
     .select('page_id, enabled')
     .eq('role', role)
   const permMap = new Map((perms || []).map((r: any) => [r.page_id, r.enabled]))
-  return (pages as any[]).map((p: any) => ({
+  return (pages as any[]).filter((p: any) => isVisiblePagePath(p.path)).map((p: any) => ({
     page_id: p.id,
     path: p.path,
     label: p.label,
@@ -161,17 +179,15 @@ export async function getAllAppPages(): Promise<PageRecord[]> {
   const supabase = await createClient()
   const { data } = await supabase.from('app_pages').select('*').order('id')
   if (data?.length) {
-    return data as PageRecord[]
+    return (data as PageRecord[]).filter((p) => isVisiblePagePath(p.path))
   }
-  return PAGE_REGISTRY
+  return PAGE_REGISTRY.filter((p) => isVisiblePagePath(p.path))
 }
 
 /** Total number of app pages (from DB or registry). */
 export async function getAppPagesCount(): Promise<number> {
-  const supabase = await createClient()
-  const { count } = await supabase.from('app_pages').select('*', { count: 'exact', head: true })
-  if (count != null) return count
-  return PAGE_REGISTRY.length
+  const all = await getAllAppPages()
+  return all.length
 }
 
 /** Set enabled for one role+page. Caller must ensure user is super_admin. */

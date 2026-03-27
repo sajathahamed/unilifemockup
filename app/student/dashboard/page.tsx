@@ -2,18 +2,14 @@ import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { getStudentDashboardData } from '@/lib/student/dashboard.server'
 import {
-  BookOpen,
   Clock,
-  Users,
-  CheckCircle,
+  Utensils,
+  Truck,
+  MapPin,
   ArrowRight,
   Bell,
-  Calendar,
-  LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
-
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function formatTime(t: string): string {
   const s = String(t).trim()
@@ -41,21 +37,21 @@ function getStatus(startTime: string, endTime: string): 'upcoming' | 'in-progres
 
 export default async function StudentDashboard() {
   const user = await requireRole('student')
-  const { coursesCount, timetableToday, assignmentsCount } = await getStudentDashboardData()
+  const { foodStallsCount, laundryShopsCount, tripsCount, timetableToday, announcements } = await getStudentDashboardData()
 
   return (
     <DashboardLayout user={user}>
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-primary to-indigo-600 rounded-2xl p-6 text-white">
           <h1 className="text-2xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
-          <p className="mt-1 text-indigo-100">Here&apos;s what&apos;s happening with your courses today.</p>
+          <p className="mt-1 text-indigo-100">Here&apos;s your campus services snapshot for today.</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={BookOpen} label="Courses" value={String(coursesCount)} color="bg-blue-500" />
           <StatCard icon={Clock} label="Classes today" value={String(timetableToday.length)} color="bg-orange-500" />
-          <StatCard icon={CheckCircle} label="Assignments" value={String(assignmentsCount)} color="bg-green-500" />
-          <StatCard icon={Users} label="Study Groups" value="—" color="bg-purple-500" />
+          <StatCard icon={Utensils} label="Food Stalls" value={String(foodStallsCount)} color="bg-green-500" />
+          <StatCard icon={Truck} label="Laundry Shops" value={String(laundryShopsCount)} color="bg-blue-500" />
+          <StatCard icon={MapPin} label="Trips" value={String(tripsCount)} color="bg-purple-500" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -96,8 +92,13 @@ export default async function StudentDashboard() {
               <Bell size={18} className="text-gray-400" />
             </div>
             <div className="space-y-4">
-              <AnnouncementItem title="Check your timetable for updates" time="Today" isNew />
-              <AnnouncementItem title="Submit assignments before due date" time="Reminder" />
+              {announcements.length === 0 ? (
+                <p className="text-gray-500 text-sm">No announcements available.</p>
+              ) : (
+                announcements.slice(0, 4).map((a, i) => (
+                  <AnnouncementItem key={a.id} title={a.title} time={a.created_at ? new Date(a.created_at).toLocaleDateString() : 'Latest'} isNew={i === 0} />
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -105,13 +106,10 @@ export default async function StudentDashboard() {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <QuickAction href="/student/assignments" icon="📝" label="Assignments" />
-            <QuickAction href="/student/courses" icon="📚" label="Courses" />
             <QuickAction href="/student/timetable" icon="📅" label="Timetable" />
-            <QuickAction href="/student/study-groups" icon="👥" label="Study Groups" />
             <QuickAction href="/student/food-order" icon="🍕" label="Order Food" />
-            <QuickAction href="/student/rides" icon="🚗" label="Book Ride" />
-            <QuickAction href="/student/marketplace" icon="🛒" label="Marketplace" />
+            <QuickAction href="/student/laundry" icon="🧺" label="Laundry" />
+            <QuickAction href="/student/trips" icon="🧭" label="Trips" />
           </div>
         </div>
       </div>

@@ -118,18 +118,19 @@ export async function GET() {
 
       const { data: allOrders } = await client
         .from('laundry_orders')
-        .select('id, total_amount, status, created_at, service')
+        .select('id, total, total_amount, status, created_at, service, items_description')
         .in('laundry_shop_id', shopIds)
 
       const orders = allOrders ?? []
+      const getAmount = (o: { total?: number | null; total_amount?: number | null }) => Number(o.total ?? o.total_amount ?? 0) || 0
       const todayOrders = orders.filter((o) => String(o.created_at).slice(0, 10) === today)
-      const todayRevenue = todayOrders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0)
-      const avgOrderValue = orders.length > 0 ? orders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0) / orders.length : 0
+      const todayRevenue = todayOrders.reduce((s, o) => s + getAmount(o), 0)
+      const avgOrderValue = orders.length > 0 ? orders.reduce((s, o) => s + getAmount(o), 0) / orders.length : 0
 
       const weekStart = new Date()
       weekStart.setDate(weekStart.getDate() - 7)
       const weekOrders = orders.filter((o) => new Date(o.created_at) >= weekStart)
-      const weekRevenue = weekOrders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0)
+      const weekRevenue = weekOrders.reduce((s, o) => s + getAmount(o), 0)
 
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
       const chartData: { day: string; revenue: number; orders: number }[] = []
@@ -140,7 +141,7 @@ export async function GET() {
         const dayOrders = orders.filter((o) => String(o.created_at).slice(0, 10) === dayStr)
         chartData.push({
           day: dayNames[d.getDay()],
-          revenue: dayOrders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0),
+          revenue: dayOrders.reduce((s, o) => s + getAmount(o), 0),
           orders: dayOrders.length,
         })
       }
@@ -159,8 +160,8 @@ export async function GET() {
 
       const serviceSales: Record<string, { sales: number; revenue: number }> = {}
       orders.forEach((o) => {
-        const svc = o.service || 'General'
-        const amt = Number(o.total_amount) || 0
+        const svc = (o.items_description && String(o.items_description).trim()) || (o.service && String(o.service).trim()) || 'Laundry'
+        const amt = getAmount(o)
         if (!serviceSales[svc]) serviceSales[svc] = { sales: 0, revenue: 0 }
         serviceSales[svc].sales += 1
         serviceSales[svc].revenue += amt
