@@ -36,30 +36,8 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export function PageManagementClient({ roles }: PageManagementClientProps) {
-    // Toggle handler for page enable/disable
-    const toggle = (pageId: number, enabled: boolean) => {
-      if (mode === 'role') {
-        toggleRole(pageId, enabled)
-      } else {
-        toggleUser(pageId, enabled)
-      }
-    }
   const [mode, setMode] = useState<'role' | 'user'>('role')
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
-  // Lookup by email handler
-  const lookupByEmail = () => {
-    if (!userEmailInput) {
-      setUserError('Please enter an email')
-      return
-    }
-    const found = users.find(u => u.email.toLowerCase() === userEmailInput.toLowerCase())
-    if (found) {
-      setSelectedUserId(found.id)
-      setUserError(null)
-    } else {
-      setUserError('User not found')
-    }
-  }
   const [selectedRole, setSelectedRole] = useState<UserRole>(roles[0])
   const [pages, setPages] = useState<PageWithPerm[]>([])
   const [loading, setLoading] = useState(true)

@@ -7,7 +7,7 @@ import { Shield, LayoutList, Users, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  student: 'Access to courses, timetable, study groups, marketplace, food order, laundry, and rides.',
+  student: 'Access to timetable, food order, laundry, trips, and rides.',
   lecturer: 'Manage courses, schedule, students, and assignments.',
   admin: 'Campus management: users, timetable, reports, announcements. Can add laundry shops, food stalls, timetable, trips, and users.',
   vendor: 'Shared access for vendor routes (food + laundry).',

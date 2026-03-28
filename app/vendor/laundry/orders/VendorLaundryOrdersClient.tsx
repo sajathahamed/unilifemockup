@@ -17,14 +17,16 @@ import { UserRole } from '@/lib/auth'
 
 type DbOrder = {
   id: number
-  laundry_shop_id: number
+  laundry_shop_id: number | string
+  order_ref?: string | null
   customer_name: string
   customer_phone: string | null
-  service: string
-  items_count: number
-  total_amount: number
+  items_description: string | null
+  total: number
   status: string
-  address: string | null
+  pickup_address: string | null
+  delivery_address: string | null
+  notes?: string | null
   created_at: string
 }
 
@@ -38,12 +40,24 @@ function timeAgo(dateStr: string): string {
 }
 
 const statusConfig = {
+  pending: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Pending' },
   new: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'New' },
   washing: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Washing' },
   ironing: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Ironing' },
   ready: { bg: 'bg-green-100', text: 'text-green-700', label: 'Ready' },
   completed: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Completed' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled' },
+}
+
+function normalizeOrderStatus(raw: string): keyof typeof statusConfig {
+  const s = String(raw || '').toLowerCase()
+  if (s === 'pending' || s === 'new' || s === 'confirmed') return 'pending'
+  if (s === 'washing' || s === 'in_progress' || s === 'processing') return 'washing'
+  if (s === 'ironing') return 'ironing'
+  if (s === 'ready' || s === 'ready_for_delivery' || s === 'out_for_delivery') return 'ready'
+  if (s === 'completed' || s === 'delivered') return 'completed'
+  if (s === 'cancelled' || s === 'canceled' || s === 'rejected') return 'cancelled'
+  return 'pending'
 }
 
 interface VendorLaundryOrdersClientProps {
@@ -60,33 +74,66 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newOrder, setNewOrder] = useState({ customer: '', phone: '', service: 'Wash & Iron', items: 1, address: '', shop_id: 0 })
   const [saving, setSaving] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
-  useEffect(() => {
-    Promise.all([
+  function isValidSriLankaPhone(value: string): boolean {
+    const digits = String(value ?? '').replace(/[^\d]/g, '')
+    // Digits-only Sri Lanka formats: 0XXXXXXXXX or 94XXXXXXXXX
+    return /^0(7\d{8}|1\d{8}|2\d{8})$/.test(digits) || /^94(7\d{8}|1\d{8}|2\d{8})$/.test(digits)
+  }
+
+  const loadOrdersAndShops = async () => {
+    const [ordRes, shopRes] = await Promise.all([
       fetch('/api/vendor/laundry-orders').then((r) => (r.ok ? r.json() : { orders: [] })),
       fetch('/api/vendor/shops').then((r) => (r.ok ? r.json() : { laundry_shops: [] })),
-    ]).then(([ordRes, shopRes]) => {
-      setOrders(ordRes.orders ?? [])
-      const ls = shopRes.laundry_shops ?? []
-      setShops(ls.map((s: { id: number; shop_name: string }) => ({ id: s.id, shop_name: s.shop_name })))
-      if (ls.length > 0) setNewOrder((p) => ({ ...p, shop_id: p.shop_id || ls[0].id }))
-    }).finally(() => setLoading(false))
+    ])
+    setOrders(ordRes.orders ?? [])
+    const ls = shopRes.laundry_shops ?? []
+    setShops(ls.map((s: { id: number; shop_name: string }) => ({ id: s.id, shop_name: s.shop_name })))
+    if (ls.length > 0) setNewOrder((p) => ({ ...p, shop_id: p.shop_id || ls[0].id }))
+  }
+
+  useEffect(() => {
+    loadOrdersAndShops().finally(() => setLoading(false))
   }, [])
 
   const filteredOrders = orders.filter((o) => {
-    const matchesStatus = filterStatus === 'all' || o.status === filterStatus
+    const normalized = normalizeOrderStatus(o.status)
+    const matchesStatus = filterStatus === 'all' || normalized === filterStatus
     const matchesSearch = !searchTerm || o.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) || String(o.id).includes(searchTerm)
     return matchesStatus && matchesSearch
   })
 
   const handleStatusUpdate = async (id: number, nextStatus: string) => {
     const res = await fetch(`/api/vendor/laundry-orders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus }) })
-    if (res.ok) setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: nextStatus } : o)))
+    if (res.ok) await loadOrdersAndShops()
     setExpandedOrder(null)
   }
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
+    setCreateError(null)
+
+    if (!newOrder.customer.trim()) {
+      setCreateError('Customer name is required.')
+      return
+    }
+
+    if (!isValidSriLankaPhone(newOrder.phone)) {
+      setCreateError('Enter a valid Sri Lankan phone number (digits only, e.g. 0712345678).')
+      return
+    }
+
+    if (!newOrder.address.trim()) {
+      setCreateError('Delivery address is required.')
+      return
+    }
+
+    if (!newOrder.items || newOrder.items < 1) {
+      setCreateError('Items must be at least 1.')
+      return
+    }
+
     const amount = newOrder.service === 'Wash & Iron' ? 500 * newOrder.items : newOrder.service === 'Dry Clean' ? 2000 * newOrder.items : 200 * newOrder.items
     setSaving(true)
     try {
@@ -97,18 +144,23 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
           laundry_shop_id: newOrder.shop_id || shops[0]?.id,
           customer_name: newOrder.customer,
           customer_phone: newOrder.phone,
-          service: newOrder.service,
-          items_count: newOrder.items,
-          total_amount: amount,
-          address: newOrder.address,
+          items_description: `${newOrder.service} (${newOrder.items} kg)`,
+          total: amount,
+          pickup_address: newOrder.address,
+          delivery_address: newOrder.address,
+          notes: null,
         }),
       })
       const data = await res.json().catch(() => null)
-      if (data && data.id) {
-        setOrders((prev) => [{ ...data, created_at: new Date().toISOString() } as DbOrder, ...prev])
-        setNewOrder({ customer: '', phone: '', service: 'Wash & Iron', items: 1, address: '', shop_id: newOrder.shop_id || shops[0]?.id })
-        setShowCreateModal(false)
+      if (!res.ok) {
+        setCreateError(data?.message || `Failed to create order (HTTP ${res.status})`)
+        return
       }
+
+      // Close modal for any successful create response.
+      if (data && data.id) await loadOrdersAndShops()
+      setNewOrder({ customer: '', phone: '', service: 'Wash & Iron', items: 1, address: '', shop_id: newOrder.shop_id || shops[0]?.id })
+      setShowCreateModal(false)
     } finally {
       setSaving(false)
     }
@@ -165,7 +217,8 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
 
         <div className="space-y-3">
           {filteredOrders.map((order) => {
-            const config = statusConfig[order.status as keyof typeof statusConfig] ?? statusConfig.new
+            const normalizedStatus = normalizeOrderStatus(order.status)
+            const config = statusConfig[normalizedStatus] ?? statusConfig.pending
             return (
               <div
                 key={order.id}
@@ -180,9 +233,9 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
                       <span className="font-semibold text-gray-900">#LND-{order.id}</span>
                       <span className={`text-xs px-2 py-1 rounded-full ${config.bg} ${config.text}`}>{config.label}</span>
                     </div>
-                    <p className="text-sm text-gray-500">{order.customer_name} • {order.service} • {timeAgo(order.created_at)}</p>
+                    <p className="text-sm text-gray-500">{order.customer_name} • {order.items_description || 'Laundry'} • {timeAgo(order.created_at)}</p>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">RS {Number(order.total_amount).toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-900">RS {Number(order.total).toLocaleString()}</p>
                   <ChevronDown size={20} className={`text-gray-400 ml-4 transition-transform ${expandedOrder === order.id ? 'rotate-180' : ''}`} />
                 </button>
                 {expandedOrder === order.id && (
@@ -194,11 +247,11 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
                       </div>
                       <div className="flex items-start gap-2">
                         <MapPin size={16} className="text-gray-400 mt-0.5" />
-                        <p className="text-sm">{order.address || '—'}</p>
+                        <p className="text-sm">{order.delivery_address || order.pickup_address || '—'}</p>
                       </div>
                     </div>
                     <div className="flex gap-2 pt-2">
-                      {order.status === 'new' && (
+                      {normalizedStatus === 'pending' && (
                         <>
                           <button onClick={() => handleStatusUpdate(order.id, 'washing')} className="flex-1 py-2 bg-green-500 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-1">
                             <CheckCircle size={16} /> Accept
@@ -208,13 +261,13 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
                           </button>
                         </>
                       )}
-                      {order.status === 'washing' && (
+                      {normalizedStatus === 'washing' && (
                         <button onClick={() => handleStatusUpdate(order.id, 'ironing')} className="w-full py-2 bg-amber-500 text-white text-sm font-medium rounded-lg">Start Ironing</button>
                       )}
-                      {order.status === 'ironing' && (
+                      {normalizedStatus === 'ironing' && (
                         <button onClick={() => handleStatusUpdate(order.id, 'ready')} className="w-full py-2 bg-green-500 text-white text-sm font-medium rounded-lg">Mark Ready</button>
                       )}
-                      {order.status === 'ready' && (
+                      {normalizedStatus === 'ready' && (
                         <button onClick={() => handleStatusUpdate(order.id, 'completed')} className="w-full py-2 bg-blue-500 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-1">
                           <Truck size={16} /> Confirm Delivery
                         </button>
@@ -254,7 +307,15 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input required value={newOrder.phone} onChange={(e) => setNewOrder((p) => ({ ...p, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg" placeholder="+234 901 234 5678" />
+                <input
+                  required
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={newOrder.phone}
+                  onChange={(e) => setNewOrder((p) => ({ ...p, phone: e.target.value.replace(/[^\d]/g, '') }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  placeholder="0712345678"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
@@ -278,6 +339,9 @@ export default function VendorLaundryOrdersClient({ user }: VendorLaundryOrdersC
                   {saving ? <Loader2 size={18} className="animate-spin" /> : null}Create
                 </button>
               </div>
+              {createError ? (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{createError}</p>
+              ) : null}
             </form>
           </div>
         </div>

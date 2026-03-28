@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { Package, Plus, Edit2, Trash2, Search, Utensils, X, Loader2 } from 'lucide-react'
 import { UserRole } from '@/lib/auth'
@@ -25,6 +25,7 @@ type ProductFormState = {
   price: number
   inStock: boolean
   description: string
+  image_url: string
   stall_id: number
 }
 
@@ -141,6 +142,16 @@ function ProductForm({
           placeholder="Brief description"
         />
       </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (optional)</label>
+        <input
+          type="url"
+          value={form.image_url}
+          onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          placeholder="https://example.com/product.jpg"
+        />
+      </div>
       <div className="flex gap-3 pt-4">
         <button type="button" onClick={onCancel} className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">
           Cancel
@@ -165,7 +176,46 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [form, setForm] = useState<ProductFormState>({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: 0 })
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [form, setForm] = useState<ProductFormState>({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: 0 })
+  const pageMessageRef = useRef<HTMLDivElement | null>(null)
+  const addModalBodyRef = useRef<HTMLDivElement | null>(null)
+  const editModalBodyRef = useRef<HTMLDivElement | null>(null)
+  const deleteModalBodyRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToPageMessage = () => {
+    if (pageMessageRef.current) {
+      pageMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const scrollModalTop = (ref: React.RefObject<HTMLDivElement | null>) => {
+    ref.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const loadProducts = async (_stallId?: number) => {
+    const res = await fetch('/api/vendor/menu-items')
+    const data = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(data?.message || `Failed to load products (HTTP ${res.status})`)
+
+    const nextProducts: Product[] = Array.isArray(data?.items)
+      ? data.items.map((row: any) => dbToProduct(row))
+      : []
+    const nextStalls: { id: number; shop_name: string }[] = Array.isArray(data?.stalls)
+      ? data.stalls
+          .map((s: any) => ({ id: Number(s?.id), shop_name: String(s?.shop_name ?? 'Store') }))
+          .filter((s: { id: number }) => Number.isFinite(s.id) && s.id > 0)
+      : []
+
+    setProducts(nextProducts)
+    setStalls(nextStalls)
+
+    if (!selectedStallId && nextStalls.length > 0) {
+      setSelectedStallId(nextStalls[0].id)
+    }
+  }
 
   useEffect(() => {
     loadProducts().catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
@@ -187,7 +237,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   })
 
   const openAddModal = () => {
-    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: p.stall_id || stalls[0]?.id || 0 }))
+    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: p.stall_id || stalls[0]?.id || 0 }))
     setFormError(null)
     setShowAddModal(true)
   }
@@ -199,6 +249,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       price: p.price,
       inStock: p.inStock,
       description: (p as Product & { description?: string }).description || '',
+      image_url: p.image_url || '',
       stall_id: prev.stall_id ?? stalls[0]?.id ?? 0,
     }))
     setEditingProduct(p)
@@ -220,24 +271,28 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           category_id: categoryToId(form.category),
           price: form.price,
           is_available: form.inStock,
-          image_url: null,
+          image_url: form.image_url?.trim() || null,
         }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) {
         setFormError(data?.message || `Failed to add product (HTTP ${res.status})`)
+        scrollModalTop(addModalBodyRef)
         return
       }
       if (data?.id) {
         setProducts((prev) => [dbToProduct(data), ...prev])
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', stall_id: form.stall_id })
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
         setShowAddModal(false)
         setMessage({ type: 'success', text: 'Product created successfully.' })
+        setTimeout(scrollToPageMessage, 0)
       } else {
         setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to create product.') })
+        setTimeout(scrollToPageMessage, 0)
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error while creating product.' })
+      setTimeout(scrollToPageMessage, 0)
     } finally {
       setSaving(false)
     }
@@ -258,11 +313,13 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           category_id: categoryToId(form.category),
           price: form.price,
           is_available: form.inStock,
+          image_url: form.image_url?.trim() || null,
         }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         setFormError(data?.message || `Failed to update product (HTTP ${res.status})`)
+        scrollModalTop(editModalBodyRef)
         return
       }
       if (res.ok) {
@@ -270,11 +327,11 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         setEditingProduct(null)
         setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
         setMessage({ type: 'success', text: 'Product updated successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to update product.') })
+        setTimeout(scrollToPageMessage, 0)
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error while updating product.' })
+      setTimeout(scrollToPageMessage, 0)
     } finally {
       setSaving(false)
     }
@@ -289,17 +346,18 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         setFormError(data?.message || `Failed to delete product (HTTP ${res.status})`)
+        scrollModalTop(deleteModalBodyRef)
         return
       }
       if (res.ok) {
         await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
         setDeletingId(null)
         setMessage({ type: 'success', text: 'Product deleted successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to delete product.') })
+        setTimeout(scrollToPageMessage, 0)
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error while deleting product.' })
+      setTimeout(scrollToPageMessage, 0)
     } finally {
       setSaving(false)
     }
@@ -332,7 +390,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         </div>
 
         {message && (
-          <div className={`px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <div ref={pageMessageRef} className={`px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
             {message.text}
           </div>
         )}
@@ -423,7 +481,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div ref={addModalBodyRef} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add Product</h3>
               <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -450,7 +508,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
       {editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingProduct(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div ref={editModalBodyRef} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
               <button onClick={() => setEditingProduct(null)} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -469,7 +527,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
       {deletingId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeletingId(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div ref={deleteModalBodyRef} className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product?</h3>
             <p className="text-gray-500 text-sm mb-4">This action cannot be undone.</p>
             {formError ? (

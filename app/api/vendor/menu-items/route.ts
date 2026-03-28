@@ -50,7 +50,26 @@ export async function GET() {
       .order('id', { ascending: false })
 
     if (error) return NextResponse.json({ message: error.message, items: [], stalls: stalls ?? [] }, { status: 400 })
-    return NextResponse.json({ items: data ?? [], stalls: stalls ?? [] })
+
+    // Back-compat: some older rows may have vendor_id = food_stall.id instead of users.id.
+    let items = data ?? []
+    if (items.length === 0 && Array.isArray(stalls) && stalls.length > 0) {
+      const stallIds = stalls
+        .map((s: any) => Number(s?.id))
+        .filter((n: number) => Number.isFinite(n) && n > 0)
+      if (stallIds.length > 0) {
+        const { data: legacyItems, error: legacyError } = await client
+          .from('food_items')
+          .select('*')
+          .in('vendor_id', stallIds)
+          .order('id', { ascending: false })
+        if (!legacyError && Array.isArray(legacyItems)) {
+          items = legacyItems
+        }
+      }
+    }
+
+    return NextResponse.json({ items, stalls: stalls ?? [] })
   } catch (e) {
     console.error('Vendor menu-items GET error:', e)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
@@ -77,14 +96,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Invalid category (category_id / food_category)' }, { status: 400 })
     }
 
-    const available =
+    const resolvedAvailable =
       typeof is_available === 'boolean'
         ? is_available
         : typeof inStock === 'boolean'
           ? inStock
           : true
 
-    const category_id = await resolveCategoryId(client, food_stall_id, food_category)
     const { data, error } = await client
       .from('food_items')
       .insert({
@@ -93,7 +111,7 @@ export async function POST(request: NextRequest) {
         price: price != null ? parseFloat(String(price)) : 0,
         category_id: resolvedCategoryId,
         image_url: image_url ? String(image_url).trim() : null,
-        is_available: available,
+        is_available: resolvedAvailable,
       })
       .select()
       .single()

@@ -29,6 +29,7 @@ import {
   LayoutList,
   MapPin,
   UserPlus,
+  CircleDollarSign,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -56,11 +57,9 @@ interface DashboardLayoutProps {
 const roleNavItems: Record<UserRole, NavItem[]> = {
   student: [
     { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
-    { label: 'Courses', href: '/student/courses', icon: BookOpen },
     { label: 'Timetable', href: '/student/timetable', icon: Calendar },
-    { label: 'Study Groups', href: '/student/study-groups', icon: Users },
-    { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
     { label: 'Food Order', href: '/student/food-order', icon: Utensils },
+    { label: 'Add to Cart', href: '/student/food-order/cart', icon: ShoppingBag },
     { label: 'Laundry', href: '/student/laundry', icon: Truck },
     { label: 'Trips', href: '/student/trips', icon: MapPin },
   ],
@@ -91,6 +90,21 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'My Store', href: '/vendor/my-store', icon: Store },
     { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
   ],
+  'vendor-food': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Orders', href: '/vendor/orders', icon: Package },
+    { label: 'Products', href: '/vendor/products', icon: Utensils },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
+  'vendor-laundry': [
+    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
+    { label: 'Pricing', href: '/vendor/products', icon: CircleDollarSign },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
+  ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
     { label: 'Food Deliveries', href: '/delivery/active', icon: Package },
@@ -113,8 +127,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
     { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
     { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
-  ],
-  vendor: []
+  ]
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -137,6 +150,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   LayoutList,
   MapPin,
   UserPlus,
+  CircleDollarSign,
 }
 
 // Role display names and colors
@@ -271,7 +285,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
-                  <li key={item.href}>
+                  <li key={`${item.href}:${item.label}`}>
                     <Link
                       href={item.href}
                       onClick={() => handleNavigation(item.href)}

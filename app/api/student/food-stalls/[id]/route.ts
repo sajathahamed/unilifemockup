@@ -52,11 +52,21 @@ function normalizeMenuItem(row: Record<string, any>) {
           } as Record<number, string>)[categoryId] ?? `Category ${categoryId}`
         : null
 
+  const availabilityRaw =
+    row.is_available ??
+    row.in_stock ??
+    row.available ??
+    (typeof row.status === 'string'
+      ? !['out_of_stock', 'unavailable', 'inactive', 'disabled'].includes(String(row.status).toLowerCase())
+      : null)
+  const isAvailable = typeof availabilityRaw === 'boolean' ? availabilityRaw : true
+
   return {
     id: row.id ?? row.menu_item_id ?? row.item_id ?? null,
     name: typeof name === 'string' ? name : String(name ?? ''),
     price,
     food_category: finalFoodCategory,
+    is_available: isAvailable,
   }
 }
 
@@ -93,7 +103,7 @@ export async function GET(
     try {
       const { data, error } = await client
         .from('food_stall_menu_items')
-        .select('id, name, price, food_category, sort_order')
+          .select('*')
         // NOTE: schema uses `food_stall_id` (uuid). Some schemas use `stall_id`.
         .eq('food_stall_id', stallId)
         .order('sort_order', { ascending: true })
@@ -189,6 +199,7 @@ export async function GET(
                 name: i.name,
                 price: i.price,
                 category_id: i.category_id,
+                is_available: i.is_available,
                 food_category: catMap.get(String(i.category_id)) ?? null,
               }))
 
@@ -220,7 +231,14 @@ export async function GET(
           .eq('vendor_id', stallId)
           .order('id', { ascending: true })
         if (!itemsErr && Array.isArray(items) && items.length > 0) {
-          menu = items.map((i: any) => ({ id: i.id, name: i.name, price: i.price, category_id: i.category_id, food_category: null }))
+          menu = items.map((i: any) => ({
+            id: i.id,
+            name: i.name,
+            price: i.price,
+            category_id: i.category_id,
+            is_available: i.is_available,
+            food_category: null,
+          }))
         }
       } catch {
         // ignore

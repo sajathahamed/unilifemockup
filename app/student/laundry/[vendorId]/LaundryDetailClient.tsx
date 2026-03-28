@@ -31,6 +31,11 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
     const [submitting, setSubmitting] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'wallet'>('cod')
+    const [cardNumber, setCardNumber] = useState('')
+    const [cardName, setCardName] = useState('')
+    const [cardExpiry, setCardExpiry] = useState('')
+    const [cardCvv, setCardCvv] = useState('')
 
     const [formData, setFormData] = useState({
         customerName: user.name,
@@ -39,6 +44,12 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
         pickupDate: '',
         serviceType: 'wash_fold'
     })
+
+    const selectedService = (vendor?.services ?? []).find((s: any) => String(s.id) === String(formData.serviceType))
+    const selectedUnit = String(selectedService?.unit || 'kg').toLowerCase() === 'item' ? 'item' : 'kg'
+    const quantityLabel = selectedUnit === 'item' ? 'Qty' : 'Est. Weight'
+    const unitPrice = Number(selectedService?.price ?? vendor?.pricePerKg ?? 250)
+    const computedTotal = (Number.isFinite(unitPrice) ? unitPrice : 0) * weight
 
     useEffect(() => {
         const fetchVendor = async () => {
@@ -53,8 +64,8 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                     setVendor({
                         ...found,
                         services: found.services ?? [
-                            { id: 'wash_fold', type: 'Wash & Fold', price: found.pricePerKg || 250 },
-                            { id: 'wash_iron', type: 'Wash & Iron', price: (found.pricePerKg || 250) + 50 }
+                            { id: 'wash_fold', type: 'Wash & Fold', price: found.pricePerKg || 250, unit: 'kg' },
+                            { id: 'wash_iron', type: 'Wash & Iron', price: (found.pricePerKg || 250) + 50, unit: 'kg' }
                         ]
                     })
                 } else {
@@ -65,8 +76,8 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                         setVendor({
                             ...found,
                             services: found.services ?? [
-                                { id: 'wash_fold', type: 'Wash & Fold', price: found.pricePerKg || 250 },
-                                { id: 'wash_iron', type: 'Wash & Iron', price: (found.pricePerKg || 250) + 50 }
+                                { id: 'wash_fold', type: 'Wash & Fold', price: found.pricePerKg || 250, unit: 'kg' },
+                                { id: 'wash_iron', type: 'Wash & Iron', price: (found.pricePerKg || 250) + 50, unit: 'kg' }
                             ]
                         })
                     }
@@ -97,6 +108,56 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
         // - 0 + (mobile 7XXXXXXXX / landline 1XXXXXXXX / 2XXXXXXXX) => 10 digits total
         const mobileOrLandlineWithZero = /^0(7\d{8}|1\d{8}|2\d{8})$/
         return mobileOrLandlineWithZero.test(s)
+    }
+
+    function isValidCardNumber(v: string): boolean {
+        const digits = v.replace(/\D/g, '')
+        const visa = /^4\d{12}(\d{3}){0,2}$/
+        const mastercard = /^(5[1-5]\d{14}|2(2[2-9]\d{12}|[3-6]\d{13}|7[01]\d{12}|720\d{12}))$/
+        if (!(visa.test(digits) || mastercard.test(digits))) return false
+        let sum = 0
+        let shouldDouble = false
+        for (let i = digits.length - 1; i >= 0; i--) {
+            let d = Number(digits[i])
+            if (shouldDouble) {
+                d *= 2
+                if (d > 9) d -= 9
+            }
+            sum += d
+            shouldDouble = !shouldDouble
+        }
+        return sum % 10 === 0
+    }
+
+    function isValidCardholderName(name: string): boolean {
+        const clean = name.trim().replace(/\s+/g, ' ')
+        if (clean.length < 3 || clean.length > 60) return false
+        return /^[A-Za-z][A-Za-z\s.'-]*$/.test(clean)
+    }
+
+    function isValidExpiry(expiry: string): boolean {
+        const raw = String(expiry || '').trim()
+        const withSlash = raw.includes('/') ? raw : raw.replace(/\D/g, '').replace(/^(\d{2})(\d{0,2}).*$/, '$1/$2')
+        const m = withSlash.match(/^(\d{2})\/(\d{2})$/)
+        if (!m) return false
+        const month = Number(m[1])
+        const year = 2000 + Number(m[2])
+        if (month < 1 || month > 12) return false
+        const now = new Date()
+        const currentMonth = now.getMonth() + 1
+        const currentYear = now.getFullYear()
+        if (year < currentYear) return false
+        if (year === currentYear && month < currentMonth) return false
+        if (year > currentYear + 15) return false
+        return true
+    }
+
+    function formatExpiryInput(raw: string): string {
+        const digits = String(raw || '').replace(/\D/g, '').slice(0, 4)
+        const mm = digits.slice(0, 2)
+        const yy = digits.slice(2, 4)
+        if (digits.length <= 2) return mm
+        return `${mm}/${yy}`
     }
 
     const handleOrder = async (e: React.FormEvent) => {
@@ -139,14 +200,65 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
             return
         }
 
+        if (paymentMethod === 'card') {
+            if (!isValidCardNumber(cardNumber)) {
+                setFormError('Enter a valid Visa/Mastercard card number.')
+                return
+            }
+            if (!isValidCardholderName(cardName)) {
+                setFormError('Enter a valid cardholder name.')
+                return
+            }
+            if (!isValidExpiry(cardExpiry)) {
+                setFormError('Enter a valid expiry date (MM/YY).')
+                return
+            }
+            if (!/^\d{3}$/.test(cardCvv.trim())) {
+                setFormError('Enter a valid CVV (3 digits).')
+                return
+            }
+        }
+
+        const serviceName = selectedService?.type || 'Laundry Service'
+        const total = unitPrice * weight
+
         setSubmitting(true)
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        setSubmitting(false)
-        setShowSuccess(true)
-        setTimeout(() => {
-            setShowSuccess(false)
-            router.push('/student/laundry')
-        }, 3000)
+        try {
+            const rawShopId = String(vendor?.id ?? '').replace(/^db-/, '')
+            const shopId: string | number = /^\d+$/.test(rawShopId) ? parseInt(rawShopId, 10) : rawShopId
+
+            const res = await fetch('/api/student/laundry-orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    laundry_shop_id: shopId,
+                    customer_name: formData.customerName,
+                    customer_phone: formData.contact,
+                    items_description: `${serviceName} (${weight} ${selectedUnit})`,
+                    total,
+                    pickup_address: formData.pickupAddress,
+                    delivery_address: formData.pickupAddress,
+                    notes: [
+                        `Preferred pickup date: ${formData.pickupDate}`,
+                        `Payment: ${paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod === 'card' ? 'Visa/Mastercard' : 'Online Wallet'}`
+                    ].join(' | '),
+                }),
+            })
+
+            const data = await res.json().catch(() => null)
+            if (!res.ok) {
+                setFormError(data?.message || `Failed to place order (HTTP ${res.status})`)
+                return
+            }
+
+            setShowSuccess(true)
+            setTimeout(() => {
+                setShowSuccess(false)
+                router.push('/student/laundry')
+            }, 3000)
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     if (loading) return (
@@ -228,7 +340,10 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                 {vendor.services.map((s: any) => (
                                     <div key={s.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-200 transition-all group">
                                         <span className="font-bold text-gray-700 group-hover:text-blue-600 transition-colors">{s.type}</span>
-                                        <span className="font-black text-gray-900">Rs. {s.price}<span className="text-xs text-gray-400 font-normal"> / kg</span></span>
+                                        <span className="font-black text-gray-900">
+                                            Rs. {Number(s.price || 0).toLocaleString()}
+                                            <span className="text-xs text-gray-400 font-normal"> / {String(s.unit || 'kg')}</span>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
@@ -299,7 +414,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Est. Weight (kg)</label>
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">{quantityLabel} ({selectedUnit})</label>
                                     <div className="flex items-center gap-2 p-1 bg-gray-50 rounded-xl border border-gray-100">
                                         <button
                                             type="button"
@@ -309,7 +424,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                             <Minus size={16} />
                                         </button>
                                         <div className="flex-1 text-center font-black text-gray-700">
-                                            {weight} kg
+                                            {weight} {selectedUnit}
                                         </div>
                                         <button
                                             type="button"
@@ -324,7 +439,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
 
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Service Type</label>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {vendor.services.map((s: any) => (
                                         <button
                                             key={s.id}
@@ -335,10 +450,91 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                                 : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
                                                 }`}
                                         >
-                                            {s.type}
+                                            {s.type} - Rs. {Number(s.price || 0).toLocaleString()}/{String(s.unit || 'kg')}
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Method</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('cod')}
+                                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${paymentMethod === 'cod' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200'}`}
+                                    >
+                                        Cash on Delivery
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('card')}
+                                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${paymentMethod === 'card' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200'}`}
+                                    >
+                                        Visa / Mastercard
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('wallet')}
+                                        className={`px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${paymentMethod === 'wallet' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200'}`}
+                                    >
+                                        Online Wallet
+                                    </button>
+                                </div>
+                            </div>
+
+                            {paymentMethod === 'card' && (
+                                <div className="space-y-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Card Number</label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={cardNumber}
+                                            onChange={(e) => setCardNumber(e.target.value.replace(/[^\d]/g, '').slice(0, 19))}
+                                            placeholder="4111 1111 1111 1111"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cardholder Name</label>
+                                        <input
+                                            type="text"
+                                            value={cardName}
+                                            onChange={(e) => setCardName(e.target.value)}
+                                            placeholder="Name on card"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Expiry</label>
+                                            <input
+                                                type="text"
+                                                value={cardExpiry}
+                                                onChange={(e) => setCardExpiry(formatExpiryInput(e.target.value))}
+                                                placeholder="MM/YY"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">CVV</label>
+                                            <input
+                                                type="password"
+                                                inputMode="numeric"
+                                                value={cardCvv}
+                                                onChange={(e) => setCardCvv(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
+                                                placeholder="123"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 flex items-center justify-between">
+                                <span className="text-sm font-semibold text-blue-700">Estimated Total</span>
+                                <span className="text-lg font-black text-blue-800">Rs. {computedTotal.toLocaleString()}</span>
                             </div>
 
                             <motion.button

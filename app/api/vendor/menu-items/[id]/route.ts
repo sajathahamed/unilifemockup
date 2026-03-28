@@ -26,6 +26,21 @@ async function getVendorUser() {
   )
 }
 
+async function isOwnedFoodItem(client: Awaited<ReturnType<typeof createClient>>, vendorUserId: number, vendorEmail: string | undefined, itemVendorId: number) {
+  // Current schema mapping: food_items.vendor_id = users.id
+  if (itemVendorId === vendorUserId) return true
+
+  // Back-compat mapping seen in old data: food_items.vendor_id = food_stalls.id
+  const email = String(vendorEmail || '').toLowerCase()
+  if (!email) return false
+  const { data: stalls } = await client
+    .from('food_stalls')
+    .select('id')
+    .ilike('owner_email', email)
+  const ownedStallIds = (stalls ?? []).map((s: any) => Number(s.id)).filter((n: number) => Number.isFinite(n))
+  return ownedStallIds.includes(Number(itemVendorId))
+}
+
 /** PUT /api/vendor/menu-items/[id] — update menu item */
 export async function PUT(
   request: NextRequest,
@@ -47,7 +62,8 @@ export async function PUT(
     const { data: item } = await client.from('food_items').select('vendor_id').eq('id', numId).single()
     if (!item) return NextResponse.json({ message: 'Not found' }, { status: 404 })
 
-    if (item.vendor_id !== user.id) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    const owned = await isOwnedFoodItem(client, user.id, user.email, Number(item.vendor_id))
+    if (!owned) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const updates: Record<string, unknown> = {}
     if (name != null) updates.name = String(name).trim() || 'Item'
@@ -55,13 +71,15 @@ export async function PUT(
     const resolvedCategoryId = toCategoryId(category_id ?? food_category)
     if (resolvedCategoryId != null) updates.category_id = resolvedCategoryId
     if (image_url != null) updates.image_url = image_url ? String(image_url).trim() : null
-    const available =
+    const resolvedAvailable =
       typeof is_available === 'boolean'
         ? is_available
         : typeof inStock === 'boolean'
           ? inStock
           : null
-    if (available != null) updates.is_available = available
+    if (resolvedAvailable != null) {
+      updates.is_available = resolvedAvailable
+    }
 
     const { error } = await client.from('food_items').update(updates).eq('id', numId)
 
@@ -91,7 +109,8 @@ export async function DELETE(
     const { data: item } = await client.from('food_items').select('vendor_id').eq('id', numId).single()
     if (!item) return NextResponse.json({ message: 'Not found' }, { status: 404 })
 
-    if (item.vendor_id !== user.id) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    const owned = await isOwnedFoodItem(client, user.id, user.email, Number(item.vendor_id))
+    if (!owned) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const { error } = await client.from('food_items').delete().eq('id', numId)
     if (error) return NextResponse.json({ message: error.message }, { status: 400 })
