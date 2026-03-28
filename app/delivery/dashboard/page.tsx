@@ -28,7 +28,7 @@ export default async function DeliveryDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={Truck} label="Today's Deliveries" value="8" color="bg-blue-500" />
           <StatCard icon={Clock} label="Avg. Time" value="18 mins" color="bg-green-500" />
-          <StatCard icon={DollarSign} label="Today's Earnings" value="₦4,200" color="bg-yellow-500" />
+          <StatCard icon={DollarSign} label="Today's Earnings" value="RS4,200" color="bg-yellow-500" />
           <StatCard icon={MapPin} label="Distance" value="12.5 km" color="bg-purple-500" />
         </div>
 
@@ -50,7 +50,7 @@ export default async function DeliveryDashboard() {
                 dropoff="Block A, Room 205"
                 customer="Stunden"
                 distance="0.8 km"
-                earnings="₦300"
+                earnings="RS300"
                 status="pickup"
               />
               <DeliveryCard
@@ -59,7 +59,7 @@ export default async function DeliveryDashboard() {
                 dropoff="Engineering Block"
                 customer="Sarah M."
                 distance="1.2 km"
-                earnings="₦400"
+                earnings="RS400"
                 status="in-transit"
               />
               <DeliveryCard
@@ -68,7 +68,7 @@ export default async function DeliveryDashboard() {
                 dropoff="Library Entrance"
                 customer="Mike O."
                 distance="0.5 km"
-                earnings="₦250"
+                earnings="RS250"
                 status="waiting"
               />
             </div>
@@ -98,7 +98,7 @@ export default async function DeliveryDashboard() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Summary</h2>
               <div className="space-y-3">
                 <SummaryItem label="Completed" value="8 deliveries" />
-                <SummaryItem label="Total Earnings" value="₦4,200" highlight />
+                <SummaryItem label="Total Earnings" value="RS4,200" highlight />
                 <div className="pt-2 border-t border-gray-50">
                   <Link
                     href="/delivery/laundry"
@@ -137,9 +137,9 @@ export default async function DeliveryDashboard() {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                <HistoryRow id="#DEL-1230" route="Café → Block B" time="25 mins ago" earnings="₦350" rating={5} />
-                <HistoryRow id="#DEL-1229" route="Kitchen → Hostel C" time="1 hour ago" earnings="₦450" rating={5} />
-                <HistoryRow id="#DEL-1228" route="Bites → Library" time="2 hours ago" earnings="₦300" rating={4} />
+                <HistoryRow id="#DEL-1230" route="Café → Block B" time="25 mins ago" earnings="RS350" rating={5} />
+                <HistoryRow id="#DEL-1229" route="Kitchen → Hostel C" time="1 hour ago" earnings="RS450" rating={5} />
+                <HistoryRow id="#DEL-1228" route="Bites → Library" time="2 hours ago" earnings="RS300" rating={4} />
               </tbody>
             </table>
           </div>
