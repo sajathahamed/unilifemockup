@@ -1,9 +1,7 @@
+// Alias for required role type
+export type RequiredRole = UserRole
 // User roles as defined in the database
 export type UserRole = 'student' | 'lecturer' | 'admin' | 'vendor' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
-
-// Roles that can be requested by route guards / API checks.
-// Kept as a separate alias so callers can use more explicit intent.
-export type RequiredRole = UserRole
 
 // User profile from the users table (matches database schema)
 export interface UserProfile {

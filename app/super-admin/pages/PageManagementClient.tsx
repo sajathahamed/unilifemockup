@@ -36,8 +36,30 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export function PageManagementClient({ roles }: PageManagementClientProps) {
+    // Toggle handler for page enable/disable
+    const toggle = (pageId: number, enabled: boolean) => {
+      if (mode === 'role') {
+        toggleRole(pageId, enabled)
+      } else {
+        toggleUser(pageId, enabled)
+      }
+    }
   const [mode, setMode] = useState<'role' | 'user'>('role')
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
+  // Lookup by email handler
+  const lookupByEmail = () => {
+    if (!userEmailInput) {
+      setUserError('Please enter an email')
+      return
+    }
+    const found = users.find(u => u.email.toLowerCase() === userEmailInput.toLowerCase())
+    if (found) {
+      setSelectedUserId(found.id)
+      setUserError(null)
+    } else {
+      setUserError('User not found')
+    }
+  }
   const [selectedRole, setSelectedRole] = useState<UserRole>(roles[0])
   const [pages, setPages] = useState<PageWithPerm[]>([])
   const [loading, setLoading] = useState(true)
@@ -171,39 +193,6 @@ export function PageManagementClient({ roles }: PageManagementClientProps) {
       }
     } finally {
       setSavingId(null)
-    }
-  }
-
-  const lookupByEmail = async () => {
-    setUserError(null)
-    const raw = (userEmailInput || userSearch).trim()
-    if (!raw) {
-      setUserError('Enter an email or user id to lookup.')
-      return
-    }
-
-    // If user pasted a numeric id, select it directly.
-    if (/^\d+$/.test(raw)) {
-      const num = Number(raw)
-      setSelectedUserId(num)
-      return
-    }
-
-    try {
-      const q = `role=${selectedRole}&users=1&search=${encodeURIComponent(raw)}`
-      const data = await fetchJsonSafe(`/api/super-admin/pages?${q}`)
-      const found = (data?.users || []).find((u: UserRow) => u.email?.toLowerCase() === raw.toLowerCase()) ?? (data?.users || [])[0]
-
-      if (!found?.id) {
-        setSelectedUserId(null)
-        setUserError('User not found for that email.')
-        return
-      }
-
-      setSelectedUserId(found.id)
-    } catch (e: any) {
-      setSelectedUserId(null)
-      setUserError(e instanceof Error ? e.message : 'Lookup failed.')
     }
   }
 
@@ -357,7 +346,7 @@ export function PageManagementClient({ roles }: PageManagementClientProps) {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs text-gray-400">ID: {p.page_id}</span>
                   <button
-                    onClick={() => (mode === 'role' ? toggleRole(p.page_id, !p.enabled) : toggleUser(p.page_id, !p.enabled))}
+                    onClick={() => toggle(p.page_id, !p.enabled)}
                     disabled={savingId === p.page_id || (mode === 'user' && !selectedUserId)}
                     className={`
                       flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors

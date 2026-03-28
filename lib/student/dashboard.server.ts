@@ -7,9 +7,7 @@ import { requireRole } from '@/lib/auth.server'
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export interface StudentDashboardData {
-  foodStallsCount: number
-  laundryShopsCount: number
-  tripsCount: number
+  coursesCount: number
   timetableToday: Array<{
     id: number
     course_id: number
@@ -20,11 +18,7 @@ export interface StudentDashboardData {
     course_code?: string
     course_name?: string
   }>
-  announcements: Array<{
-    id: number
-    title: string
-    created_at?: string
-  }>
+  assignmentsCount: number
 }
 
 export async function getStudentDashboardData(): Promise<StudentDashboardData> {
@@ -34,20 +28,17 @@ export async function getStudentDashboardData(): Promise<StudentDashboardData> {
   const today = new Date()
   const todayDayName = DAY_NAMES[today.getDay()]
 
-  const [foodStallsRes, laundryShopsRes, tripsRes, timetableRes, announcementsRes] = await Promise.all([
-    client.from('food_stalls').select('id', { count: 'exact', head: true }),
-    client.from('laundry_shops').select('id', { count: 'exact', head: true }),
-    client.from('trips').select('id', { count: 'exact', head: true }),
+  const [coursesRes, timetableRes, assignmentsRes] = await Promise.all([
+    client.from('courses').select('id', { count: 'exact', head: true }),
     client
       .from('timetable')
       .select('*, courses(course_code, course_name)')
       .order('start_time', { ascending: true }),
-    client.from('announcements').select('id, title, created_at').order('created_at', { ascending: false }).limit(5),
+    client.from('assignments').select('id', { count: 'exact', head: true }),
   ])
 
-  const foodStallsCount = foodStallsRes.count ?? 0
-  const laundryShopsCount = laundryShopsRes.count ?? 0
-  const tripsCount = tripsRes.count ?? 0
+  const coursesCount = coursesRes.count ?? 0
+  const assignmentsCount = assignmentsRes.error ? 0 : (assignmentsRes.count ?? 0)
 
   const timetableRows = (timetableRes.error ? [] : (timetableRes.data || [])).map(
     (row: Record<string, unknown>) => {
@@ -71,17 +62,9 @@ export async function getStudentDashboardData(): Promise<StudentDashboardData> {
 
   const timetableToday = timetableRows.filter((r: { day_of_week: string }) => r.day_of_week === todayDayName)
 
-  const announcements = (announcementsRes.error ? [] : (announcementsRes.data || [])).map((a: any) => ({
-    id: Number(a.id),
-    title: String(a.title ?? 'Announcement'),
-    created_at: a.created_at ? String(a.created_at) : undefined,
-  }))
-
   return {
-    foodStallsCount,
-    laundryShopsCount,
-    tripsCount,
+    coursesCount,
     timetableToday,
-    announcements,
+    assignmentsCount,
   }
 }

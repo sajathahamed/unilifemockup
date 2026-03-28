@@ -107,7 +107,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
-    { label: 'Food Deliveries', href: '/delivery/active', icon: Package },
+    { label: 'Manage Orders', href: '/delivery/orders', icon: Package },
+    { label: 'Riders', href: '/delivery/riders', icon: Users },
     { label: 'Laundry Jobs', href: '/delivery/laundry', icon: Truck },
     { label: 'Earnings', href: '/delivery/earnings', icon: BarChart3 },
   ],
