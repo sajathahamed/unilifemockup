@@ -1,6 +1,7 @@
 import { createClient } from './supabase/server'
 import { redirect } from 'next/navigation'
 import { UserProfile, UserRole, getRoleBasedRedirect, hasRoleAccess } from './auth'
+import { RequiredRole } from './auth'
 
 /**
  * Get the currently authenticated user with their profile

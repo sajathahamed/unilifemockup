@@ -38,12 +38,7 @@ export default async function SuperAdminUsersPage() {
                     <div className="lg:col-span-2 space-y-6">
                         <CreateUserForm currentUserRole="super_admin" />
 
-                        {/* User List */}
-                        <UserList
-                            users={users}
-                            title="System-wide User Directory"
-                            showActions={true}
-                        />
+                        <SuperAdminUsersListSection users={users} title="System-wide User Directory" />
                     </div>
 
                     {/* User Stats / Info */}

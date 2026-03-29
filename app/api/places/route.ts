@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
 // @ts-ignore
 import getLocations from 'restaurant-location-search-api'
 
 function logDebug(message: string) {
-    const logPath = path.join(process.cwd(), 'debug_api.log')
-    const timestamp = new Date().toISOString()
-    fs.appendFileSync(logPath, `${timestamp} - ${message}\n`)
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[places] ${message}`)
+    }
 }
 
 // Map OSM categories to Unsplash placeholder images

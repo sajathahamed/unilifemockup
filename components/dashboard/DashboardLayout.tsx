@@ -27,7 +27,8 @@ import {
   BarChart3,
   UserCog,
   MapPin,
-  User,
+  UserPlus,
+  CircleDollarSign,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -77,13 +78,15 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
     { label: 'Food Orders', href: '/vendor/orders', icon: Package },
     { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
-    { label: 'Menu', href: '/vendor/menu', icon: Utensils },
-    { label: 'Store Settings', href: '/vendor/settings', icon: Store },
-    { label: 'Analytics', href: '/vendor/analytics', icon: BarChart3 },
+    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
+    { label: 'Pricing', href: '/vendor/products', icon: CircleDollarSign },
+    { label: 'My Store', href: '/vendor/my-store', icon: Store },
+    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
   ],
   delivery: [
     { label: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
-    { label: 'Food Deliveries', href: '/delivery/active', icon: Package },
+    { label: 'Manage Orders', href: '/delivery/orders', icon: Package },
+    { label: 'Riders', href: '/delivery/riders', icon: Users },
     { label: 'Laundry Jobs', href: '/delivery/laundry', icon: Truck },
     { label: 'Earnings', href: '/delivery/earnings', icon: BarChart3 },
   ],
@@ -93,7 +96,40 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Roles & Permissions', href: '/super-admin/roles', icon: Shield },
     { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/super-admin/settings', icon: Settings },
-  ],
+    { label: 'Page Management', href: '/super-admin/pages', icon: LayoutList },
+    // Admin pages (super_admin can access all admin features)
+    { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Admin Users', href: '/admin/users', icon: Users },
+    { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
+    { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
+    { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
+    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
+    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
+    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
+  ]
+}
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  BookOpen,
+  Calendar,
+  Users,
+  ShoppingBag,
+  Utensils,
+  Car,
+  Bell,
+  Settings,
+  Package,
+  Briefcase,
+  Store,
+  Truck,
+  Shield,
+  BarChart3,
+  UserCog,
+  LayoutList,
+  MapPin,
+  UserPlus,
+  CircleDollarSign,
 }
 
 // Role display names and colors
@@ -102,6 +138,8 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   lecturer: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
   vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
+  'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
 }
@@ -188,17 +226,17 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
-                  <li key={item.href}>
+                  <li key={`${item.href}:${item.label}`}>
                     <Link
                       href={item.href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`
-                        flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 border
-                        ${isActive
-                          ? 'bg-primary text-white shadow-md shadow-indigo-500/25 border-indigo-700/50'
-                          : 'text-gray-700 border-gray-200/90 bg-white hover:bg-indigo-50/70 hover:border-indigo-200 hover:text-gray-900'
-                        }
-                      `}
+                      onClick={() => handleNavigation(item.href)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-primary text-white shadow-md'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      } ${
+                        isNavigating && navigatingTo === item.href ? 'opacity-75 cursor-wait' : ''
+                      }`}
                     >
                       <item.icon size={20} strokeWidth={isActive ? 2.25 : 2} />
                       <span>{item.label}</span>

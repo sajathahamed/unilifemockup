@@ -206,12 +206,16 @@ export default async function StudentDashboard() {
   )
 }
 
-function StatCard({ icon: Icon, label, value, color, href }: { 
-  icon: any; 
-  label: string; 
-  value: string;
-  color: string;
-  href?: string;
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ElementType
+  label: string
+  value: string
+  color: string
 }) {
   const content = (
     <>

@@ -24,6 +24,8 @@ export function getRoleBasedRedirect(role: UserRole): string {
     lecturer: '/student/dashboard',
     admin: '/admin/dashboard',
     vendor: '/vendor/dashboard',
+    'vendor-food': '/vendor/dashboard',
+    'vendor-laundry': '/vendor/dashboard',
     delivery: '/delivery/dashboard',
     super_admin: '/super-admin/dashboard',
   }
@@ -36,7 +38,11 @@ export function getRoleBasedRedirect(role: UserRole): string {
  */
 export function hasRoleAccess(userRole: UserRole, requiredRole: UserRole): boolean {
   if (userRole === 'super_admin') return true
-  /* Legacy lecturer accounts use the same student app surfaces */
-  if (requiredRole === 'student' && userRole === 'lecturer') return true
+  // vendor-food and vendor-laundry can access vendor routes
+  if (userRole === 'vendor-food' || userRole === 'vendor-laundry') {
+    if (requiredRole === 'vendor' || requiredRole === 'vendor-food' || requiredRole === 'vendor-laundry') return true
+  }
+  if (requiredRole === 'vendor' && (userRole === 'vendor-food' || userRole === 'vendor-laundry')) return true
+  // Otherwise, must match exactly
   return userRole === requiredRole
 }
