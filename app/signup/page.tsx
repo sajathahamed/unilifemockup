@@ -12,7 +12,6 @@ import { AuthLayout, GoogleButton, Button, Input, Select, Alert } from '@/compon
 // Available roles for signup
 const roleOptions = [
   { value: 'student', label: 'Student' },
-  { value: 'lecturer', label: 'Lecturer' },
   { value: 'vendor', label: 'Food Vendor' },
   { value: 'delivery', label: 'Delivery Rider' },
 ]

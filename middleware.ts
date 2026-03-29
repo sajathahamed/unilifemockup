@@ -1,106 +1,76 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-// Routes that don't require authentication
 const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/reset-password']
 
-// Role-based route prefixes
 const roleRoutes: Record<string, string[]> = {
   student: ['/student'],
-  lecturer: ['/lecturer'],
+  lecturer: ['/student'],
   admin: ['/admin'],
   vendor: ['/vendor'],
   delivery: ['/delivery'],
-  super_admin: ['/super-admin', '/admin', '/vendor', '/delivery', '/student', '/lecturer'], // Super admin can access all
+  super_admin: ['/super-admin', '/admin', '/vendor', '/delivery', '/student'],
+}
+
+function dashboardPathForRole(role: string): string {
+  if (role === 'super_admin') return '/super-admin/dashboard'
+  if (role === 'lecturer') return '/student/dashboard'
+  return `/${role}/dashboard`
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  console.log(`>>> Middleware: ${request.method} ${pathname}`)
 
-  // 1. Bypass all API routes — they handle their own auth
   if (pathname.includes('/api/')) {
-    console.log(`>>> Bypassing API: ${pathname}`)
     return NextResponse.next()
   }
 
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
-
-
-  // 2. Allow public routes
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
-    // If user is already logged in and tries to access auth pages, redirect to dashboard
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
     if (user && (pathname === '/login' || pathname === '/signup')) {
-      const role = user.user_metadata?.role
-      if (role) {
-        const rolePrefix = role === 'super_admin' ? 'super-admin' : role
-        return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
+      const metaRole = user.user_metadata?.role as string | undefined
+      if (metaRole) {
+        return NextResponse.redirect(new URL(dashboardPathForRole(metaRole), request.url))
       }
     }
     return supabaseResponse
   }
 
-  // If no user and trying to access protected route, redirect to login
   if (!user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Fetch user role for protected routes - DB is Source of Truth
-  const { data: userData, error: userError } = await supabase
+  const { data: userData } = await supabase
     .from('users')
     .select('role')
     .eq('auth_id', user.id)
     .single()
 
-  let userRole = userData?.role as string
-
-  // Fallback to metadata if DB query fails or returns nothing
-  if (!userRole || userError) {
-    userRole = (user.user_metadata?.role as string) || ''
-  }
+  let userRole = (userData?.role as string) || (user.user_metadata?.role as string) || ''
 
   if (!userRole) {
-    // User exists in auth but no role found anywhere - redirect to login
     return NextResponse.redirect(new URL('/login?error=profile_not_found', request.url))
   }
 
   const allowedPrefixes = roleRoutes[userRole] || []
-
-  // Shared routes any authenticated user can access (e.g. Trip Planner)
   const sharedRoutes = ['/trip-planner']
-  const isSharedRoute = sharedRoutes.some(route => pathname.startsWith(route))
-
-  // Check if user has access to the requested route
-  const hasAccess = isSharedRoute || allowedPrefixes.some(prefix => pathname.startsWith(prefix))
+  const isSharedRoute = sharedRoutes.some((route) => pathname.startsWith(route))
+  const hasAccess = isSharedRoute || allowedPrefixes.some((prefix) => pathname.startsWith(prefix))
 
   if (!hasAccess) {
-    // Redirect to user's own dashboard
-    const rolePrefix = userRole === 'super_admin' ? 'super-admin' : userRole
-    return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
+    return NextResponse.redirect(new URL(dashboardPathForRole(userRole), request.url))
   }
 
-  // Root path - redirect to appropriate dashboard
   if (pathname === '/') {
-    const rolePrefix = userRole === 'super_admin' ? 'super-admin' : userRole
-    return NextResponse.redirect(new URL(`/${rolePrefix}/dashboard`, request.url))
+    return NextResponse.redirect(new URL(dashboardPathForRole(userRole), request.url))
   }
 
   return supabaseResponse
 }
-export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     * - api routes
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images in public folder
-     */
 
-    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

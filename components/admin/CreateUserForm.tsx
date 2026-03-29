@@ -52,7 +52,6 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
     // Filter role options based on current user role
     const roleOptions = [
         { value: 'student', label: 'Student' },
-        { value: 'lecturer', label: 'Lecturer' },
         { value: 'vendor', label: 'Vendor Admin' },
         { value: 'delivery', label: 'Delivery Rider' },
         { value: 'admin', label: 'Admin' },

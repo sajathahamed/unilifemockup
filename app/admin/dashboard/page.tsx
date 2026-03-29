@@ -94,9 +94,8 @@ export default async function AdminDashboard() {
         {/* User Distribution */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">User Distribution by Role</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <RoleCard role="Students" count={1850} color="bg-blue-500" />
-            <RoleCard role="Lecturers" count={245} color="bg-purple-500" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <RoleCard role="Students" count={2095} color="bg-blue-500" />
             <RoleCard role="Vendors" count={56} color="bg-green-500" />
             <RoleCard role="Delivery" count={89} color="bg-yellow-500" />
             <RoleCard role="Admins" count={16} color="bg-red-500" />

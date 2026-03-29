@@ -112,9 +112,8 @@ export default async function SuperAdminDashboard() {
         {/* User Distribution by Role */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Platform Statistics</h2>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <RoleStatCard role="Students" count={1850} percentage={75} color="bg-blue-500" />
-            <RoleStatCard role="Lecturers" count={245} percentage={10} color="bg-purple-500" />
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <RoleStatCard role="Students" count={2095} percentage={85} color="bg-blue-500" />
             <RoleStatCard role="Admins" count={16} percentage={1} color="bg-orange-500" />
             <RoleStatCard role="Vendors" count={56} percentage={2} color="bg-green-500" />
             <RoleStatCard role="Delivery" count={89} percentage={4} color="bg-yellow-500" />

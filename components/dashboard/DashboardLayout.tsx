@@ -27,6 +27,7 @@ import {
   BarChart3,
   UserCog,
   MapPin,
+  User,
   LucideIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -50,26 +51,21 @@ interface DashboardLayoutProps {
   }
 }
 
-// Navigation items for each role
+const studentNavItems: NavItem[] = [
+  { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
+  { label: 'Profile', href: '/student/profile', icon: User },
+  { label: 'Timetable', href: '/student/timetable', icon: Calendar },
+  { label: 'Assignments', href: '/student/assignments', icon: Briefcase },
+  { label: 'Trip Planner', href: '/trip-planner', icon: MapPin },
+  { label: 'Study Groups', href: '/student/study-groups', icon: Users },
+  { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
+  { label: 'Food Order', href: '/student/food-order', icon: Utensils },
+  { label: 'Laundry', href: '/student/laundry', icon: Truck },
+]
+
 const roleNavItems: Record<UserRole, NavItem[]> = {
-  student: [
-    { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
-    { label: 'Courses', href: '/student/courses', icon: BookOpen },
-    { label: 'Timetable', href: '/student/timetable', icon: Calendar },
-    { label: 'Assignments', href: '/student/assignments', icon: Briefcase },
-    { label: 'Trip Planner', href: '/trip-planner', icon: MapPin },
-    { label: 'Study Groups', href: '/student/study-groups', icon: Users },
-    { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
-    { label: 'Food Order', href: '/student/food-order', icon: Utensils },
-    { label: 'Laundry', href: '/student/laundry', icon: Truck },
-  ],
-  lecturer: [
-    { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
-    { label: 'My Courses', href: '/lecturer/courses', icon: BookOpen },
-    { label: 'Schedule', href: '/lecturer/schedule', icon: Calendar },
-    { label: 'Students', href: '/lecturer/students', icon: Users },
-    { label: 'Assignments', href: '/lecturer/assignments', icon: Briefcase },
-  ],
+  student: studentNavItems,
+  lecturer: studentNavItems,
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
@@ -103,7 +99,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
 // Role display names and colors
 const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
-  lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
+  lecturer: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
   vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
   delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
@@ -161,7 +157,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200
+          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-indigo-100
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -169,7 +165,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+          <div className="flex items-center justify-between p-4 border-b border-indigo-100/80">
             <Link href={`/${user.role.replace('_', '-')}/dashboard`} className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
@@ -177,10 +173,12 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
               <span className="text-xl font-bold text-gray-900">UniLife</span>
             </Link>
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all"
+              aria-label="Close menu"
             >
-              <X size={20} />
+              <X size={22} strokeWidth={2.25} />
             </button>
           </div>
 
@@ -195,14 +193,14 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                       href={item.href}
                       onClick={() => setIsSidebarOpen(false)}
                       className={`
-                        flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200
+                        flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 border
                         ${isActive
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-primary text-white shadow-md shadow-indigo-500/25 border-indigo-700/50'
+                          : 'text-gray-700 border-gray-200/90 bg-white hover:bg-indigo-50/70 hover:border-indigo-200 hover:text-gray-900'
                         }
                       `}
                     >
-                      <item.icon size={20} />
+                      <item.icon size={20} strokeWidth={isActive ? 2.25 : 2} />
                       <span>{item.label}</span>
                     </Link>
                   </li>
@@ -212,7 +210,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
           </nav>
 
           {/* User profile section */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-indigo-100/80">
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -249,10 +247,21 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-indigo-100 overflow-hidden"
                   >
+                    {(user.role === 'student' || user.role === 'lecturer') && (
+                      <Link
+                        href="/student/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <User size={18} />
+                        <span className="text-sm">Profile</span>
+                      </Link>
+                    )}
                     <Link
                       href={`/${user.role.replace('_', '-')}/settings`}
+                      onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />
@@ -277,19 +286,25 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <header className="sticky top-0 z-30 bg-white border-b border-indigo-100">
           <div className="flex items-center justify-between px-4 py-3">
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200 active:scale-[0.98]"
+              aria-label="Open menu"
             >
-              <Menu size={20} />
+              <Menu size={22} strokeWidth={2.25} />
             </button>
 
             <div className="flex items-center gap-4 ml-auto">
               {/* Notifications */}
-              <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Bell size={20} className="text-gray-600" />
+              <button
+                type="button"
+                className="relative inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200"
+                aria-label="Notifications"
+              >
+                <Bell size={22} strokeWidth={2} className="text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 

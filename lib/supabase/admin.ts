@@ -69,8 +69,8 @@ export interface StudentRow {
 }
 
 /**
- * Fetches all students (users with role 'student') for lecturer pages.
- * Uses service role when available to bypass RLS so lecturers can see the list.
+ * Fetches all students (users with role 'student').
+ * Uses service role when available to bypass RLS.
  */
 export async function fetchStudents(): Promise<StudentRow[]> {
     if (isValidServiceKey(serviceRoleKey)) {

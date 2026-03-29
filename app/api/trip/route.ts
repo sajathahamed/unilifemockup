@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
+import { sendDialogSms } from '@/lib/dialog-sms.server'
 
 /**
  * POST /api/trip
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
       total_budget = 0,
       distance_km,
       places = [],
+      plan_json = null,
     } = body
 
     if (!start_location || !destination) {
@@ -42,15 +44,19 @@ export async function POST(request: NextRequest) {
         start_location: String(start_location).trim(),
         destination: String(destination).trim(),
         days: Math.max(1, Number(days)),
+        duration: Math.max(1, Number(days)),   // same as days — satisfies NOT NULL constraint
         travelers: Math.max(1, Number(travelers)),
         hotel_budget_per_night: Number(hotel_budget_per_night) || 0,
         food_budget_per_day: Number(food_budget_per_day) || 0,
         transport_cost_per_km: Number(transport_cost_per_km) || 0,
         total_budget: Number(total_budget) || 0,
+        budget: Number(total_budget) || 0,        // NOT NULL column in live DB
         distance_km: distance_km != null ? Number(distance_km) : null,
+        plan_json: plan_json && typeof plan_json === 'object' ? plan_json : null,
       })
       .select()
       .single()
+
 
     if (tripError || !trip) {
       console.error('Trip insert error:', tripError)
@@ -79,6 +85,33 @@ export async function POST(request: NextRequest) {
       .select('*, trip_places(*)')
       .eq('id', tripId)
       .single()
+
+    // SMS Integration
+    try {
+      // 1. Get user phone number from student_phones table
+      const { data: phoneData } = await client
+        .from('student_phones')
+        .select('mobile')
+        .eq('user_id', user.id)
+        .single()
+      
+      const mobile = String(phoneData?.mobile ?? '').trim() || '94700000000'
+      const msg = `Trip Planner: You have a new trip to ${destination} for ${days} days. Total Budget: Rs ${total_budget}. Safe travels!`
+
+      void sendDialogSms({
+        number: mobile,
+        text: msg,
+        clientRef: `RPOSbyUpview_UniLife_trip_${tripId}`,
+      }).then((result) => {
+        if (!result.ok || result.gatewayReportedError) {
+          const hint = result.gatewayErrorHint || JSON.stringify(result.body).slice(0, 200)
+          console.warn('Trip SMS:', hint)
+        }
+      })
+        
+    } catch (smsError) {
+      console.error('SMS Logic Error:', smsError)
+    }
 
     return NextResponse.json(fullTrip ?? trip, { status: 201 })
   } catch (e) {

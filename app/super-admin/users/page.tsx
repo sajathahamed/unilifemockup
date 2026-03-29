@@ -55,8 +55,7 @@ export default async function SuperAdminUsersPage() {
                                 <RoleInfo role="Admin" desc="Campus-specific management and approvals." />
                                 <RoleInfo role="Vendor Admin" desc="Manage food stalls and shop inventory." />
                                 <RoleInfo role="Delivery" desc="Pickup and delivery logistics." />
-                                <RoleInfo role="Lecturer" desc="Academic course and timetable management." />
-                                <RoleInfo role="Student" desc="Access to all campus student services." />
+                                <RoleInfo role="Student" desc="Upload timetable, class reminders, food, laundry, trips." />
                             </div>
                         </div>
 

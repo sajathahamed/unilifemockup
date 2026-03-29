@@ -8,7 +8,10 @@ export interface UserProfile {
   name: string
   email: string
   role: UserRole
-  uni_id?: number
+  uni_id?: number | null
+  program_id?: number | null
+  semester_id?: number | null
+  active_university_id?: number | null
   created_at: string
 }
 
@@ -18,7 +21,7 @@ export interface UserProfile {
 export function getRoleBasedRedirect(role: UserRole): string {
   const roleRoutes: Record<UserRole, string> = {
     student: '/student/dashboard',
-    lecturer: '/lecturer/dashboard',
+    lecturer: '/student/dashboard',
     admin: '/admin/dashboard',
     vendor: '/vendor/dashboard',
     delivery: '/delivery/dashboard',
@@ -32,9 +35,8 @@ export function getRoleBasedRedirect(role: UserRole): string {
  * Check if a user has access to a specific role's routes
  */
 export function hasRoleAccess(userRole: UserRole, requiredRole: UserRole): boolean {
-  // Super admin has access to everything
   if (userRole === 'super_admin') return true
-  
-  // Otherwise, must match exactly
+  /* Legacy lecturer accounts use the same student app surfaces */
+  if (requiredRole === 'student' && userRole === 'lecturer') return true
   return userRole === requiredRole
 }

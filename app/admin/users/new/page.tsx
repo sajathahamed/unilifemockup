@@ -20,7 +20,7 @@ export default async function AdminNewUserPage() {
                     </Link>
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Add New User</h1>
-                        <p className="text-sm text-gray-500">Create accounts for vendors, lecturers, or students.</p>
+                        <p className="text-sm text-gray-500">Create accounts for vendors or students.</p>
                     </div>
                 </div>
 

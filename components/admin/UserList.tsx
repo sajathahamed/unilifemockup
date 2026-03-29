@@ -314,7 +314,8 @@ function getInitials(name: string | null | undefined): string {
 }
 
 function formatRole(role: string): string {
-    return role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    if (role?.toLowerCase() === 'lecturer') return 'Legacy → student app'
+    return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function getRoleStyles(role: string): string {
@@ -330,7 +331,6 @@ function getRoleStyles(role: string): string {
         case 'delivery_rider':
             return 'bg-orange-50 text-orange-700 border-orange-100'
         case 'lecturer':
-            return 'bg-indigo-50 text-indigo-700 border-indigo-100'
         case 'student':
             return 'bg-sky-50 text-sky-700 border-sky-100'
         default:

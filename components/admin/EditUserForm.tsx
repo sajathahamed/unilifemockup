@@ -83,7 +83,6 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
     // Filter role options based on current user role
     const roleOptions = [
         { value: 'student', label: 'Student' },
-        { value: 'lecturer', label: 'Lecturer' },
         { value: 'vendor', label: 'Vendor Admin' },
         { value: 'delivery', label: 'Delivery Rider' },
         { value: 'admin', label: 'Admin' },
