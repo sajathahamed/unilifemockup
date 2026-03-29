@@ -26,7 +26,6 @@ import {
   Shield,
   BarChart3,
   UserCog,
-  LayoutList,
   MapPin,
   UserPlus,
   CircleDollarSign,
@@ -53,52 +52,31 @@ interface DashboardLayoutProps {
   }
 }
 
-// Navigation items for each role
+const studentNavItems: NavItem[] = [
+  { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
+  { label: 'Profile', href: '/student/profile', icon: User },
+  { label: 'Timetable', href: '/student/timetable', icon: Calendar },
+  { label: 'Assignments', href: '/student/assignments', icon: Briefcase },
+  { label: 'Trip Planner', href: '/trip-planner', icon: MapPin },
+  { label: 'Study Groups', href: '/student/study-groups', icon: Users },
+  { label: 'Marketplace', href: '/student/marketplace', icon: ShoppingBag },
+  { label: 'Food Order', href: '/student/food-order', icon: Utensils },
+  { label: 'Laundry', href: '/student/laundry', icon: Truck },
+]
+
 const roleNavItems: Record<UserRole, NavItem[]> = {
-  student: [
-    { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
-    { label: 'Timetable', href: '/student/timetable', icon: Calendar },
-    { label: 'Food Order', href: '/student/food-order', icon: Utensils },
-    { label: 'Add to Cart', href: '/student/food-order/cart', icon: ShoppingBag },
-    { label: 'Laundry', href: '/student/laundry', icon: Truck },
-    { label: 'Trips', href: '/student/trips', icon: MapPin },
-  ],
-  lecturer: [
-    { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
-    { label: 'My Courses', href: '/lecturer/courses', icon: BookOpen },
-    { label: 'Schedule', href: '/lecturer/schedule', icon: Calendar },
-    { label: 'Students', href: '/lecturer/students', icon: Users },
-    { label: 'Assignments', href: '/lecturer/assignments', icon: Briefcase },
-  ],
+  student: studentNavItems,
+  lecturer: studentNavItems,
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
-    { label: 'Timetable', href: '/admin/timetable', icon: Calendar },
+    { label: 'Courses', href: '/admin/courses', icon: BookOpen },
     { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
-    { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
   vendor: [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
-    { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
-    { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
-    { label: 'Products', href: '/vendor/products', icon: Utensils },
-    { label: 'My Store', href: '/vendor/my-store', icon: Store },
-    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
-  ],
-  'vendor-food': [
-    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
-    { label: 'Orders', href: '/vendor/orders', icon: Package },
-    { label: 'Products', href: '/vendor/products', icon: Utensils },
-    { label: 'My Store', href: '/vendor/my-store', icon: Store },
-    { label: 'Sales & Analysis', href: '/vendor/sales-analytics', icon: BarChart3 },
-  ],
-  'vendor-laundry': [
-    { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
+    { label: 'Food Orders', href: '/vendor/orders', icon: Package },
     { label: 'Laundry Orders', href: '/vendor/laundry/orders', icon: Truck },
     { label: 'Fulfillment', href: '/vendor/fulfillment', icon: Truck },
     { label: 'Pricing', href: '/vendor/products', icon: CircleDollarSign },
@@ -157,7 +135,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 // Role display names and colors
 const roleConfig: Record<UserRole, { label: string; color: string }> = {
   student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
-  lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
+  lecturer: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
   admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
   vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
@@ -166,48 +144,21 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
 }
 
-/** Role segment used in URLs (vendor-food/vendor-laundry -> vendor) */
-function rolePathSegment(role: UserRole): string {
-  if (role === 'super_admin') return 'super-admin'
-  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
-  return role.replace('_', '-')
-}
-
 export default function DashboardLayout({ children, user }: DashboardLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isNavigating, setIsNavigating] = useState(false)
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
   const [supabase, setSupabase] = useState<any | null>(null)
-  const [apiNavItems, setApiNavItems] = useState<NavItem[] | null>(null)
-  const pathSegment = rolePathSegment(user.role)
 
+  // Initialize Supabase client only on client runtime
   useEffect(() => {
     setSupabase(createClient())
   }, [])
-
-  // Clear navigation state when route changes
-  useEffect(() => {
-    setIsNavigating(false)
-    setNavigatingTo(null)
-  }, [pathname])
-
-  // Handle navigation with loading state
-  const handleNavigation = (href: string) => {
-    if (href !== pathname) {
-      setIsNavigating(true)
-      setNavigatingTo(href)
-    }
-    setIsSidebarOpen(false)
-  }
-
-  const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
-  const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
-  const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
+  const navItems = roleNavItems[user.role]
+  const roleInfo = roleConfig[user.role]
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -228,19 +179,6 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top navigation progress bar */}
-      <AnimatePresence>
-        {isNavigating && (
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 0.7 }}
-            exit={{ scaleX: 1 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left"
-          />
-        )}
-      </AnimatePresence>
-      
       {/* Mobile sidebar overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -257,7 +195,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200
+          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-indigo-100
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -265,18 +203,20 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3">
+          <div className="flex items-center justify-between p-4 border-b border-indigo-100/80">
+            <Link href={`/${user.role.replace('_', '-')}/dashboard`} className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900">UniLife</span>
             </Link>
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all"
+              aria-label="Close menu"
             >
-              <X size={20} />
+              <X size={22} strokeWidth={2.25} />
             </button>
           </div>
 
@@ -298,7 +238,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                         isNavigating && navigatingTo === item.href ? 'opacity-75 cursor-wait' : ''
                       }`}
                     >
-                      <item.icon size={20} />
+                      <item.icon size={20} strokeWidth={isActive ? 2.25 : 2} />
                       <span>{item.label}</span>
                     </Link>
                   </li>
@@ -308,7 +248,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
           </nav>
 
           {/* User profile section */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-indigo-100/80">
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -345,10 +285,21 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-lg border border-indigo-100 overflow-hidden"
                   >
+                    {(user.role === 'student' || user.role === 'lecturer') && (
+                      <Link
+                        href="/student/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <User size={18} />
+                        <span className="text-sm">Profile</span>
+                      </Link>
+                    )}
                     <Link
-                      href={`/${pathSegment}/settings`}
+                      href={`/${user.role.replace('_', '-')}/settings`}
+                      onClick={() => setIsProfileOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings size={18} />
@@ -373,19 +324,25 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <header className="sticky top-0 z-30 bg-white border-b border-indigo-100">
           <div className="flex items-center justify-between px-4 py-3">
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200 active:scale-[0.98]"
+              aria-label="Open menu"
             >
-              <Menu size={20} />
+              <Menu size={22} strokeWidth={2.25} />
             </button>
 
             <div className="flex items-center gap-4 ml-auto">
               {/* Notifications */}
-              <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Bell size={20} className="text-gray-600" />
+              <button
+                type="button"
+                className="relative inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200"
+                aria-label="Notifications"
+              >
+                <Bell size={22} strokeWidth={2} className="text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 
@@ -410,29 +367,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6 relative">
-          {/* Navigation loading overlay */}
-          <AnimatePresence>
-            {isNavigating && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <GraduationCap size={24} className="text-primary" />
-                    </div>
-                  </div>
-                  <p className="text-gray-500 font-medium text-sm animate-pulse">Loading...</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
+        <main className="p-4 lg:p-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

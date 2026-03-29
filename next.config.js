@@ -1,11 +1,6 @@
-const path = require('path')
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Fix lockfile root warning when deploying from nested/OneDrive folder
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
+  serverExternalPackages: ['pdf-parse'],
   images: {
     remotePatterns: [
       {

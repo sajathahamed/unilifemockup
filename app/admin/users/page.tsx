@@ -11,9 +11,8 @@ export default async function AdminUsersPage() {
 
     // Calculate stats
     const stats = {
-        students: users.filter(u => u.role === 'student').length,
-        lecturers: users.filter(u => u.role === 'lecturer').length,
-        vendors: users.filter(u => u.role === 'vendor-food' || u.role === 'vendor-laundry').length,
+        students: users.filter(u => u.role === 'student' || u.role === 'lecturer').length,
+        vendors: users.filter(u => u.role === 'vendor').length,
         delivery: users.filter(u => u.role === 'delivery').length,
     }
 
@@ -24,7 +23,7 @@ export default async function AdminUsersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-                        <p className="text-sm text-gray-500">Manage students, lecturers, and service providers.</p>
+                        <p className="text-sm text-gray-500">Manage students and service providers.</p>
                     </div>
                     <Link href="/admin/users/new">
                         <Button className="flex items-center gap-2">
@@ -35,9 +34,8 @@ export default async function AdminUsersPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatMini label="Total Students" value={stats.students.toString()} color="bg-blue-500" />
-                    <StatMini label="Lecturers" value={stats.lecturers.toString()} color="bg-purple-500" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <StatMini label="Students" value={stats.students.toString()} color="bg-blue-500" />
                     <StatMini label="Vendors" value={stats.vendors.toString()} color="bg-green-500" />
                     <StatMini label="Delivery" value={stats.delivery.toString()} color="bg-yellow-500" />
                 </div>

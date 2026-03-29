@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Building2, Shield, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -14,7 +13,6 @@ interface CreateUserFormProps {
 }
 
 export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUserFormProps) {
-    const router = useRouter()
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
@@ -26,25 +24,44 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
     const [generalError, setGeneralError] = useState<string | null>(null)
     const [generalSuccess, setGeneralSuccess] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [universities, setUniversities] = useState<{ id: number; name: string }[]>([])
+    const [isLoadingUniversities, setIsLoadingUniversities] = useState(true)
+
+    // Fetch universities on mount
+    useEffect(() => {
+        const fetchUniversities = async () => {
+            try {
+                const supabase = createClient()
+                const { data } = await supabase
+                    .from('universities')
+                    .select('id, name')
+                    .eq('is_active', true)
+                    .order('name', { ascending: true })
+                
+                setUniversities(data || [])
+            } catch (err) {
+                console.error('Failed to fetch universities:', err)
+            } finally {
+                setIsLoadingUniversities(false)
+            }
+        }
+        
+        fetchUniversities()
+    }, [])
 
     // Filter role options based on current user role
     const roleOptions = [
         { value: 'student', label: 'Student' },
-        { value: 'lecturer', label: 'Lecturer' },
-        { value: 'vendor-food', label: 'Food Vendor' },
-        { value: 'vendor-laundry', label: 'Laundry Vendor' },
+        { value: 'vendor', label: 'Vendor Admin' },
         { value: 'delivery', label: 'Delivery Rider' },
         { value: 'admin', label: 'Admin' },
         { value: 'super_admin', label: 'Super Admin' },
     ]
 
-    // Sample universities (can be fetched from database)
+    // Build university options from fetched data
     const universityOptions = [
         { value: '', label: 'Select university (optional)' },
-        { value: '1', label: 'University of Lagos' },
-        { value: '2', label: 'University of Ibadan' },
-        { value: '3', label: 'Ahmadu Bello University' },
-        { value: '4', label: 'University of Nigeria, Nsukka' },
+        ...universities.map(uni => ({ value: uni.id.toString(), label: uni.name }))
     ]
 
     const validateForm = (): boolean => {
@@ -69,55 +86,49 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
 
         setIsLoading(true)
 
-        const useApi = currentUserRole === 'super_admin' || currentUserRole === 'admin'
-        const apiUrl = currentUserRole === 'super_admin' ? '/api/super-admin/users' : '/api/admin/users'
-
         try {
-            if (useApi) {
-                // Create user via API (service role) so current user's session is not replaced
-                const res = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: formData.fullName,
-                        email: formData.email,
-                        password: formData.password,
-                        role: formData.role,
-                        uni_id: formData.university || null,
-                    }),
-                })
-                const data = await res.json().catch(() => ({}))
-                if (!res.ok) throw new Error(data?.message || `Failed (${res.status})`)
-                setGeneralSuccess(`Account created successfully for ${formData.fullName}!`)
-                setFormData({ fullName: '', email: '', password: '', role: '', university: '' })
-                if (onSuccess) onSuccess()
-                router.refresh()
-                return
-            }
-
             const supabase = createClient()
+
+            // 1. Create Auth User (Note: In a real app, this should probably be a Server Action or API route to bypass rate limits or use service role)
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
                 options: {
-                    data: { name: formData.fullName, role: formData.role },
+                    data: {
+                        name: formData.fullName,
+                        role: formData.role,
+                    },
                 },
             })
+
             if (authError) throw authError
+
             if (!authData.user) throw new Error('Failed to create account')
 
-            const { error: profileError } = await supabase.from('users').insert({
-                auth_id: authData.user.id,
-                email: formData.email,
-                name: formData.fullName,
-                role: formData.role,
-                uni_id: formData.university ? parseInt(formData.university) : null,
-            })
+            // 2. Insert into users table
+            const { error: profileError } = await supabase
+                .from('users')
+                .insert({
+                    auth_id: authData.user.id,
+                    email: formData.email,
+                    name: formData.fullName,
+                    role: formData.role,
+                    uni_id: formData.university ? parseInt(formData.university) : null,
+                })
+
             if (profileError) throw profileError
 
             setGeneralSuccess(`Account created successfully for ${formData.fullName}!`)
-            setFormData({ fullName: '', email: '', password: '', role: '', university: '' })
+            setFormData({
+                fullName: '',
+                email: '',
+                password: '',
+                role: '',
+                university: '',
+            })
+
             if (onSuccess) onSuccess()
+
         } catch (err) {
             setGeneralError(err instanceof Error ? err.message : 'An unexpected error occurred')
         } finally {
@@ -220,7 +231,7 @@ export default function CreateUserForm({ currentUserRole, onSuccess }: CreateUse
                     value={formData.university}
                     onChange={(e) => updateField('university', e.target.value)}
                     helperText="Optional - links the user to a specific campus"
-                    disabled={isLoading}
+                    disabled={isLoading || isLoadingUniversities}
                 />
 
                 <div className="pt-4 flex justify-end">

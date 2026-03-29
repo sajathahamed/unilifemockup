@@ -20,26 +20,54 @@ interface UserListProps {
     users: User[]
     title?: string
     showActions?: boolean
-    /** When true, Delete action calls API and refreshes (super-admin only). */
-    enableDelete?: boolean
 }
 
-export default function UserList({ users, title = "User Directory", showActions = false, enableDelete = false }: UserListProps) {
+export default function UserList({ users, title = "User Directory", showActions = false }: UserListProps) {
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState('all')
-    const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null)
-    const [deleteLoading, setDeleteLoading] = useState(false)
+    const [userList, setUserList] = useState(users)
+    const [isDeleting, setIsDeleting] = useState<number | null>(null)
     const [deleteError, setDeleteError] = useState<string | null>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null)
 
     const router = useRouter()
     const pathname = usePathname()
     const [activeMenu, setActiveMenu] = useState<any | null>(null)
 
+    // Sync users prop to state
+    useEffect(() => {
+        setUserList(users)
+    }, [users])
+
     // Helper to determine the edit base URL (either /admin/users or /super-admin/users)
     const baseEditPath = pathname.includes('/super-admin') ? '/super-admin/users' : '/admin/users'
 
+    const handleDeleteUser = async (userId: number) => {
+        setIsDeleting(userId)
+        setDeleteError(null)
+        
+        try {
+            const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE'
+            })
+            
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.message || 'Failed to delete user')
+            }
+            
+            // Remove user from list
+            setUserList(prev => prev.filter(u => u.id !== userId))
+            setShowDeleteConfirm(null)
+        } catch (err) {
+            setDeleteError(err instanceof Error ? err.message : 'Failed to delete user')
+        } finally {
+            setIsDeleting(null)
+        }
+    }
+
     const filteredUsers = useMemo(() => {
-        return users.filter(user => {
+        return userList.filter(user => {
             const name = user.name ?? ''
             const email = user.email ?? ''
             const matchesSearch =
@@ -48,7 +76,7 @@ export default function UserList({ users, title = "User Directory", showActions 
             const matchesRole = roleFilter === 'all' || user.role === roleFilter
             return matchesSearch && matchesRole
         })
-    }, [users, searchTerm, roleFilter])
+    }, [userList, searchTerm, roleFilter])
 
     /** Always show every system role so filters work even when a role has zero users. */
     const roleFilterOptions = ROLES
@@ -60,41 +88,13 @@ export default function UserList({ users, title = "User Directory", showActions 
         return () => document.removeEventListener('click', handleClickOutside)
     }, [])
 
-    const handleDeleteClick = (u: User) => {
-        setActiveMenu(null)
-        if (enableDelete) {
-            setDeleteError(null)
-            setDeleteConfirm(u)
-        }
-    }
-
-    const handleDeleteConfirm = async () => {
-        if (!deleteConfirm || !enableDelete) return
-        setDeleteLoading(true)
-        setDeleteError(null)
-        try {
-            const res = await fetch(`/api/super-admin/users/${deleteConfirm.id}`, { method: 'DELETE' })
-            const data = await res.json().catch(() => ({}))
-            if (res.ok) {
-                setDeleteConfirm(null)
-                router.refresh()
-            } else {
-                setDeleteError(data?.message || `Failed to delete (${res.status})`)
-            }
-        } catch {
-            setDeleteError('Network error')
-        } finally {
-            setDeleteLoading(false)
-        }
-    }
-
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
             <div className="p-4 border-b border-gray-100 space-y-4">
                 <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">{title}</h3>
                     <span className="text-xs text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded-lg">
-                        {filteredUsers.length} of {users.length} Users
+                        {filteredUsers.length} of {userList.length} Users
                     </span>
                 </div>
 
@@ -232,7 +232,10 @@ export default function UserList({ users, title = "User Directory", showActions 
                                                             <div className="h-px bg-gray-50 my-1" />
                                                             <button
                                                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
-                                                                onClick={() => handleDeleteClick(u)}
+                                                                onClick={() => {
+                                                                    setActiveMenu(null)
+                                                                    setShowDeleteConfirm(u.id)
+                                                                }}
                                                             >
                                                                 <Trash2 size={14} className="text-red-400" />
                                                                 <span>Delete User</span>
@@ -250,36 +253,49 @@ export default function UserList({ users, title = "User Directory", showActions 
                 </table>
             </div>
 
-            {/* Delete confirmation modal */}
-            {deleteConfirm && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50" onClick={() => !deleteLoading && setDeleteConfirm(null)}>
-                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="font-semibold text-gray-900">Delete user?</h3>
-                        <p className="text-sm text-gray-600">
-                            <span className="font-medium">{deleteConfirm.name}</span>
-                            {deleteConfirm.email && (
-                                <span className="text-gray-500"> ({deleteConfirm.email})</span>
+            {/* Delete Confirmation Dialog */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                                    <Trash2 size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Delete User</h3>
+                                    <p className="text-sm text-gray-500">This action cannot be undone</p>
+                                </div>
+                            </div>
+
+                            {deleteError && (
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+                                    <p className="text-sm text-red-700">{deleteError}</p>
+                                </div>
                             )}
-                            {' '}will be removed. This cannot be undone.
-                        </p>
-                        {deleteError && (
-                            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{deleteError}</p>
-                        )}
-                        <div className="flex gap-3 justify-end">
+
+                            <p className="text-sm text-gray-600">
+                                Are you sure you want to delete this user? All associated data will be permanently removed.
+                            </p>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3 justify-end">
                             <button
-                                type="button"
-                                onClick={() => !deleteLoading && setDeleteConfirm(null)}
-                                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                onClick={() => setShowDeleteConfirm(null)}
+                                disabled={isDeleting !== null}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                             >
                                 Cancel
                             </button>
                             <button
-                                type="button"
-                                onClick={handleDeleteConfirm}
-                                disabled={deleteLoading}
-                                className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                                onClick={() => handleDeleteUser(showDeleteConfirm)}
+                                disabled={isDeleting !== null}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                             >
-                                {deleteLoading ? 'Deleting…' : 'Delete'}
+                                {isDeleting === showDeleteConfirm && (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                )}
+                                Delete User
                             </button>
                         </div>
                     </div>
@@ -297,7 +313,8 @@ function getInitials(name: string | null | undefined): string {
 }
 
 function formatRole(role: string): string {
-    return role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    if (role?.toLowerCase() === 'lecturer') return 'Legacy → student app'
+    return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function getRoleStyles(role: string): string {
@@ -306,16 +323,13 @@ function getRoleStyles(role: string): string {
             return 'bg-purple-50 text-purple-700 border-purple-100'
         case 'admin':
             return 'bg-blue-50 text-blue-700 border-blue-100'
-        case 'vendor-food':
+        case 'vendor':
         case 'vendor_admin':
             return 'bg-emerald-50 text-emerald-700 border-emerald-100'
-        case 'vendor-laundry':
-            return 'bg-teal-50 text-teal-700 border-teal-100'
         case 'delivery':
         case 'delivery_rider':
             return 'bg-orange-50 text-orange-700 border-orange-100'
         case 'lecturer':
-            return 'bg-indigo-50 text-indigo-700 border-indigo-100'
         case 'student':
             return 'bg-sky-50 text-sky-700 border-sky-100'
         default:

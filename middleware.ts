@@ -26,23 +26,31 @@ function redirectWithSessionCookies(
 // Routes that don't require authentication
 const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/reset-password']
 
-// Role-based route prefixes (no generic vendor - only vendor-food, vendor-laundry)
 const roleRoutes: Record<string, string[]> = {
   student: ['/student'],
-  lecturer: ['/lecturer'],
+  lecturer: ['/student'],
   admin: ['/admin'],
-  'vendor-food': ['/vendor'],
-  'vendor-laundry': ['/vendor'],
+  vendor: ['/vendor'],
   delivery: ['/delivery'],
-  super_admin: ['/super-admin', '/admin', '/vendor', '/delivery', '/student', '/lecturer'],
+  super_admin: ['/super-admin', '/admin', '/vendor', '/delivery', '/student'],
+}
+
+function dashboardPathForRole(role: string): string {
+  if (role === 'super_admin') return '/super-admin/dashboard'
+  if (role === 'lecturer') return '/student/dashboard'
+  return `/${role}/dashboard`
 }
 
 export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user, supabase } = await updateSession(request)
   const { pathname } = request.nextUrl
 
-  // Allow public routes
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+  if (pathname.includes('/api/')) {
+    return NextResponse.next()
+  }
+
+  const { supabaseResponse, user, supabase } = await updateSession(request)
+
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
     if (user && (pathname === '/login' || pathname === '/signup')) {
       const role = (user.user_metadata?.role as string) || ''
       if (role) {
@@ -56,24 +64,19 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  // If no user and trying to access protected route, redirect to login
   if (!user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return redirectWithSessionCookies(supabaseResponse, loginUrl)
   }
 
-  let userRole: string = (user.user_metadata?.role as string) || ''
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('auth_id', user.id)
+    .single()
 
-  // Fetch role from DB when Supabase is available
-  if (supabase) {
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_id', user.id)
-      .single()
-    if (userData?.role && !userError) userRole = userData.role as string
-  }
+  let userRole = (userData?.role as string) || (user.user_metadata?.role as string) || ''
 
   if (!userRole) {
     return redirectWithSessionCookies(
@@ -83,16 +86,9 @@ export async function middleware(request: NextRequest) {
   }
 
   const allowedPrefixes = roleRoutes[userRole] || []
-  let hasAccess = allowedPrefixes.some(prefix => pathname.startsWith(prefix))
-
-  // vendor-food: cannot access laundry pages
-  if (userRole === 'vendor-food' && pathname.startsWith('/vendor/laundry')) {
-    hasAccess = false
-  }
-  // vendor-laundry: cannot access food orders page
-  if (userRole === 'vendor-laundry' && pathname === '/vendor/orders') {
-    hasAccess = false
-  }
+  const sharedRoutes = ['/trip-planner']
+  const isSharedRoute = sharedRoutes.some((route) => pathname.startsWith(route))
+  const hasAccess = isSharedRoute || allowedPrefixes.some((prefix) => pathname.startsWith(prefix))
 
   if (!hasAccess) {
     const rolePrefix = normalizeRolePrefix(userRole)
@@ -113,22 +109,6 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse
 }
 
-function normalizeRolePrefix(role: string): string {
-  if (role === 'super_admin') return 'super-admin'
-  if (role === 'vendor-food' || role === 'vendor-laundry') return 'vendor'
-  return role
-}
-
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api routes (they handle their own auth)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

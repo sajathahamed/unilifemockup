@@ -1,426 +1,251 @@
-[
-  {
-    "table_name": "announcements",
-    "columns": "created_by, target_audience, body, title, created_at, updated_at, id"
-  },
-  {
-    "table_name": "app_pages",
-    "columns": "path, id, sort_order, icon, role, label"
-  },
-  {
-    "table_name": "assignment_submissions",
-    "columns": "assignment_id, student_id, submitted_at, grade, content, feedback, status, id"
-  },
-  {
-    "table_name": "assignments",
-    "columns": "created_at, description, id, title, updated_at, created_by, course_id, due_date"
-  },
-  {
-    "table_name": "courses",
-    "columns": "lecturer, id, colour, course_name, course_code"
-  },
-  {
-    "table_name": "deliveries",
-    "columns": "order_id, status, updated_at, id, delivery_agent_id"
-  },
-  {
-    "table_name": "delivery_agents",
-    "columns": "is_available, phone, name, id"
-  },
-  {
-    "table_name": "food_categories",
-    "columns": "name, id, vendor_id"
-  },
-  {
-    "table_name": "food_items",
-    "columns": "id, image_url, name, is_available, price, category_id, vendor_id"
-  },
-  {
-    "table_name": "food_order_items",
-    "columns": "food_id, qty, price, order_id, id"
-  },
-  {
-    "table_name": "food_orders",
-    "columns": "notes, food_stall_id, id, customer_email, created_at, total, items, delivery_address, order_ref, status, customer_name, customer_phone"
-  },
-  {
-    "table_name": "food_stall_menu_items",
-    "columns": "food_stall_id, name, id, price, sort_order, food_category, image_url"
-  },
-  {
-    "table_name": "food_stalls",
-    "columns": "is_open, description, vendor_type, gallery, banner, logo, category, shop_name, owner_name, owner_email, phone, whatsapp, address, city, area, id, lat, lng, opening_time, closing_time, created_at, days_open"
-  },
-  {
-    "table_name": "laundry_orders",
-    "columns": "created_at, pickup_address, status, notes, items_description, customer_phone, customer_name, order_ref, id, laundry_shop_id, total, delivery_address"
-  },
-  {
-    "table_name": "laundry_services",
-    "columns": "price_per_item, price_per_kg, id, name, pickup_available, location"
-  },
-  {
-    "table_name": "laundry_shops",
-    "columns": "delivery_radius, pickup_delivery, services, price_list, lng, owner_email, owner_name, whatsapp, shop_name, id, banner, vendor_type, gallery, logo, lat, is_open, created_at, phone, closing_time, opening_time, address, city, area"
-  },
-  {
-    "table_name": "notifications",
-    "columns": "is_read, user_id, message, created_at, title, id"
-  },
-  {
-    "table_name": "platform_stats",
-    "columns": "total_users, id, total_orders, total_revenue, generated_at"
-  },
-  {
-    "table_name": "role_page_permissions",
-    "columns": "role, page_id, enabled, id"
-  },
-  {
-    "table_name": "shop_earnings",
-    "columns": "shop_id, id, order_id, amount, created_at"
-  },
-  {
-    "table_name": "shop_orders",
-    "columns": "student_id, total_amount, created_at, status, id, shop_id"
-  },
-  {
-    "table_name": "shops",
-    "columns": "created_at, name, shop_type, status, owner_id, id"
-  },
-  {
-    "table_name": "system_settings",
-    "columns": "key, value"
-  },
-  {
-    "table_name": "timetable",
-    "columns": "start_time, course_id, student_id, academic_year, id, location, day_of_week, end_time"
-  },
-  {
-    "table_name": "trip_days",
-    "columns": "created_at, activities, day_number, estimated_cost, trip_id, id"
-  },
-  {
-    "table_name": "trip_itinerary",
-    "columns": "trip_id, activity, day_number, id"
-  },
-  {
-    "table_name": "trip_members",
-    "columns": "id, joined_at, trip_id, student_id"
-  },
-  {
-    "table_name": "trip_places",
-    "columns": "budget, sort_order, ticket_price, trip_id, id, additional_details, place_name"
-  },
-  {
-    "table_name": "trip_plans",
-    "columns": "void_reason, status, budget_message, summary, updated_at, created_at, voided_at, budget_sufficient, total_cost_usd, total_cost_lkr, travel_tips_json, cost_breakdown_json, transport_details_json, food_places_json, hotel_details_json, room_type, itinerary_json, travelers, budget_lkr, days, user_id, trip_id, id, food_preference, transport_mode, destination, travel_type"
-  },
-  {
-    "table_name": "trip_plans_summary",
-    "columns": "voided_at, id, user_id, days, travelers, budget_lkr, total_cost_lkr, budget_sufficient, created_at, user_name, user_email, destination, room_type, status"
-  },
-  {
-    "table_name": "trip_recommendations",
-    "columns": "id, trip_id, price_level, name, type, created_at, place_id, rating, photo_url, address"
-  },
-  {
-    "table_name": "trips",
-    "columns": "food_preference, banner_url, trip_type, organizer_email, organizer_name, area, inclusions, logo_url, city, travel_type, accommodation_type, transport_mode, lat, voided_at, budget_sufficient, gallery_urls, cost_breakdown_json, transport_details_json, budget_lkr, total_cost_lkr, hotel_details_json, itinerary_json, travelers, updated_at, created_at, total_estimated_cost, budget, duration, longitude, latitude, user_id, currency, id, place_id, destination, whatsapp, phone, transport_type, address, description, status, void_reason, ai_summary, ai_travel_tips, max_participants, return_date, departure_date, lng"
-  },
-  {
-    "table_name": "universities",
-    "columns": "id, name, is_active, city"
-  },
-  {
-    "table_name": "user_page_permissions",
-    "columns": "id, enabled, page_id, user_id"
-  },
-  {
-    "table_name": "users",
-    "columns": "auth_provider, auth_id, uni_id, created_at, role, id, email, google_id, name, vendor_type, photo_url"
-  },
-  {
-    "table_name": "vendors",
-    "columns": "is_open, type, location, created_at, rating, name, id"
-  }
-] 
+-- =========================================
+-- University Life Management System
+-- Supabase / PostgreSQL Compatible Schema
+-- =========================================
 
--- announcements
-CREATE TABLE announcements (
-    id uuid PRIMARY KEY,
-    created_by uuid,
-    target_audience text,
-    body text,
-    title text,
-    created_at timestamp,
-    updated_at timestamp
+
+-- ============
+-- ENUM TYPES
+-- ============
+CREATE TYPE user_role AS ENUM (
+  'student','lecturer','admin','vendor','delivery','super_admin'
 );
 
--- app_pages
-CREATE TABLE app_pages (
-    id uuid PRIMARY KEY,
-    path text,
-    sort_order integer,
-    icon text,
-    role text,
-    label text
+CREATE TYPE shop_status AS ENUM ('open','closed');
+
+
+-- =====================
+-- UNIVERSITY & USERS
+-- =====================
+CREATE TABLE universities (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  city VARCHAR(100),
+  is_active BOOLEAN DEFAULT TRUE
 );
 
--- assignment_submissions
-CREATE TABLE assignment_submissions (
-    id uuid PRIMARY KEY,
-    assignment_id uuid,
-    student_id uuid,
-    submitted_at timestamp,
-    grade numeric,
-    content text,
-    feedback text,
-    status text
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  role user_role NOT NULL,
+  uni_id INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (uni_id) REFERENCES universities(id)
 );
 
--- assignments
-CREATE TABLE assignments (
-    id uuid PRIMARY KEY,
-    created_at timestamp,
-    updated_at timestamp,
-    created_by uuid,
-    course_id uuid,
-    title text,
-    description text,
-    due_date date
-);
 
--- courses
+-- =====================
+-- ACADEMIC MODULE
+-- =====================
 CREATE TABLE courses (
-    id uuid PRIMARY KEY,
-    lecturer text,
-    colour text,
-    course_name text,
-    course_code text
+  id SERIAL PRIMARY KEY,
+  course_code VARCHAR(50),
+  course_name VARCHAR(100),
+  lecturer VARCHAR(100),
+  colour VARCHAR(20)
 );
 
--- deliveries
-CREATE TABLE deliveries (
-    id uuid PRIMARY KEY,
-    order_id uuid,
-    delivery_agent_id uuid,
-    status text,
-    updated_at timestamp
-);
-
--- delivery_agents
-CREATE TABLE delivery_agents (
-    id uuid PRIMARY KEY,
-    name text,
-    phone text,
-    is_available boolean
-);
-
--- food_categories
-CREATE TABLE food_categories (
-    id uuid PRIMARY KEY,
-    name text,
-    vendor_id uuid
-);
-
--- food_items
-CREATE TABLE food_items (
-    id uuid PRIMARY KEY,
-    image_url text,
-    name text,
-    is_available boolean,
-    price numeric,
-    category_id uuid,
-    vendor_id uuid
-);
-
--- food_order_items
-CREATE TABLE food_order_items (
-    id uuid PRIMARY KEY,
-    food_id uuid,
-    order_id uuid,
-    qty integer,
-    price numeric
-);
-
--- food_orders
-CREATE TABLE food_orders (
-    id uuid PRIMARY KEY,
-    food_stall_id uuid,
-    customer_email text,
-    customer_name text,
-    customer_phone text,
-    created_at timestamp,
-    total numeric,
-    notes text,
-    items text,
-    delivery_address text,
-    order_ref text,
-    status text
-);
-
--- food_stall_menu_items
-CREATE TABLE food_stall_menu_items (
-    id uuid PRIMARY KEY,
-    food_stall_id uuid,
-    name text,
-    price numeric,
-    sort_order integer,
-    food_category text,
-    image_url text
-);
-
--- food_stalls
-CREATE TABLE food_stalls (
-    id uuid PRIMARY KEY,
-    is_open boolean,
-    description text,
-    vendor_type text,
-    gallery text,
-    banner text,
-    logo text,
-    category text,
-    shop_name text,
-    owner_name text,
-    owner_email text,
-    phone text,
-    whatsapp text,
-    address text,
-    city text,
-    area text,
-    lat numeric,
-    lng numeric,
-    opening_time time,
-    closing_time time,
-    created_at timestamp,
-    days_open text
-);
-
--- laundry_orders
-CREATE TABLE laundry_orders (
-    id uuid PRIMARY KEY,
-    created_at timestamp,
-    pickup_address text,
-    delivery_address text,
-    status text,
-    notes text,
-    items_description text,
-    customer_phone text,
-    customer_name text,
-    order_ref text,
-    laundry_shop_id uuid,
-    total numeric
-);
-
--- laundry_services
-CREATE TABLE laundry_services (
-    id uuid PRIMARY KEY,
-    name text,
-    price_per_item numeric,
-    price_per_kg numeric,
-    pickup_available boolean,
-    location text
-);
-
--- laundry_shops
-CREATE TABLE laundry_shops (
-    id uuid PRIMARY KEY,
-    delivery_radius numeric,
-    pickup_delivery boolean,
-    services text,
-    price_list text,
-    lng numeric,
-    lat numeric,
-    owner_email text,
-    owner_name text,
-    whatsapp text,
-    shop_name text,
-    banner text,
-    vendor_type text,
-    gallery text,
-    logo text,
-    is_open boolean,
-    created_at timestamp,
-    phone text,
-    opening_time time,
-    closing_time time,
-    address text,
-    city text,
-    area text
-);
-
--- notifications
-CREATE TABLE notifications (
-    id uuid PRIMARY KEY,
-    user_id uuid,
-    title text,
-    message text,
-    is_read boolean,
-    created_at timestamp
-);
-
--- platform_stats
-CREATE TABLE platform_stats (
-    id uuid PRIMARY KEY,
-    total_users integer,
-    total_orders integer,
-    total_revenue numeric,
-    generated_at timestamp
-);
-
--- role_page_permissions
-CREATE TABLE role_page_permissions (
-    id uuid PRIMARY KEY,
-    role text,
-    page_id uuid,
-    enabled boolean
-);
-
--- shop_earnings
-CREATE TABLE shop_earnings (
-    id uuid PRIMARY KEY,
-    shop_id uuid,
-    order_id uuid,
-    amount numeric,
-    created_at timestamp
-);
-
--- shop_orders
-CREATE TABLE shop_orders (
-    id uuid PRIMARY KEY,
-    shop_id uuid,
-    student_id uuid,
-    total_amount numeric,
-    status text,
-    created_at timestamp
-);
-
--- shops
-CREATE TABLE shops (
-    id uuid PRIMARY KEY,
-    created_at timestamp,
-    name text,
-    shop_type text,
-    status text,
-    owner_id uuid
-);
-
--- system_settings
-CREATE TABLE system_settings (
-    key text PRIMARY KEY,
-    value text
-);
-
--- timetable
 CREATE TABLE timetable (
-    id uuid PRIMARY KEY,
-    course_id uuid,
-    student_id uuid,
-    academic_year text,
-    location text,
-    day_of_week text,
-    start_time time,
-    end_time time
+  id SERIAL PRIMARY KEY,
+  student_id INT,
+  course_id INT,
+  day_of_week VARCHAR(20),
+  start_time TIME,
+  end_time TIME,
+  location VARCHAR(100),
+  FOREIGN KEY (student_id) REFERENCES users(id),
+  FOREIGN KEY (course_id) REFERENCES courses(id)
 );
 
--- (and so on for the rest of your trip and university tables)
+
+-- =====================
+-- SHOP MODULE
+-- =====================
+CREATE TABLE shops (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  owner_id INT,
+  shop_type VARCHAR(50),
+  status shop_status,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id)
+);
+
+CREATE TABLE shop_orders (
+  id SERIAL PRIMARY KEY,
+  shop_id INT,
+  student_id INT,
+  total_amount DECIMAL(10,2),
+  status VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shop_id) REFERENCES shops(id),
+  FOREIGN KEY (student_id) REFERENCES users(id)
+);
+
+CREATE TABLE shop_earnings (
+  id SERIAL PRIMARY KEY,
+  shop_id INT,
+  order_id INT,
+  amount DECIMAL(10,2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shop_id) REFERENCES shops(id),
+  FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+);
+
+
+-- =====================
+-- DELIVERY MODULE
+-- =====================
+CREATE TABLE delivery_agents (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  phone VARCHAR(20),
+  is_available BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE deliveries (
+  id SERIAL PRIMARY KEY,
+  order_id INT,
+  delivery_agent_id INT,
+  status VARCHAR(50),
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES shop_orders(id),
+  FOREIGN KEY (delivery_agent_id) REFERENCES delivery_agents(id)
+);
+
+
+-- =====================
+-- FOOD MODULE
+-- =====================
+CREATE TABLE vendors (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  type VARCHAR(50),
+  location VARCHAR(100),
+  is_open BOOLEAN DEFAULT TRUE,
+  rating DECIMAL(2,1),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE food_categories (
+  id SERIAL PRIMARY KEY,
+  vendor_id INT,
+  name VARCHAR(100),
+  FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+);
+
+CREATE TABLE food_items (
+  id SERIAL PRIMARY KEY,
+  vendor_id INT,
+  category_id INT,
+  name VARCHAR(100),
+  price DECIMAL(10,2),
+  image_url VARCHAR(255),
+  is_available BOOLEAN DEFAULT TRUE,
+  FOREIGN KEY (vendor_id) REFERENCES vendors(id),
+  FOREIGN KEY (category_id) REFERENCES food_categories(id)
+);
+
+CREATE TABLE food_orders (
+  id SERIAL PRIMARY KEY,
+  student_id INT,
+  vendor_id INT,
+  total DECIMAL(10,2),
+  status VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (student_id) REFERENCES users(id),
+  FOREIGN KEY (vendor_id) REFERENCES vendors(id)
+);
+
+CREATE TABLE food_order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INT,
+  food_id INT,
+  qty INT,
+  price DECIMAL(10,2),
+  FOREIGN KEY (order_id) REFERENCES food_orders(id),
+  FOREIGN KEY (food_id) REFERENCES food_items(id)
+);
+
+
+-- =====================
+-- LAUNDRY MODULE
+-- =====================
+CREATE TABLE laundry_services (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  location VARCHAR(100),
+  price_per_kg DECIMAL(10,2),
+  price_per_item DECIMAL(10,2),
+  pickup_available BOOLEAN DEFAULT TRUE
+);
+
+CREATE TABLE laundry_orders (
+  id SERIAL PRIMARY KEY,
+  student_id INT,
+  laundry_service_id INT,
+  order_type VARCHAR(50),
+  total_price DECIMAL(10,2),
+  status VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (student_id) REFERENCES users(id),
+  FOREIGN KEY (laundry_service_id) REFERENCES laundry_services(id)
+);
+
+
+-- =====================
+-- TOURISM / TRIPS MODULE
+-- =====================
+CREATE TABLE trips (
+  id SERIAL PRIMARY KEY,
+  destination VARCHAR(100),
+  days INT,
+  estimated_budget DECIMAL(10,2),
+  created_by INT,
+  status VARCHAR(50),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE trip_itinerary (
+  id SERIAL PRIMARY KEY,
+  trip_id INT,
+  day_number INT,
+  activity TEXT,
+  FOREIGN KEY (trip_id) REFERENCES trips(id)
+);
+
+CREATE TABLE trip_members (
+  id SERIAL PRIMARY KEY,
+  trip_id INT,
+  student_id INT,
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (trip_id) REFERENCES trips(id),
+  FOREIGN KEY (student_id) REFERENCES users(id)
+);
+
+
+-- =====================
+-- NOTIFICATIONS
+-- =====================
+CREATE TABLE notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INT,
+  title VARCHAR(100),
+  message TEXT,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+
+-- =====================
+-- PLATFORM STATS
+-- =====================
+CREATE TABLE platform_stats (
+  id SERIAL PRIMARY KEY,
+  total_users INT,
+  total_orders INT,
+  total_revenue DECIMAL(12,2),
+  generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
