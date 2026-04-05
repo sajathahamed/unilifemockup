@@ -22,7 +22,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.12.7",
-    "restaurant-location-search-api": "^1.0.1"
+    "restaurant-location-search-api": "^1.0.1",
+    "sweetalert2": "^11.26.24"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

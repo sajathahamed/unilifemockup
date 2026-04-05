@@ -164,7 +164,7 @@ const roleConfig: Record<UserRole, { label: string; color: string }> = {
   vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
-  delivery: { label: 'Delivery', color: 'bg-yellow-100 text-yellow-800' },
+  delivery: { label: 'Delivery', color: 'bg-amber-50 text-amber-700 border border-amber-200' },
   super_admin: { label: 'Super Admin', color: 'bg-red-100 text-red-800' },
 }
 
@@ -210,6 +210,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
   const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
   const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
+  const isDeliveryUI = user.role === 'delivery'
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -229,7 +230,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Top navigation progress bar */}
       <AnimatePresence>
         {isNavigating && (
@@ -238,7 +239,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
             animate={{ scaleX: 0.7 }}
             exit={{ scaleX: 1 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left"
+            className={`fixed top-0 left-0 right-0 h-1 z-[100] origin-left ${isDeliveryUI ? 'bg-[#5f6db8]' : 'bg-primary'}`}
           />
         )}
       </AnimatePresence>
@@ -251,7 +252,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/35 z-40 lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -259,7 +260,8 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200
+          fixed top-0 left-0 z-50 h-full w-64 border-r
+          ${isDeliveryUI ? 'bg-gradient-to-b from-blue-50 to-blue-50/80 border-blue-200/40' : 'bg-gradient-to-b from-blue-50 to-blue-50/80 border-blue-200/40'}
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -267,12 +269,12 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <GraduationCap className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between p-5 border-b border-blue-200/40">
+            <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3 hover:opacity-80 transition">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-200">
+                <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">UniLife</span>
+              <span className="text-lg font-bold font-display tracking-[-0.018em] text-blue-900">UniLife</span>
             </Link>
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -283,8 +285,8 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            <ul className="space-y-1">
+          <nav className="flex-1 overflow-y-auto p-5 pt-4">
+            <ul className="space-y-1.5">
               {navItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
@@ -292,12 +294,12 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                     <Link
                       href={item.href}
                       onClick={() => handleNavigation(item.href)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-4 transition-all duration-200 ${
                         isActive
-                          ? 'bg-primary text-white shadow-md'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? 'border-blue-500 bg-white text-blue-700 font-semibold shadow-sm shadow-blue-100'
+                          : 'border-transparent text-gray-600 hover:bg-white/60 hover:text-gray-700'
                       } ${
-                        isNavigating && navigatingTo === item.href ? 'opacity-75 cursor-wait' : ''
+                        isNavigating && navigatingTo === item.href ? 'opacity-60 cursor-wait' : ''
                       }`}
                     >
                       <item.icon size={20} />
@@ -310,13 +312,13 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
           </nav>
 
           {/* User profile section */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-5 border-t border-blue-200/40">
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-colors hover:bg-white/60"
               >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center ring-2 bg-white ring-blue-200 shadow-sm">
                   {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
@@ -324,7 +326,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-sm font-semibold text-primary">
+                    <span className="text-sm font-semibold">
                       {getInitials(user.name)}
                     </span>
                   )}
@@ -351,7 +353,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                   >
                     <Link
                       href={`/${pathSegment}/settings`}
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors"
                     >
                       <Settings size={18} />
                       <span className="text-sm">Settings</span>
@@ -375,7 +377,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <header className="sticky top-0 z-30 border-b bg-white/95 border-blue-100 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -412,7 +414,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6 relative">
+        <main className={`relative ${isDeliveryUI ? 'p-5 lg:p-6' : 'p-4 lg:p-6'}`}>
           {/* Navigation loading overlay */}
           <AnimatePresence>
             {isNavigating && (
@@ -420,11 +422,11 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center"
+                className={`absolute inset-0 z-20 flex items-center justify-center backdrop-blur-sm ${isDeliveryUI ? 'bg-stone-50/80' : 'bg-white/80'}`}
               >
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <div className={`w-16 h-16 rounded-full border-4 animate-spin ${isDeliveryUI ? 'border-[#d6dcf9] border-t-[#5f6db8]' : 'border-primary/20 border-t-primary'}`} />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <GraduationCap size={24} className="text-primary" />
                     </div>

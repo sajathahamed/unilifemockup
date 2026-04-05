@@ -6,17 +6,8 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getRoleBasedRedirect, UserRole } from '@/lib/auth'
+import { getRoleBasedRedirect } from '@/lib/auth'
 import { AuthLayout, GoogleButton, Button, Input, Select, Alert } from '@/components'
-
-// Available roles for signup (no generic vendor - only vendor-food, vendor-laundry)
-const roleOptions = [
-  { value: 'student', label: 'Student' },
-  { value: 'lecturer', label: 'Lecturer' },
-  { value: 'vendor-food', label: 'Food Vendor' },
-  { value: 'vendor-laundry', label: 'Laundry Vendor' },
-  { value: 'delivery', label: 'Delivery Rider' },
-]
 
 // Sample universities (can be fetched from database)
 const universityOptions = [
@@ -38,7 +29,6 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: '',
     university: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -77,10 +67,6 @@ export default function SignupPage() {
       newErrors.confirmPassword = 'Passwords do not match'
     }
 
-    if (!formData.role) {
-      newErrors.role = 'Please select a role'
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -106,7 +92,7 @@ export default function SignupPage() {
         options: {
           data: {
             name: formData.fullName,
-            role: formData.role,
+            role: 'student',
           },
         },
       })
@@ -132,7 +118,7 @@ export default function SignupPage() {
           auth_id: authData.user.id,
           email: formData.email,
           name: formData.fullName,
-          role: formData.role,
+          role: 'student',
           uni_id: formData.university ? parseInt(formData.university) : null,
         })
 
@@ -148,7 +134,7 @@ export default function SignupPage() {
       // If email confirmation is disabled, redirect immediately
       if (authData.session) {
         setTimeout(() => {
-          const redirectPath = getRoleBasedRedirect(formData.role as UserRole)
+          const redirectPath = getRoleBasedRedirect('student')
           router.push(redirectPath)
           router.refresh()
         }, 1500)
@@ -327,16 +313,6 @@ export default function SignupPage() {
             autoComplete="new-password"
           />
         </div>
-
-        <Select
-          label="I am a..."
-          options={roleOptions}
-          placeholder="Select your role"
-          value={formData.role}
-          onChange={(e) => updateField('role', e.target.value)}
-          error={errors.role}
-          disabled={isLoading}
-        />
 
         <Select
           label="University"
