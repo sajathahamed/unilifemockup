@@ -211,11 +211,13 @@ function StatCard({
   label,
   value,
   color,
+  href,
 }: {
   icon: React.ElementType
   label: string
   value: string
   color: string
+  href?: string
 }) {
   const content = (
     <>

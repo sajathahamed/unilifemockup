@@ -1,0 +1,6 @@
+tree 7eb77247429f34011f156f73c616a0b2f445439c
+parent 67507c7e1d630d77c8a14a77e539500b432163d3
+author Shalomiyal <Perushanshalomiyal22@gmail.com> 1772788702 +0530
+committer Shalomiyal <Perushanshalomiyal22@gmail.com> 1772788702 +0530
+
+fix: add suppressHydrationWarning to organizer email input for better SSR compatibility

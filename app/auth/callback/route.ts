@@ -63,6 +63,7 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}/login?error=profile_creation_failed`)
         }
 
+        // Redirect new user to student dashboard
         return NextResponse.redirect(`${origin}/student/dashboard`)
       }
     }

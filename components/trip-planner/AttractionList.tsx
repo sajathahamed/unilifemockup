@@ -1,7 +1,6 @@
 'use client'
 
-import { MapPin, Star, Plus } from 'lucide-react'
-import Image from 'next/image'
+import { Loader2, Plus, Star } from 'lucide-react'
 
 export interface Place {
   id: string | null
@@ -23,77 +22,61 @@ interface AttractionListProps {
 export default function AttractionList({ places, loading, onAdd, addedIds }: AttractionListProps) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center py-12 text-gray-500">
+        <Loader2 size={24} className="animate-spin mr-2" />
+        Finding attractions…
       </div>
     )
   }
 
   if (places.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <p>No attractions found near this destination.</p>
-        <p className="text-sm mt-1">Try a different location or check GOOGLE_MAPS_API_KEY.</p>
-      </div>
-    )
+    return <p className="text-sm text-gray-500 py-6 text-center">No attractions found near this location.</p>
   }
 
   return (
-    <ul className="space-y-3">
-      {places.map((p) => {
-        const key = p.id || p.name + String(p.latitude)
-        const added = p.id ? addedIds.has(p.id) : addedIds.has(key)
+    <div className="grid gap-3 sm:grid-cols-2">
+      {places.map((place, idx) => {
+        const added = addedIds.has(place.id)
         return (
-          <li
-            key={key}
-            className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex gap-4"
+          <div
+            key={place.id ?? `${place.name}-${idx}`}
+            className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3 hover:border-indigo-200 transition-colors"
           >
-            <div className="w-24 h-24 shrink-0 bg-gray-100 relative">
-              {p.imageUrl ? (
-                <Image
-                  src={p.imageUrl}
-                  alt={p.name}
-                  fill
-                  className="object-cover"
-                  sizes="96px"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <MapPin size={28} />
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0 py-3 pr-3">
-              <h3 className="font-semibold text-gray-900 truncate">{p.name}</h3>
-              {p.rating != null && (
-                <p className="flex items-center gap-1 text-sm text-amber-600 mt-0.5">
-                  <Star size={14} fill="currentColor" /> {p.rating}
+            {place.imageUrl && (
+              <img
+                src={place.imageUrl}
+                alt={place.name}
+                className="h-16 w-16 rounded-lg object-cover shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-gray-900 truncate">{place.name}</p>
+              {place.rating != null && (
+                <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                  <Star size={12} className="text-amber-500 fill-amber-500" />
+                  {place.rating.toFixed(1)}
                 </p>
               )}
-              {p.address && (
-                <p className="text-xs text-gray-500 truncate mt-1 flex items-center gap-1">
-                  <MapPin size={12} /> {p.address}
-                </p>
+              {place.address && (
+                <p className="text-xs text-gray-400 truncate mt-0.5">{place.address}</p>
               )}
             </div>
-            <div className="flex items-center pr-3">
-              <button
-                type="button"
-                onClick={() => onAdd(p)}
-                disabled={added}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  added
-                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                    : 'bg-primary text-white hover:bg-primary/90'
-                }`}
-              >
-                <Plus size={16} /> {added ? 'Added' : 'Add to Trip'}
-              </button>
-            </div>
-          </li>
+            <button
+              type="button"
+              onClick={() => onAdd(place)}
+              disabled={added}
+              className={`shrink-0 self-center p-2 rounded-lg transition-colors ${
+                added
+                  ? 'bg-emerald-100 text-emerald-600 cursor-default'
+                  : 'bg-primary/10 text-primary hover:bg-primary/20'
+              }`}
+              title={added ? 'Added' : 'Add to itinerary'}
+            >
+              <Plus size={16} />
+            </button>
+          </div>
         )
       })}
-    </ul>
+    </div>
   )
 }
