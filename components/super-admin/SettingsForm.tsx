@@ -3,7 +3,16 @@
 import { useState, useEffect } from 'react'
 import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
-const KEYS = ['app_name', 'support_email', 'maintenance_mode', 'allow_registration', 'session_timeout_minutes'] as const
+const KEYS = [
+  'app_name',
+  'support_email',
+  'maintenance_mode',
+  'allow_registration',
+  'session_timeout_minutes',
+  'maintenance_message',
+  'maintenance_start_time',
+  'maintenance_end_time'
+] as const
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   app_name: 'UniLife',
@@ -11,6 +20,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   maintenance_mode: 'false',
   allow_registration: 'true',
   session_timeout_minutes: '60',
+  maintenance_message: 'The system will be undergoing scheduled maintenance.',
+  maintenance_start_time: '',
+  maintenance_end_time: '',
 }
 
 type SettingsState = Record<string, string>
@@ -21,6 +33,9 @@ const LABELS: Record<string, string> = {
   maintenance_mode: 'Maintenance mode',
   allow_registration: 'Allow new registrations',
   session_timeout_minutes: 'Session timeout (minutes)',
+  maintenance_message: 'Maintenance Message',
+  maintenance_start_time: 'Warning Start Time',
+  maintenance_end_time: 'Warning End Time',
 }
 
 export default function SettingsForm() {
@@ -74,6 +89,9 @@ export default function SettingsForm() {
           maintenance_mode: settings.maintenance_mode === 'true' ? 'true' : 'false',
           allow_registration: settings.allow_registration === 'true' ? 'true' : 'false',
           session_timeout_minutes: settings.session_timeout_minutes || '60',
+          maintenance_message: settings.maintenance_message || '',
+          maintenance_start_time: settings.maintenance_start_time || '',
+          maintenance_end_time: settings.maintenance_end_time || '',
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -178,7 +196,7 @@ export default function SettingsForm() {
           <h2 className="text-lg font-semibold text-gray-900">Maintenance</h2>
           <p className="text-sm text-gray-500 mt-0.5">Take the app offline for updates.</p>
         </div>
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{LABELS.maintenance_mode}</label>
             <select
@@ -189,6 +207,39 @@ export default function SettingsForm() {
               <option value="false">Off</option>
               <option value="true">On (show maintenance page)</option>
             </select>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{LABELS.maintenance_start_time}</label>
+              <input
+                type="datetime-local"
+                value={settings.maintenance_start_time ?? ''}
+                onChange={(e) => handleChange('maintenance_start_time', e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{LABELS.maintenance_end_time}</label>
+              <input
+                type="datetime-local"
+                value={settings.maintenance_end_time ?? ''}
+                onChange={(e) => handleChange('maintenance_end_time', e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{LABELS.maintenance_message}</label>
+            <textarea
+              rows={3}
+              value={settings.maintenance_message ?? ''}
+              onChange={(e) => handleChange('maintenance_message', e.target.value)}
+              placeholder="Enter the message to display during the scheduled maintenance window..."
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">If the current time is between the start and end times above, this warning will pop up for all users.</p>
           </div>
         </div>
       </div>

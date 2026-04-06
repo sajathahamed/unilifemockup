@@ -24,7 +24,7 @@ function redirectWithSessionCookies(
 }
 
 // Routes that don't require authentication
-const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/reset-password']
+const publicRoutes = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/reset-password', '/maintenance']
 
 // Role-based route prefixes (no generic vendor - only vendor-food, vendor-laundry)
 const roleRoutes: Record<string, string[]> = {

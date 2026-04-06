@@ -71,6 +71,21 @@ export default function LoginPage() {
         throw new Error('User profile not found. Please contact support.')
       }
 
+      // Check maintenance mode
+      const { data: maintenanceData } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'maintenance_mode')
+        .single()
+      
+      const isMaintenance = maintenanceData?.value === 'true'
+
+      if (isMaintenance && userRole !== 'super_admin') {
+        await supabase.auth.signOut()
+        window.location.assign('/maintenance')
+        return
+      }
+
       // Full-page redirect so the destination loads in a normal request (avoids RSC fetch failure in router)
       const redirectPath = getRoleBasedRedirect(userRole as UserRole)
       window.location.assign(redirectPath)

@@ -80,7 +80,6 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
     { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
     { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
-    { label: 'Add User', href: '/admin/users/new', icon: UserPlus },
   ],
   'vendor-food': [
     { label: 'Dashboard', href: '/vendor/dashboard', icon: LayoutDashboard },
@@ -109,15 +108,6 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: 'System Analytics', href: '/super-admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/super-admin/settings', icon: Settings },
     { label: 'Page Management', href: '/super-admin/pages', icon: LayoutList },
-    // Admin pages (super_admin can access all admin features)
-    { label: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Admin Users', href: '/admin/users', icon: Users },
-    { label: 'Admin Timetable', href: '/admin/timetable', icon: Calendar },
-    { label: 'Admin Reports', href: '/admin/reports', icon: BarChart3 },
-    { label: 'Admin Announcements', href: '/admin/announcements', icon: Bell },
-    { label: 'Laundry Shops', href: '/admin/laundry/add', icon: Truck },
-    { label: 'Food Stalls', href: '/admin/food-stalls/add', icon: Utensils },
-    { label: 'Trip Locations', href: '/admin/trips/add', icon: MapPin },
   ],
   vendor: []
 }

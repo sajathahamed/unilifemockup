@@ -1,7 +1,7 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { createClient } from '@/lib/supabase/server'
-import { Bell, MapPin, Truck, TrendingUp, Users, Utensils, UserPlus, FileText } from 'lucide-react'
+import { Bell, MapPin, Truck, TrendingUp, Users, Utensils, FileText } from 'lucide-react'
 import Link from 'next/link'
 
 type Role = 'student' | 'lecturer' | 'admin' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
@@ -73,7 +73,6 @@ export default async function AdminDashboard() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <ActionButton href="/admin/users/new" label="Add New User" icon={UserPlus} />
               <ActionButton href="/admin/food-stalls/add" label="Register Food Stall" icon={Utensils} />
               <ActionButton href="/admin/laundry/add" label="Register Laundry Shop" icon={Truck} />
               <ActionButton href="/admin/trips/add" label="Add Trip Location" icon={MapPin} />

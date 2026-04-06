@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getRoleBasedRedirect, UserRole } from '@/lib/auth'
-import { AuthLayout, GoogleButton, Button, Input, Select, Alert } from '@/components'
+import { GoogleButton, Button, Input, Select, Alert } from '@/components'
 
 // Available roles for signup (no generic vendor - only vendor-food, vendor-laundry)
 const roleOptions = [
@@ -204,191 +204,265 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <AuthLayout title="Check your email" subtitle="We've sent you a confirmation link">
+      <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 relative animate-pulse" />
+          <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse animation-delay-4000" />
+        </div>
+
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-4"
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative z-10 p-10 bg-white/80 backdrop-blur-2xl border border-white rounded-[2rem] shadow-2xl max-w-lg w-full text-center mx-4"
         >
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+          <div className="w-24 h-24 bg-gradient-to-tr from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-green-200 mb-8 transform rotate-3 hover:rotate-0 transition-transform">
             <motion.svg
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="w-8 h-8 text-green-500"
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="w-12 h-12 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <motion.path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
+              <motion.path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </motion.svg>
           </div>
-          <p className="text-gray-600">
-            Please check your email at <strong>{formData.email}</strong> and click the confirmation
-            link to activate your account.
+          <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 mb-3 tracking-tight">Check your email</h2>
+          <p className="text-gray-500 mb-8 text-lg font-medium">
+            We've sent a verification link to <span className="font-bold text-indigo-600 block mt-1">{formData.email}</span>
           </p>
           <Link
             href="/login"
-            className="inline-block text-primary hover:text-primary/80 font-medium transition-colors"
+            className="inline-flex items-center justify-center w-full py-4 px-6 rounded-xl text-white font-semibold flex gap-2 bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 shadow-md transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
           >
-            Back to login
+            Go to Login
           </Link>
         </motion.div>
-      </AuthLayout>
+      </div>
     )
   }
 
   return (
-    <AuthLayout
-      title="Create your account"
-      subtitle="Join UniLife and simplify your campus life"
-    >
-      <AnimatePresence mode="wait">
-        {generalError && (
-          <motion.div
-            key="error"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-6"
-          >
-            <Alert type="error" message={generalError} onClose={() => setGeneralError(null)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Google Sign Up */}
-      <GoogleButton
-        onClick={handleGoogleSignup}
-        isLoading={isGoogleLoading}
-        text="Sign up with Google"
-      />
-
-      {/* Divider */}
-      <div className="flex items-center gap-4 my-6">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-sm text-gray-400">or register with email</span>
-        <div className="flex-1 h-px bg-gray-200" />
+    <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-[#f4f7fb]">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute -top-32 -left-32 w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-indigo-500/10 rounded-full filter blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-purple-500/10 rounded-full filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Registration Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Full name"
-          type="text"
-          placeholder="Student"
-          icon={User}
-          value={formData.fullName}
-          onChange={(e) => updateField('fullName', e.target.value)}
-          error={errors.fullName}
-          disabled={isLoading}
-          autoComplete="name"
-        />
+      <div className="relative z-10 w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] rounded-[2.5rem] overflow-hidden bg-white/70 backdrop-blur-xl border border-white m-4 lg:m-8">
+        
+        {/* Left Side: Editorial Banner */}
+        <div className="hidden lg:flex w-[48%] bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 p-12 flex-col justify-between relative overflow-hidden text-white">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+          
+          <div className="relative z-10">
+            <Link href="/" className="inline-block hover:scale-105 transition-transform duration-300">
+              <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 shadow-xl">
+                <span className="text-2xl font-black text-white">UL</span>
+              </div>
+            </Link>
+          </div>
 
-        <Input
-          label="Email address"
-          type="email"
-          placeholder="you@university.edu"
-          icon={Mail}
-          value={formData.email}
-          onChange={(e) => updateField('email', e.target.value)}
-          error={errors.email}
-          disabled={isLoading}
-          autoComplete="email"
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="Password"
-            type="password"
-            placeholder="Min. 8 characters"
-            icon={Lock}
-            value={formData.password}
-            onChange={(e) => updateField('password', e.target.value)}
-            error={errors.password}
-            disabled={isLoading}
-            autoComplete="new-password"
-          />
-
-          <Input
-            label="Confirm password"
-            type="password"
-            placeholder="Confirm password"
-            icon={Lock}
-            value={formData.confirmPassword}
-            onChange={(e) => updateField('confirmPassword', e.target.value)}
-            error={errors.confirmPassword}
-            disabled={isLoading}
-            autoComplete="new-password"
-          />
+          <div className="relative z-10 mb-20 space-y-8">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[3.5rem] font-black leading-[1.05] tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-indigo-200"
+            >
+              Start your<br/>campus journey<br/><span className="text-indigo-400">today.</span>
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-lg text-indigo-100/70 max-w-sm font-medium leading-relaxed"
+            >
+              Join thousands of students and staff making campus life easier, smarter, and more connected.
+            </motion.p>
+            
+            <div className="pt-8 grid grid-cols-2 gap-x-6 gap-y-8">
+              {[
+                { title: 'Smart Timetable', desc: 'Never miss a class' },
+                { title: 'Campus Food', desc: 'Order direct to dorm' },
+                { title: 'Laundry', desc: 'Doorstep pickup' },
+                { title: 'Connect', desc: 'Find study groups' },
+              ].map((item, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + (i * 0.1) }}
+                  className="flex flex-col gap-1 border-l-2 border-indigo-500/30 pl-4"
+                >
+                  <span className="font-bold text-white tracking-wide">{item.title}</span>
+                  <span className="text-sm text-indigo-300/70">{item.desc}</span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <Select
-          label="I am a..."
-          options={roleOptions}
-          placeholder="Select your role"
-          value={formData.role}
-          onChange={(e) => updateField('role', e.target.value)}
-          error={errors.role}
-          disabled={isLoading}
-        />
+        {/* Right Side: Signup Form */}
+        <div className="w-full lg:w-[52%] p-8 sm:p-12 lg:p-16 flex flex-col justify-center bg-white/60 relative">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-md w-full mx-auto"
+          >
+            {/* Mobile Title */}
+            <div className="lg:hidden mb-10 text-center">
+              <div className="w-14 h-14 bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-6">
+                 <span className="text-2xl font-black text-white">UL</span>
+              </div>
+              <h2 className="text-3xl font-black text-gray-900 tracking-tight">Create account</h2>
+            </div>
 
-        <Select
-          label="University"
-          icon={Building2}
-          options={universityOptions}
-          value={formData.university}
-          onChange={(e) => updateField('university', e.target.value)}
-          helperText="Optional - helps connect you with campus services"
-          disabled={isLoading}
-        />
+            {/* Desktop Title */}
+            <div className="hidden lg:block mb-8">
+              <h2 className="text-3xl font-black text-gray-900 tracking-tight">Create account</h2>
+              <p className="text-gray-500 font-medium mt-2">Sign up in seconds, unlock your campus.</p>
+            </div>
 
-        <div className="pt-2">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              required
-              className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <span className="text-sm text-gray-600">
-              I agree to the{' '}
-              <Link href="/terms" className="text-primary hover:underline">
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link href="/privacy" className="text-primary hover:underline">
-                Privacy Policy
+            <AnimatePresence mode="wait">
+              {generalError && (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-6 overflow-hidden"
+                >
+                  <Alert type="error" message={generalError} onClose={() => setGeneralError(null)} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="hover:scale-[1.01] transition-transform duration-300">
+              <GoogleButton
+                onClick={handleGoogleSignup}
+                isLoading={isGoogleLoading}
+                text="Continue with Google"
+              />
+            </div>
+
+            <div className="flex items-center gap-4 my-8">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">or register using email</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                label="Full name"
+                type="text"
+                placeholder="John Doe"
+                icon={User}
+                value={formData.fullName}
+                onChange={(e) => updateField('fullName', e.target.value)}
+                error={errors.fullName}
+                disabled={isLoading}
+              />
+
+              <Input
+                label="Email address"
+                type="email"
+                placeholder="you@university.edu"
+                icon={Mail}
+                value={formData.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                error={errors.email}
+                disabled={isLoading}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="Min. 8 chars"
+                  icon={Lock}
+                  value={formData.password}
+                  onChange={(e) => updateField('password', e.target.value)}
+                  error={errors.password}
+                  disabled={isLoading}
+                />
+
+                <Input
+                  label="Confirm password"
+                  type="password"
+                  placeholder="Repeat password"
+                  icon={Lock}
+                  value={formData.confirmPassword}
+                  onChange={(e) => updateField('confirmPassword', e.target.value)}
+                  error={errors.confirmPassword}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <Select
+                  label="I am a..."
+                  options={roleOptions}
+                  placeholder="Select role"
+                  value={formData.role}
+                  onChange={(e) => updateField('role', e.target.value)}
+                  error={errors.role}
+                  disabled={isLoading}
+                />
+
+                <Select
+                  label="University (Optional)"
+                  options={universityOptions}
+                  icon={Building2}
+                  value={formData.university}
+                  onChange={(e) => updateField('university', e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    required
+                    className="w-4 h-4 mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 shadow-sm"
+                  />
+                  <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition-colors">
+                    I agree to the{' '}
+                    <Link href="/terms" className="text-gray-900 font-semibold border-b border-gray-900/30 hover:border-gray-900 transition-colors">Terms of Service</Link>
+                    {' '}and{' '}
+                    <Link href="/privacy" className="text-gray-900 font-semibold border-b border-gray-900/30 hover:border-gray-900 transition-colors">Privacy Policy</Link>
+                  </span>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-6 py-3.5 px-6 rounded-xl text-white font-bold tracking-wide bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-gray-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-sm flex justify-center items-center gap-2"
+              >
+                {isLoading ? (
+                  <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </form>
+
+            <p className="mt-10 text-center text-sm font-medium text-gray-500">
+              Already have an account?{' '}
+              <Link
+                href="/login"
+                className="text-indigo-600 hover:text-indigo-700 font-bold tracking-wide"
+              >
+                Sign in securely
               </Link>
-            </span>
-          </label>
+            </p>
+          </motion.div>
         </div>
-
-        <Button
-          type="submit"
-          fullWidth
-          size="lg"
-          isLoading={isLoading}
-          className="mt-6"
-        >
-          Create account
-        </Button>
-      </form>
-
-      {/* Sign in link */}
-      <p className="mt-8 text-center text-sm text-gray-500">
-        Already have an account?{' '}
-        <Link
-          href="/login"
-          className="text-primary hover:text-primary/80 font-medium transition-colors"
-        >
-          Sign in
-        </Link>
-      </p>
-    </AuthLayout>
+      </div>
+    </div>
   )
 }

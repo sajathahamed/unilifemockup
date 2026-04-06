@@ -7,6 +7,9 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   app_name: 'UniLife',
   support_email: 'support@unilife.edu',
   maintenance_mode: 'false',
+  maintenance_message: 'The system will be undergoing scheduled maintenance.',
+  maintenance_start_time: '',
+  maintenance_end_time: '',
   allow_registration: 'true',
   session_timeout_minutes: '60',
 }
@@ -63,7 +66,16 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const keys = ['app_name', 'support_email', 'maintenance_mode', 'allow_registration', 'session_timeout_minutes']
+    const keys = [
+      'app_name',
+      'support_email',
+      'maintenance_mode',
+      'maintenance_message',
+      'maintenance_start_time',
+      'maintenance_end_time',
+      'allow_registration',
+      'session_timeout_minutes'
+    ]
     const rows = keys
       .filter((k) => body[k] !== undefined)
       .map((key) => ({ key, value: String(body[key]) }))

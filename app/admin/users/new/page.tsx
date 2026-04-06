@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminNewUserPage() {
-    const user = await requireRole('admin')
+    const user = await requireRole('super_admin')
 
     return (
         <DashboardLayout user={user}>

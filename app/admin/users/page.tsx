@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { Users, UserPlus } from 'lucide-react'
+import { Users } from 'lucide-react'
 import Link from 'next/link'
 import { Button, UserList } from '@/components'
 import { fetchAllUsers } from '@/lib/supabase/admin'
@@ -26,12 +26,6 @@ export default async function AdminUsersPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Users</h1>
                         <p className="text-sm text-gray-500">Manage students, lecturers, and service providers.</p>
                     </div>
-                    <Link href="/admin/users/new">
-                        <Button className="flex items-center gap-2">
-                            <UserPlus size={18} />
-                            Add New User
-                        </Button>
-                    </Link>
                 </div>
 
                 {/* Stats */}

@@ -67,7 +67,7 @@ export const PAGE_REGISTRY: PageRecord[] = [
   { id: 37, path: '/admin/food-stalls/add', label: 'Add Food Stall', role: 'admin', icon: 'Utensils', sort_order: 7 },
   { id: 38, path: '/admin/timetable/add', label: 'Add Timetable', role: 'admin', icon: 'Calendar', sort_order: 8 },
   { id: 39, path: '/admin/trips/add', label: 'Add Trip Location', role: 'admin', icon: 'MapPin', sort_order: 9 },
-  { id: 40, path: '/admin/users/new', label: 'Add User', role: 'admin', icon: 'UserPlus', sort_order: 10 },
+  { id: 40, path: '/admin/users/new', label: 'Add User', role: 'super_admin', icon: 'UserPlus', sort_order: 10 },
 ]
 
 /** Default nav items per role (when DB has no permissions yet). vendor-laundry also gets shared vendor pages (dashboard, products, etc) excluding food Orders. */
