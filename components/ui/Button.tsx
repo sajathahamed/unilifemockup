@@ -18,17 +18,17 @@ interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-white hover:bg-primary/90 shadow-sm',
-  secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-  outline: 'border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300',
-  ghost: 'bg-transparent text-gray-600 hover:bg-gray-100',
-  danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm',
+  primary: 'bg-gradient-primary text-white hover:shadow-glow-lg',
+  secondary: 'bg-glass text-text-primary border border-glassBorder hover:bg-glassBorder hover:border-primary/30',
+  outline: 'border-2 border-glassBorder bg-transparent text-text-primary hover:bg-glass hover:border-primary',
+  ghost: 'bg-transparent text-text-secondary hover:text-text-primary hover:bg-glass',
+  danger: 'bg-red-500/80 text-white hover:bg-red-600',
 }
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'px-3 py-2 text-sm gap-1.5',
-  md: 'px-4 py-2.5 text-sm gap-2',
-  lg: 'px-6 py-3 text-base gap-2',
+  sm: 'px-3 py-2 text-sm gap-1.5 rounded-lg',
+  md: 'px-4 py-2.5 text-sm gap-2 rounded-xl',
+  lg: 'px-6 py-3 text-base gap-2 rounded-xl',
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -50,11 +50,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <motion.button
         ref={ref}
-        whileHover={{ scale: disabled || isLoading ? 1 : 1.01 }}
+        whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
         whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
         className={`
-          inline-flex items-center justify-center font-medium rounded-xl
-          transition-colors duration-200
+          inline-flex items-center justify-center font-semibold
+          transition-all duration-300
           disabled:opacity-50 disabled:cursor-not-allowed
           ${variants[variant]}
           ${sizes[size]}
