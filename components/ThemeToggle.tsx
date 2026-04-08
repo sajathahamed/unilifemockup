@@ -1,15 +1,31 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Sun, Moon } from 'lucide-react'
 
 export default function ThemeToggle() {
-  const isDark = typeof window !== 'undefined' && document.body.classList.contains('dark-mode')
+  const [isDark, setIsDark] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem('theme')
+    setIsDark(stored !== 'light')
+  }, [])
 
   const toggleTheme = () => {
     const newTheme = isDark ? 'light' : 'dark'
     localStorage.setItem('theme', newTheme)
     window.location.reload()
+  }
+
+  if (!mounted) {
+    return (
+      <div className="px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+        <span>Dark</span>
+      </div>
+    )
   }
 
   return (

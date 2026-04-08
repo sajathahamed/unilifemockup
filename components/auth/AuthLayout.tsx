@@ -54,8 +54,8 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
             {[
               { label: 'Course Management', icon: '📚' },
               { label: 'Campus Food', icon: '🍕' },
-              { label: 'Study Groups', icon: '👥' },
-              { label: 'Campus Rides', icon: '🚗' },
+              { label: 'Time Management', icon: '👥' },
+              { label: 'Trip Planning', icon: '🚗' },
             ].map((feature, i) => (
               <motion.div
                 key={feature.label}
