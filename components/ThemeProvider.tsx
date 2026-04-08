@@ -7,39 +7,36 @@ type Theme = 'dark' | 'light'
 interface ThemeContextType {
   theme: Theme
   toggleTheme: () => void
-  setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
+  const [theme, setTheme] = useState<Theme>('dark')
 
   useEffect(() => {
     const stored = localStorage.getItem('theme') as Theme | null
-    if (stored) {
-      setThemeState(stored)
-      document.documentElement.setAttribute('data-theme', stored)
-    } else {
-      document.documentElement.setAttribute('data-theme', 'dark')
-    }
+    const currentTheme = (stored || 'dark') as Theme
+    setTheme(currentTheme)
+    document.documentElement.setAttribute('data-theme', currentTheme)
+    document.body.className = `${currentTheme}-mode`
+    
+    // Load CSS
+    const link = document.createElement('link')
+    link.id = 'theme-stylesheet'
+    link.rel = 'stylesheet'
+    link.href = `/${currentTheme}.css`
+    document.head.appendChild(link)
   }, [])
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
-    setThemeState(newTheme)
     localStorage.setItem('theme', newTheme)
-    document.documentElement.setAttribute('data-theme', newTheme)
-  }
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.setAttribute('data-theme', newTheme)
+    window.location.reload()
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

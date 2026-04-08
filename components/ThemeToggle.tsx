@@ -2,35 +2,39 @@
 
 import { motion } from 'framer-motion'
 import { Sun, Moon } from 'lucide-react'
-import { useTheme } from './ThemeProvider'
 
 export default function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme()
+  const isDark = typeof window !== 'undefined' && document.body.classList.contains('dark-mode')
+
+  const toggleTheme = () => {
+    const newTheme = isDark ? 'light' : 'dark'
+    localStorage.setItem('theme', newTheme)
+    window.location.reload()
+  }
 
   return (
     <motion.button
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={toggleTheme}
-      className="relative w-14 h-8 rounded-full bg-glass border border-glassBorder flex items-center p-1 cursor-pointer transition-colors hover:border-primary/50"
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2"
+      style={{
+        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+        border: `1px solid ${isDark ? '#334155' : '#000000'}`,
+        color: isDark ? '#ffffff' : '#000000',
+      }}
     >
-      <motion.div
-        animate={{ x: theme === 'dark' ? 0 : 24 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        className="w-6 h-6 rounded-full flex items-center justify-center"
-        style={{
-          background: theme === 'dark' 
-            ? 'linear-gradient(135deg, #2ec118 0%, #5dd842 100%)' 
-            : 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-        }}
-      >
-        {theme === 'dark' ? (
-          <Moon size={14} className="text-white" />
-        ) : (
-          <Sun size={14} className="text-white" />
-        )}
-      </motion.div>
+      {isDark ? (
+        <>
+          <Sun size={16} />
+          <span>Light</span>
+        </>
+      ) : (
+        <>
+          <Moon size={16} />
+          <span>Dark</span>
+        </>
+      )}
     </motion.button>
   )
 }
