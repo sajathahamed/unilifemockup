@@ -11,7 +11,20 @@ import { UserProfile } from '@/lib/auth'
 import { getMenuForShop, MenuCategory, MenuItem } from '@/lib/food-utils'
 
 const PRICE_MAP: Record<number, string> = { 0: 'Free', 1: 'Rs', 2: 'Rs', 3: 'Rs', 4: 'Rs' }
-const CATEGORY_EMOJI: Record<string, string> = { mains: '🍛', drinks: '🥤', snacks: '🥐', desserts: '🍨', default: '🍽️' }
+const CATEGORY_EMOJI: Record<string, string> = {
+    mains: '🍛',
+    main: '🍛',
+    'fast food': '🍔',
+    fast_food: '🍔',
+    drinks: '🥤',
+    drink: '🥤',
+    snacks: '🥐',
+    sides: '🍟',
+    desserts: '🍨',
+    restaurant: '🍜',
+    canteen: '🍛',
+    default: '🍽️',
+}
 
 function formatTime(v: string | null): string {
     if (!v) return '—'
@@ -20,28 +33,35 @@ function formatTime(v: string | null): string {
     return match ? `${match[1]}:${match[2]} AM` : s
 }
 
-function mapDbMenuToCategories(menuItems: { id: number; name: string; price: number | string; food_category?: string | null }[]): MenuCategory[] {
-    const byCat: Record<string, MenuItem[]> = {}
+type MenuItemWithStock = MenuItem & { available?: boolean }
+
+function mapDbMenuToCategories(menuItems: { id: number; name: string; price: number | string; food_category?: string | null; is_available?: boolean }[]): MenuCategory[] {
+    const byCat: Record<string, MenuItemWithStock[]> = {}
     for (const m of menuItems) {
         const cat = m.food_category?.trim() || 'items'
         if (!byCat[cat]) byCat[cat] = []
+        const emojiKey = cat.toLowerCase().trim().replace(/\s+/g, ' ')
+        const emojiKeyNormalized = emojiKey.replace(/\s+/g, '_')
+        const emoji = CATEGORY_EMOJI[emojiKey] || CATEGORY_EMOJI[emojiKeyNormalized] || CATEGORY_EMOJI[cat.toLowerCase()] || CATEGORY_EMOJI.default
         byCat[cat].push({
             id: String(m.id),
             name: m.name,
             description: m.food_category || '',
             price: Number(m.price) || 0,
-            emoji: CATEGORY_EMOJI[cat.toLowerCase()] || CATEGORY_EMOJI.default,
+            emoji,
+            available: m.is_available !== false,
         })
     }
     return Object.entries(byCat).map(([id, items]) => ({
         id,
         label: id.charAt(0).toUpperCase() + id.slice(1),
-        emoji: CATEGORY_EMOJI[id.toLowerCase()] || CATEGORY_EMOJI.default,
+        emoji: CATEGORY_EMOJI[id.toLowerCase()] || CATEGORY_EMOJI[id.toLowerCase().replace(/\s+/g, '_')] || CATEGORY_EMOJI.default,
         items,
     }))
 }
 
-function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) => void }) {
+function MenuItemCard({ item, onAdd }: { item: MenuItemWithStock; onAdd: (i: MenuItemWithStock) => void }) {
+    const available = item.available !== false
     return (
         <div className="flex items-center gap-4 py-4 border-b border-gray-50 last:border-0">
             <div className="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-2xl flex-shrink-0">
@@ -58,15 +78,57 @@ function MenuItemCard({ item, onAdd }: { item: MenuItem; onAdd: (i: MenuItem) =>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.description}</p>
                 <p className="text-sm font-bold text-gray-900 mt-1">Rs {item.price.toFixed(2)}</p>
+                <p className={`text-xs mt-1 font-semibold ${available ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {available ? 'Available' : 'This item is not available'}
+                </p>
             </div>
             <button
                 onClick={() => onAdd(item)}
-                className="w-9 h-9 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-sm"
+                disabled={!available}
+                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-sm ${available ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
                 <Plus size={18} />
             </button>
         </div>
     )
+}
+
+type StoredCartItem = { id: string; name: string; price: number; emoji: string; qty: number }
+
+function getCartKey(userId: number, shopId: string) {
+    return `unilife_food_cart:${userId}:${shopId}`
+}
+
+function readCart(userId: number, shopId: string): StoredCartItem[] {
+    try {
+        const raw = localStorage.getItem(getCartKey(userId, shopId))
+        if (!raw) return []
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return []
+        return parsed
+            .map((i: any) => ({
+                id: String(i?.id ?? ''),
+                name: String(i?.name ?? ''),
+                price: Number(i?.price ?? 0),
+                emoji: String(i?.emoji ?? '🍽️'),
+                qty: Math.max(1, Number(i?.qty ?? 1)),
+            }))
+            .filter((i) => i.id && i.name)
+    } catch {
+        return []
+    }
+}
+
+function writeCart(userId: number, shopId: string, cart: StoredCartItem[]) {
+    try {
+        localStorage.setItem(getCartKey(userId, shopId), JSON.stringify(cart))
+    } catch {
+        // ignore
+    }
+}
+
+function countCart(cart: StoredCartItem[]) {
+    return cart.reduce((acc, i) => acc + (i.qty || 0), 0)
 }
 
 export default function ShopDetailClient({ user, shopId }: { user: UserProfile; shopId: string }) {
@@ -75,6 +137,17 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
 
     const isDbStall = shopId?.startsWith?.('db-') ?? false
     const stallId = isDbStall ? shopId?.replace?.('db-', '') ?? null : null
+    const queryStallId = searchParams.get('stallId')
+
+    // Normalize shop id so the cart key matches across pages.
+    // Examples:
+    // - `db-8` stays `db-8`
+    // - `8` becomes `db-8`
+    // - if a `stallId` query param exists, prefer `db-${stallId}`
+    const cartShopId =
+        shopId?.startsWith?.('db-') ? shopId
+            : (/^\d+$/.test(shopId) ? `db-${shopId}` : null) ??
+                (queryStallId && /^\d+$/.test(queryStallId) ? `db-${queryStallId}` : shopId)
 
     const [stallData, setStallData] = useState<{
         shop_name: string
@@ -84,7 +157,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
         is_open?: boolean
         opening_time?: string | null
         closing_time?: string | null
-        menu_items: { id: number; name: string; price: number | string; food_category?: string | null }[]
+        menu_items: { id: number; name: string; price: number | string; food_category?: string | null; is_available?: boolean }[]
     } | null>(null)
     const [loading, setLoading] = useState(isDbStall)
     const [error, setError] = useState<string | null>(null)
@@ -101,6 +174,21 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
 
     const [activeCategory, setActiveCategory] = useState('mains')
     const [cartCount, setCartCount] = useState(0)
+
+    const refreshCartCount = async () => {
+        try {
+            const res = await fetch(`/api/student/cart-items?cart_type=food&shop_ref=${encodeURIComponent(cartShopId)}`)
+            const data = await res.json().catch(() => null)
+            if (!res.ok || !Array.isArray(data?.items)) {
+                setCartCount(0)
+                return
+            }
+            const total = data.items.reduce((acc: number, i: any) => acc + Math.max(0, Number(i?.qty ?? 0)), 0)
+            setCartCount(total)
+        } catch {
+            setCartCount(0)
+        }
+    }
 
     // Menu: from DB if available, else mock
     const tags = searchParams.get('tags')?.split(',') ?? []
@@ -119,15 +207,45 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
         if (isDbStall && stallId) {
             setLoading(true)
             fetch(`/api/student/food-stalls/${stallId}`)
-                .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Not found'))))
+                .then(async (r) => {
+                    if (!r.ok) {
+                        const text = await r.text().catch(() => '')
+                        throw new Error(`HTTP ${r.status}${text ? `: ${text.slice(0, 200)}` : ''}`)
+                    }
+                    return r.json()
+                })
                 .then(setStallData)
                 .catch((e) => setError(e?.message ?? 'Failed to load'))
                 .finally(() => setLoading(false))
         }
     }, [isDbStall, stallId])
 
+    useEffect(() => {
+        refreshCartCount()
+    }, [user.id, cartShopId])
+
+    const addToCart = async (item: MenuItemWithStock) => {
+        if (item.available === false) return
+        await fetch('/api/student/cart-items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cart_type: 'food',
+                shop_ref: cartShopId,
+                item_ref: item.id,
+                item_name: item.name,
+                item_description: item.description || '',
+                item_emoji: item.emoji || '🍽️',
+                unit_price: Number(item.price) || 0,
+                qty_delta: 1,
+            }),
+        })
+        await refreshCartCount()
+    }
+
     const orderParams = new URLSearchParams({ name, photo })
     if (isDbStall && stallId) orderParams.set('stallId', stallId)
+    if (tags.length) orderParams.set('tags', tags.join(','))
     const orderUrl = `/student/food-order/${encodeURIComponent(shopId)}/order?${orderParams}`
 
     if (loading && isDbStall) {
@@ -241,7 +359,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
                         className="px-4"
                     >
                         {activeMenu?.items.map((item) => (
-                            <MenuItemCard key={item.id} item={item} onAdd={() => setCartCount((c) => c + 1)} />
+                            <MenuItemCard key={item.id} item={item} onAdd={addToCart} />
                         ))}
                     </motion.div>
                 </div>

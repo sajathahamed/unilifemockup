@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, User, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getRoleBasedRedirect, UserRole } from '@/lib/auth'
-import { GoogleButton, Button, Input, Select, Alert } from '@/components'
+import { AuthLayout, GoogleButton, Button, Input, Select, Alert } from '@/components'
 
 // Available roles for signup (no generic vendor - only vendor-food, vendor-laundry)
 const roleOptions = [
@@ -38,7 +38,6 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: '',
     university: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -77,10 +76,6 @@ export default function SignupPage() {
       newErrors.confirmPassword = 'Passwords do not match'
     }
 
-    if (!formData.role) {
-      newErrors.role = 'Please select a role'
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -106,7 +101,7 @@ export default function SignupPage() {
         options: {
           data: {
             name: formData.fullName,
-            role: formData.role,
+            role: 'student',
           },
         },
       })
@@ -132,7 +127,7 @@ export default function SignupPage() {
           auth_id: authData.user.id,
           email: formData.email,
           name: formData.fullName,
-          role: formData.role,
+          role: 'student',
           uni_id: formData.university ? parseInt(formData.university) : null,
         })
 
@@ -148,7 +143,7 @@ export default function SignupPage() {
       // If email confirmation is disabled, redirect immediately
       if (authData.session) {
         setTimeout(() => {
-          const redirectPath = getRoleBasedRedirect(formData.role as UserRole)
+          const redirectPath = getRoleBasedRedirect('student')
           router.push(redirectPath)
           router.refresh()
         }, 1500)
@@ -389,28 +384,28 @@ export default function SignupPage() {
                   disabled={isLoading}
                 />
 
-                <Input
-                  label="Confirm password"
-                  type="password"
-                  placeholder="Repeat password"
-                  icon={Lock}
-                  value={formData.confirmPassword}
-                  onChange={(e) => updateField('confirmPassword', e.target.value)}
-                  error={errors.confirmPassword}
-                  disabled={isLoading}
-                />
-              </div>
+          <Input
+            label="Confirm password"
+            type="password"
+            placeholder="Confirm password"
+            icon={Lock}
+            value={formData.confirmPassword}
+            onChange={(e) => updateField('confirmPassword', e.target.value)}
+            error={errors.confirmPassword}
+            disabled={isLoading}
+            autoComplete="new-password"
+          />
+        </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <Select
-                  label="I am a..."
-                  options={roleOptions}
-                  placeholder="Select role"
-                  value={formData.role}
-                  onChange={(e) => updateField('role', e.target.value)}
-                  error={errors.role}
-                  disabled={isLoading}
-                />
+        <Select
+          label="I am a..."
+          options={roleOptions}
+          placeholder="Select your role"
+          value={formData.role}
+          onChange={(e) => updateField('role', e.target.value)}
+          error={errors.role}
+          disabled={isLoading}
+        />
 
                 <Select
                   label="University (Optional)"

@@ -37,59 +37,80 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--background);
-  color: var(--text-primary);
-  overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: #F9FAFB;
+  color: #111827;
 }
 
-[data-theme="light"] body { background-color: #f8fafc; }
-
-::selection { background: rgba(46, 193, 24, 0.4); color: white; }
-
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--card); }
-::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
-[data-theme="light"] ::-webkit-scrollbar-track { background: #e2e8f0; }
-[data-theme="light"] ::-webkit-scrollbar-thumb { background: #cbd5e1; }
-
-.glass {
-  background: var(--glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.glass-card {
-  background: var(--card);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+::-webkit-scrollbar-track {
+  background: #F1F1F1;
+  border-radius: 10px;
 }
 
-[data-theme="light"] .glass-card {
-  background: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.08);
+::-webkit-scrollbar-thumb {
+  background: #C1C1C1;
+  border-radius: 10px;
 }
 
-.bg-gradient-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); }
-
-.bg-mesh {
-  background-color: var(--background);
-  background-image: 
-    radial-gradient(at 40% 20%, rgba(46, 193, 24, 0.15) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(46, 193, 24, 0.1) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(46, 193, 24, 0.1) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(255, 255, 255, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(46, 193, 24, 0.12) 0px, transparent 50%);
+::-webkit-scrollbar-thumb:hover {
+  background: #A1A1A1;
 }
 
-[data-theme="light"] .bg-mesh {
-  background-color: #f8fafc;
-  background-image: 
-    radial-gradient(at 40% 20%, rgba(46, 193, 24, 0.08) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(46, 193, 24, 0.04) 0px, transparent 50%);
+/* Animation Classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .grid-pattern {
@@ -289,9 +310,16 @@ tbody tr:hover { background: var(--glass); }
 .btn-outline:hover { background: var(--glass); }
 .btn-danger { @apply bg-danger text-white hover:bg-danger/90 active:scale-95; }
 
-.input { @apply w-full px-4 py-3 rounded-xl border outline-none transition-all duration-200; background: var(--glass); border-color: var(--border-color); color: var(--text-primary); }
-.input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46, 193, 24, 0.1); }
+/* Input Styles */
+.input {
+  @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-200;
+}
 
-.tab { @apply px-4 py-2 font-medium transition-colors duration-200; color: var(--text-secondary); }
-.tab:hover { color: var(--text-primary); }
-.tab-active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+/* Tab Styles */
+.tab {
+  @apply px-4 py-2 font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200;
+}
+
+.tab-active {
+  @apply text-primary border-b-2 border-primary;
+}

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -13,7 +13,10 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "ai": "^6.0.146",
+<<<<<<< HEAD
     "all": "^0.0.0",
+=======
+>>>>>>> 2f807b0e0070d2962a321a5d2a6be6af599c81c4
     "dotenv": "^17.4.0",
     "framer-motion": "^12.33.0",
     "jspdf": "^4.2.1",

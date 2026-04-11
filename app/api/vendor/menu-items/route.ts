@@ -2,67 +2,74 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
 
-async function resolveCategoryId(client: Awaited<ReturnType<typeof createClient>>, vendorId: number, categoryName?: string) {
-  const name = String(categoryName || '').trim()
-  if (!name) return null
-  const { data: existing } = await client
-    .from('food_categories')
-    .select('id')
-    .eq('vendor_id', vendorId)
-    .ilike('name', name)
-    .maybeSingle()
-  if (existing?.id) return existing.id as number
-  const { data: created } = await client
-    .from('food_categories')
-    .insert({ vendor_id: vendorId, name })
-    .select('id')
-    .single()
-  return (created?.id as number | undefined) ?? null
+const CATEGORY_TO_ID: Record<string, number> = {
+  Main: 1,
+  Snacks: 2,
+  Sides: 3,
+  Drinks: 4,
+  Desserts: 5,
 }
 
-/** GET /api/vendor/menu-items — list menu items for vendor's food stalls (optionally filtered by stall) */
-export async function GET(request: NextRequest) {
+function toCategoryId(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value)
+  const s = typeof value === 'string' ? value.trim() : ''
+  if (!s) return null
+  if (/^\d+$/.test(s)) return parseInt(s, 10)
+  return CATEGORY_TO_ID[s] ?? null
+}
+
+/** GET /api/vendor/menu-items — list menu items for vendor's food stalls */
+export async function GET() {
   try {
-    const user = await verifyRole('vendor-food')
+    const user =
+      (await verifyRole('vendor')) ||
+      (await verifyRole('vendor-food')) ||
+      (await verifyRole('vendor-laundry'))
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const email = user.email?.toLowerCase()
-    if (!email) return NextResponse.json({ items: [] })
+    if (!email) return NextResponse.json({ items: [], stalls: [] })
+    if (!user.id || user.id < 1) return NextResponse.json({ message: 'Missing vendor profile (users table)' }, { status: 400 })
 
     const client = await createClient()
-    const { data: stalls } = await client.from('food_stalls').select('id, shop_name').eq('owner_email', email)
-    const stallIds = (stalls ?? []).map((s) => s.id)
-    if (stallIds.length === 0) return NextResponse.json({ items: [], stalls: [] })
-
-    const requestedStallId = Number(request.nextUrl.searchParams.get('food_stall_id') || '')
-    const availableOnly = request.nextUrl.searchParams.get('available_only') === 'true'
-    const hasRequestedStall = Number.isFinite(requestedStallId) && requestedStallId > 0
-    const scopedStallIds = hasRequestedStall
-      ? stallIds.filter((id) => id === requestedStallId)
-      : stallIds
-    if (scopedStallIds.length === 0) {
-      return NextResponse.json({ items: [], stalls: stalls ?? [] })
+    // Stalls are optional metadata for the UI. Items are sourced from `food_items`.
+    const { data: stalls, error: stallsError } = await client
+      .from('food_stalls')
+      .select('id, shop_name')
+      .ilike('owner_email', email)
+      .order('id', { ascending: true })
+    if (stallsError) {
+      // Don't fail listing items if stalls lookup fails
+      console.warn('[vendor/menu-items] stalls lookup failed:', stallsError.message)
     }
 
-    let itemsQuery = client
+    const { data, error } = await client
       .from('food_items')
       .select('*')
-      .in('vendor_id', scopedStallIds)
+      .eq('vendor_id', user.id)
       .order('id', { ascending: false })
-    if (availableOnly) itemsQuery = itemsQuery.eq('is_available', true)
-    const { data: items } = await itemsQuery
-    const catIds = (items ?? []).map((x) => x.category_id).filter((x): x is number => typeof x === 'number')
-    const { data: cats } = catIds.length
-      ? await client.from('food_categories').select('id, name').in('id', catIds)
-      : { data: [] as { id: number; name: string }[] }
-    const catMap = new Map<number, string>((cats ?? []).map((c) => [c.id, c.name]))
-    const mapped = (items ?? []).map((m) => ({
-      ...m,
-      food_stall_id: m.vendor_id,
-      food_category: (typeof m.category_id === 'number' ? catMap.get(m.category_id) : '') || '',
-    }))
 
-    return NextResponse.json({ items: mapped, stalls: stalls ?? [] })
+    if (error) return NextResponse.json({ message: error.message, items: [], stalls: stalls ?? [] }, { status: 400 })
+
+    // Back-compat: some older rows may have vendor_id = food_stall.id instead of users.id.
+    let items = data ?? []
+    if (items.length === 0 && Array.isArray(stalls) && stalls.length > 0) {
+      const stallIds = stalls
+        .map((s: any) => Number(s?.id))
+        .filter((n: number) => Number.isFinite(n) && n > 0)
+      if (stallIds.length > 0) {
+        const { data: legacyItems, error: legacyError } = await client
+          .from('food_items')
+          .select('*')
+          .in('vendor_id', stallIds)
+          .order('id', { ascending: false })
+        if (!legacyError && Array.isArray(legacyItems)) {
+          items = legacyItems
+        }
+      }
+    }
+
+    return NextResponse.json({ items, stalls: stalls ?? [] })
   } catch (e) {
     console.error('Vendor menu-items GET error:', e)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
@@ -72,29 +79,39 @@ export async function GET(request: NextRequest) {
 /** POST /api/vendor/menu-items — create menu item */
 export async function POST(request: NextRequest) {
   try {
-    const user = await verifyRole('vendor-food')
+    const user =
+      (await verifyRole('vendor')) ||
+      (await verifyRole('vendor-food')) ||
+      (await verifyRole('vendor-laundry'))
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
-    const email = user.email?.toLowerCase()
-    if (!email) return NextResponse.json({ message: 'No email' }, { status: 400 })
+    if (!user.id || user.id < 1) return NextResponse.json({ message: 'Missing vendor profile (users table)' }, { status: 400 })
 
     const body = await request.json()
-    const { food_stall_id, name, price, food_category, image_url, is_available } = body
+    const { name, price, food_category, category_id, image_url, inStock, is_available } = body
 
     const client = await createClient()
-    const { data: stall } = await client.from('food_stalls').select('id').eq('id', food_stall_id).eq('owner_email', email).single()
-    if (!stall) return NextResponse.json({ message: 'Stall not found or not yours' }, { status: 400 })
+    const resolvedCategoryId = toCategoryId(category_id ?? food_category)
+    if (!resolvedCategoryId) {
+      return NextResponse.json({ message: 'Invalid category (category_id / food_category)' }, { status: 400 })
+    }
 
-    const category_id = await resolveCategoryId(client, food_stall_id, food_category)
+    const resolvedAvailable =
+      typeof is_available === 'boolean'
+        ? is_available
+        : typeof inStock === 'boolean'
+          ? inStock
+          : true
+
     const { data, error } = await client
       .from('food_items')
       .insert({
-        vendor_id: food_stall_id,
+        vendor_id: user.id,
         name: String(name || '').trim() || 'Item',
         price: price != null ? parseFloat(String(price)) : 0,
-        category_id,
+        category_id: resolvedCategoryId,
         image_url: image_url ? String(image_url).trim() : null,
-        is_available: typeof is_available === 'boolean' ? is_available : true,
+        is_available: resolvedAvailable,
       })
       .select()
       .single()

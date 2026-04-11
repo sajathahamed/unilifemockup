@@ -24,7 +24,6 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        display: ['Space Grotesk', 'sans-serif'],
       },
       borderRadius: {
         'card': '16px',

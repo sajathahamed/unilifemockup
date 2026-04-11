@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { Package, Plus, Edit2, Trash2, Search, Utensils, X, Loader2 } from 'lucide-react'
 import { UserRole } from '@/lib/auth'
@@ -12,22 +12,49 @@ interface Product {
   price: number
   inStock: boolean
   description?: string
-  food_stall_id?: number
+  vendor_id?: number
+  category_id?: number
   image_url?: string
 }
 
 const CATEGORIES = ['Main', 'Snacks', 'Sides', 'Drinks', 'Desserts']
 
-function dbToProduct(m: { id: number; name: string; food_category?: string; price: number; food_stall_id?: number; description?: string | null; image_url?: string | null; is_available?: boolean | null }): Product {
+type ProductFormState = {
+  name: string
+  category: string
+  price: number
+  inStock: boolean
+  description: string
+  image_url: string
+  stall_id: number
+}
+
+function categoryFromId(id?: number | null) {
+  const map = new Map<number, string>([
+    [1, 'Main'],
+    [2, 'Snacks'],
+    [3, 'Sides'],
+    [4, 'Drinks'],
+    [5, 'Desserts'],
+  ])
+  return id != null ? (map.get(Number(id)) || 'Main') : 'Main'
+}
+
+function categoryToId(label: string) {
+  const map: Record<string, number> = { Main: 1, Snacks: 2, Sides: 3, Drinks: 4, Desserts: 5 }
+  return map[label] ?? 1
+}
+
+function dbToProduct(m: { id: number; name: string; category_id?: number | null; price: number; is_available?: boolean | null; vendor_id?: number | null; image_url?: string | null }): Product {
   return {
     id: String(m.id),
     name: m.name,
-    category: m.food_category || 'Main',
+    category: categoryFromId(m.category_id ?? null),
     price: Number(m.price),
-    inStock: m.is_available !== false,
-    description: m.description || '',
-    food_stall_id: m.food_stall_id,
-    image_url: m.image_url || '',
+    inStock: m.is_available ?? true,
+    vendor_id: m.vendor_id ?? undefined,
+    category_id: m.category_id ?? undefined,
+    image_url: m.image_url ?? undefined,
   }
 }
 
@@ -44,165 +71,22 @@ interface VendorProductsClientProps {
   user: { id: number; auth_id: string; name: string; email: string; role: UserRole; avatar_url?: string }
 }
 
-export default function VendorProductsClient({ user }: VendorProductsClientProps) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
-  const [selectedStallId, setSelectedStallId] = useState<number>(0)
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [form, setForm] = useState({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: 0 })
-
-  const loadProducts = async (stallId?: number) => {
-    const qs = stallId ? `?food_stall_id=${stallId}` : ''
-    const r = await fetch(`/api/vendor/menu-items${qs}`)
-    const data = await r.json().catch(() => ({}))
-    if (!r.ok) {
-      setMessage({ type: 'error', text: getApiError(data, r.status, 'Failed to load products.') })
-      return
-    }
-    const s = data.stalls ?? []
-    setStalls(s)
-    const effectiveStallId = stallId || selectedStallId || s[0]?.id || 0
-    if (effectiveStallId && effectiveStallId !== selectedStallId) {
-      setSelectedStallId(effectiveStallId)
-    }
-    setProducts((data.items ?? []).map(dbToProduct))
-    setForm((p) => ({ ...p, stall_id: effectiveStallId || p.stall_id || 0 }))
-  }
-
-  useEffect(() => {
-    loadProducts().catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
-      .finally(() => setLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!selectedStallId) return
-    loadProducts(selectedStallId).catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStallId])
-
-  const categories = [...new Set(products.map((p) => p.category))]
-  const filtered = products.filter((p) => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
-    const matchCat = categoryFilter === 'all' || p.category === categoryFilter
-    return matchSearch && matchCat
-  })
-
-  const openAddModal = () => {
-    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: selectedStallId || p.stall_id || stalls[0]?.id || 0 }))
-    setShowAddModal(true)
-  }
-
-  const openEditModal = (p: Product) => {
-    setForm((prev) => ({
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      inStock: p.inStock,
-      description: (p as Product & { description?: string }).description || '',
-      image_url: (p as Product & { image_url?: string }).image_url || '',
-      stall_id: (p as Product & { food_stall_id?: number }).food_stall_id ?? prev.stall_id ?? stalls[0]?.id ?? 0,
-    }))
-    setEditingProduct(p)
-  }
-
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setMessage(null)
-    if (!form.name.trim()) return
-    const stallId = form.stall_id || selectedStallId || stalls[0]?.id
-    if (!stallId) return
-    setSaving(true)
-    try {
-      const res = await fetch('/api/vendor/menu-items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          food_stall_id: stallId,
-          name: form.name.trim(),
-          food_category: form.category,
-          price: form.price,
-          is_available: form.inStock,
-          image_url: form.image_url.trim() || null,
-        }),
-      })
-      const data = await res.json().catch(() => null)
-      if (res.ok && data?.id) {
-        await loadProducts(stallId)
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: stallId })
-        setShowAddModal(false)
-        setMessage({ type: 'success', text: 'Product created successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to create product.') })
-      }
-    } catch {
-      setMessage({ type: 'error', text: 'Network error while creating product.' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleEditProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setMessage(null)
-    if (!editingProduct || !form.name.trim()) return
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/vendor/menu-items/${editingProduct.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          food_category: form.category,
-          price: form.price,
-          is_available: form.inStock,
-          image_url: form.image_url.trim() || null,
-        }),
-      })
-      const data = await res.json().catch(() => null)
-      if (res.ok) {
-        await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
-        setEditingProduct(null)
-        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
-        setMessage({ type: 'success', text: 'Product updated successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to update product.') })
-      }
-    } catch {
-      setMessage({ type: 'error', text: 'Network error while updating product.' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDeleteProduct = async (id: string) => {
-    setMessage(null)
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/vendor/menu-items/${id}`, { method: 'DELETE' })
-      const data = await res.json().catch(() => null)
-      if (res.ok) {
-        await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
-        setDeletingId(null)
-        setMessage({ type: 'success', text: 'Product deleted successfully.' })
-      } else {
-        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to delete product.') })
-      }
-    } catch {
-      setMessage({ type: 'error', text: 'Network error while deleting product.' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const renderProductForm = ({ onSubmit, onCancel, title, disabled }: { onSubmit: (e: React.FormEvent) => void; onCancel: () => void; title: string; disabled?: boolean }) => (
+function ProductForm({
+  form,
+  setForm,
+  onSubmit,
+  onCancel,
+  title,
+  disabled,
+}: {
+  form: ProductFormState
+  setForm: React.Dispatch<React.SetStateAction<ProductFormState>>
+  onSubmit: (e: React.FormEvent) => void
+  onCancel: () => void
+  title: string
+  disabled?: boolean
+}) {
+  return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
@@ -232,7 +116,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           type="number"
           min={0}
           required
-          value={form.price || ''}
+          value={Number.isFinite(form.price) ? form.price : 0}
           onChange={(e) => setForm((p) => ({ ...p, price: parseInt(e.target.value) || 0 }))}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary"
         />
@@ -261,9 +145,10 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (optional)</label>
         <input
+          type="url"
           value={form.image_url}
           onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
           placeholder="https://example.com/product.jpg"
         />
       </div>
@@ -277,6 +162,206 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       </div>
     </form>
   )
+}
+
+export default function VendorProductsClient({ user }: VendorProductsClientProps) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
+  const [selectedStallId, setSelectedStallId] = useState<number>(0)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [form, setForm] = useState<ProductFormState>({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: 0 })
+  const pageMessageRef = useRef<HTMLDivElement | null>(null)
+  const addModalBodyRef = useRef<HTMLDivElement | null>(null)
+  const editModalBodyRef = useRef<HTMLDivElement | null>(null)
+  const deleteModalBodyRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToPageMessage = () => {
+    if (pageMessageRef.current) {
+      pageMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const scrollModalTop = (ref: React.RefObject<HTMLDivElement | null>) => {
+    ref.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const loadProducts = async (_stallId?: number) => {
+    const res = await fetch('/api/vendor/menu-items')
+    const data = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(data?.message || `Failed to load products (HTTP ${res.status})`)
+
+    const nextProducts: Product[] = Array.isArray(data?.items)
+      ? data.items.map((row: any) => dbToProduct(row))
+      : []
+    const nextStalls: { id: number; shop_name: string }[] = Array.isArray(data?.stalls)
+      ? data.stalls
+          .map((s: any) => ({ id: Number(s?.id), shop_name: String(s?.shop_name ?? 'Store') }))
+          .filter((s: { id: number }) => Number.isFinite(s.id) && s.id > 0)
+      : []
+
+    setProducts(nextProducts)
+    setStalls(nextStalls)
+
+    if (!selectedStallId && nextStalls.length > 0) {
+      setSelectedStallId(nextStalls[0].id)
+    }
+  }
+
+  useEffect(() => {
+    loadProducts().catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!selectedStallId) return
+    loadProducts(selectedStallId).catch(() => setMessage({ type: 'error', text: 'Network error while loading products.' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStallId])
+
+  const categories = [...new Set(products.map((p) => p.category))]
+  const filtered = products.filter((p) => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
+    const matchCat = categoryFilter === 'all' || p.category === categoryFilter
+    return matchSearch && matchCat
+  })
+
+  const openAddModal = () => {
+    setForm((p) => ({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: p.stall_id || stalls[0]?.id || 0 }))
+    setFormError(null)
+    setShowAddModal(true)
+  }
+
+  const openEditModal = (p: Product) => {
+    setForm((prev) => ({
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      inStock: p.inStock,
+      description: (p as Product & { description?: string }).description || '',
+      image_url: p.image_url || '',
+      stall_id: prev.stall_id ?? stalls[0]?.id ?? 0,
+    }))
+    setEditingProduct(p)
+    setFormError(null)
+  }
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage(null)
+    if (!form.name.trim()) return
+    setSaving(true)
+    setFormError(null)
+    try {
+      const res = await fetch('/api/vendor/menu-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          category_id: categoryToId(form.category),
+          price: form.price,
+          is_available: form.inStock,
+          image_url: form.image_url?.trim() || null,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setFormError(data?.message || `Failed to add product (HTTP ${res.status})`)
+        scrollModalTop(addModalBodyRef)
+        return
+      }
+      if (data?.id) {
+        setProducts((prev) => [dbToProduct(data), ...prev])
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
+        setShowAddModal(false)
+        setMessage({ type: 'success', text: 'Product created successfully.' })
+        setTimeout(scrollToPageMessage, 0)
+      } else {
+        setMessage({ type: 'error', text: getApiError(data, res.status, 'Failed to create product.') })
+        setTimeout(scrollToPageMessage, 0)
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while creating product.' })
+      setTimeout(scrollToPageMessage, 0)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage(null)
+    if (!editingProduct || !form.name.trim()) return
+    setSaving(true)
+    setFormError(null)
+    try {
+      const res = await fetch(`/api/vendor/menu-items/${editingProduct.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          category_id: categoryToId(form.category),
+          price: form.price,
+          is_available: form.inStock,
+          image_url: form.image_url?.trim() || null,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setFormError(data?.message || `Failed to update product (HTTP ${res.status})`)
+        scrollModalTop(editModalBodyRef)
+        return
+      }
+      if (res.ok) {
+        await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
+        setEditingProduct(null)
+        setForm({ name: '', category: 'Main', price: 0, inStock: true, description: '', image_url: '', stall_id: form.stall_id })
+        setMessage({ type: 'success', text: 'Product updated successfully.' })
+        setTimeout(scrollToPageMessage, 0)
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while updating product.' })
+      setTimeout(scrollToPageMessage, 0)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteProduct = async (id: string) => {
+    setMessage(null)
+    setSaving(true)
+    setFormError(null)
+    try {
+      const res = await fetch(`/api/vendor/menu-items/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setFormError(data?.message || `Failed to delete product (HTTP ${res.status})`)
+        scrollModalTop(deleteModalBodyRef)
+        return
+      }
+      if (res.ok) {
+        await loadProducts(selectedStallId || form.stall_id || stalls[0]?.id)
+        setDeletingId(null)
+        setMessage({ type: 'success', text: 'Product deleted successfully.' })
+        setTimeout(scrollToPageMessage, 0)
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error while deleting product.' })
+      setTimeout(scrollToPageMessage, 0)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -305,7 +390,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
         </div>
 
         {message && (
-          <div className={`px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <div ref={pageMessageRef} className={`px-4 py-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
             {message.text}
           </div>
         )}
@@ -396,13 +481,18 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div ref={addModalBodyRef} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Add Product</h3>
               <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
                 <X size={20} />
               </button>
             </div>
+            {formError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
             {stalls.length > 1 && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Food Stall</label>
@@ -411,30 +501,40 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
                 </select>
               </div>
             )}
-            {renderProductForm({ onSubmit: handleAddProduct, onCancel: () => setShowAddModal(false), title: 'Add Product', disabled: saving })}
+            <ProductForm form={form} setForm={setForm} onSubmit={handleAddProduct} onCancel={() => setShowAddModal(false)} title="Add Product" disabled={saving} />
           </div>
         </div>
       )}
 
       {editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingProduct(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div ref={editModalBodyRef} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
               <button onClick={() => setEditingProduct(null)} className="p-1 hover:bg-gray-100 rounded-lg">
                 <X size={20} />
               </button>
             </div>
-            {renderProductForm({ onSubmit: handleEditProduct, onCancel: () => setEditingProduct(null), title: 'Save Changes', disabled: saving })}
+            {formError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
+            <ProductForm form={form} setForm={setForm} onSubmit={handleEditProduct} onCancel={() => setEditingProduct(null)} title="Save Changes" disabled={saving} />
           </div>
         </div>
       )}
 
       {deletingId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeletingId(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+          <div ref={deleteModalBodyRef} className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product?</h3>
             <p className="text-gray-500 text-sm mb-4">This action cannot be undone.</p>
+            {formError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            ) : null}
             <div className="flex gap-3">
               <button onClick={() => setDeletingId(null)} className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700">Cancel</button>
               <button onClick={() => handleDeleteProduct(deletingId)} disabled={saving} className="flex-1 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2">
