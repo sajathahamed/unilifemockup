@@ -9,17 +9,22 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.58",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
-    "@types/nodemailer": "^8.0.0",
+    "ai": "^6.0.146",
+    "all": "^0.0.0",
+    "dotenv": "^17.4.0",
     "framer-motion": "^12.33.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.378.0",
     "next": "^16.1.6",
-    "nodemailer": "^8.0.4",
+    "pdf-parse": "^2.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.12.7",
-    "restaurant-location-search-api": "^1.0.1"
+    "restaurant-location-search-api": "^1.0.1",
+    "sweetalert2": "^11.26.24"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

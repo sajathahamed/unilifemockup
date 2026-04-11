@@ -86,3 +86,5 @@ public/workbox-*.js.map
 
 # Husky
 .husky/_
+package-lock.json
+package.json
