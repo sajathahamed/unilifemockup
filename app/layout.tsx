@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DM_Sans, Bricolage_Grotesque } from 'next/font/google'
 import './globals.css'
+import { getPublicSettings } from '@/lib/settings'
 
 export const metadata: Metadata = {
   title: 'UniLife - Your Campus, Simplified',
