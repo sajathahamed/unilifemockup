@@ -10,15 +10,16 @@ import {
     MapPin,
     Phone,
     User,
-    Loader2,
     X,
     ArrowRight,
     Filter,
     Utensils,
     ShoppingBag,
+    WifiOff,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { UserProfile } from '@/lib/auth'
+import InlineSpinner from '@/components/ui/InlineSpinner'
 
 interface DeliveryOrder {
     id: string
@@ -58,11 +59,39 @@ interface Stats {
     delivered: number
 }
 
-const deliveryStatusConfig: Record<string, { bg: string; text: string; label: string }> = {
-    unassigned:  { bg: 'bg-red-100',    text: 'text-red-800',    label: 'Unassigned' },
-    assigned:    { bg: 'bg-blue-100',   text: 'text-blue-800',   label: 'Assigned' },
-    picked_up:   { bg: 'bg-amber-100',  text: 'text-amber-800',  label: 'Picked up' },
-    delivered:   { bg: 'bg-emerald-100',text: 'text-emerald-800',label: 'Delivered' },
+const deliveryStatusConfig: Record<string, { bg: string; text: string; border: string; dot: string; label: string; accent: string }> = {
+    unassigned: {
+        bg: 'bg-rose-50',
+        text: 'text-rose-700',
+        border: 'border-rose-200',
+        dot: 'bg-rose-500',
+        label: 'Unassigned',
+        accent: 'border-l-rose-300',
+    },
+    assigned: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-700',
+        border: 'border-blue-200',
+        dot: 'bg-blue-500',
+        label: 'Assigned',
+        accent: 'border-l-blue-300',
+    },
+    picked_up: {
+        bg: 'bg-amber-50',
+        text: 'text-amber-700',
+        border: 'border-amber-200',
+        dot: 'bg-amber-500',
+        label: 'Picked up',
+        accent: 'border-l-amber-300',
+    },
+    delivered: {
+        bg: 'bg-emerald-50',
+        text: 'text-emerald-700',
+        border: 'border-emerald-200',
+        dot: 'bg-emerald-500',
+        label: 'Delivered',
+        accent: 'border-l-emerald-300',
+    },
 }
 
 type TabFilter = 'all' | 'unassigned' | 'assigned' | 'picked_up' | 'delivered'
@@ -76,6 +105,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
     const [search, setSearch] = useState('')
     const [tabFilter, setTabFilter] = useState<TabFilter>('all')
     const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+    const [isAdminOnline, setIsAdminOnline] = useState<boolean | null>(null)
 
     const [assigningOrder, setAssigningOrder] = useState<DeliveryOrder | null>(null)
     const [selectedRider, setSelectedRider] = useState<number>(0)
@@ -112,6 +142,11 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
 
     useEffect(() => {
         Promise.all([fetchOrders(), fetchRiders()]).finally(() => setLoading(false))
+        // Load admin online/offline status
+        fetch('/api/delivery/status')
+            .then(r => r.json())
+            .then(d => setIsAdminOnline(typeof d.is_online === 'boolean' ? d.is_online : true))
+            .catch(() => setIsAdminOnline(true))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -204,32 +239,32 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                <InlineSpinner size={40} className="text-primary" />
                 <p className="text-sm text-gray-600">Loading orders…</p>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6 pb-10">
-            <div className="border-b border-gray-200 pb-6">
-                <h1 className="text-2xl font-semibold text-gray-900">Orders</h1>
-                <p className="mt-1 text-sm text-gray-600 max-w-2xl">
+        <div className="space-y-7 pb-10">
+            <div className="border-b border-stone-200 pb-6">
+                <h1 className="font-display text-[1.9rem] font-semibold tracking-[-0.016em] text-gray-900">Manage orders</h1>
+                <p className="mt-1.5 text-[0.95rem] leading-6 text-gray-600 max-w-2xl">
                     Food and laundry orders: assign riders and update delivery status.
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                <StatCard icon={Package} label="Total" value={stats.total} color="bg-gray-100 text-gray-600" />
-                <StatCard icon={Clock} label="Unassigned" value={stats.unassigned} color="bg-red-100 text-red-600" />
-                <StatCard icon={User} label="Assigned" value={stats.assigned} color="bg-blue-100 text-blue-600" />
-                <StatCard icon={Truck} label="Picked up" value={stats.picked_up} color="bg-amber-100 text-amber-600" />
-                <StatCard icon={CheckCircle2} label="Delivered" value={stats.delivered} color="bg-emerald-100 text-emerald-600" />
+            <div className="flex flex-wrap gap-5">
+                <StatCard icon={Package} label="Total" value={stats.total} color="bg-stone-100 text-stone-700" minWidth="min-w-[170px]" radius="rounded-xl" />
+                <StatCard icon={Clock} label="Unassigned" value={stats.unassigned} color="bg-rose-50 text-rose-700" minWidth="min-w-[170px]" radius="rounded-2xl" />
+                <StatCard icon={User} label="Assigned" value={stats.assigned} color="bg-blue-50 text-blue-700" minWidth="min-w-[170px]" radius="rounded-lg" />
+                <StatCard icon={Truck} label="Picked up" value={stats.picked_up} color="bg-amber-50 text-amber-700" minWidth="min-w-[170px]" radius="rounded-xl" />
+                <StatCard icon={CheckCircle2} label="Delivered" value={stats.delivered} color="bg-emerald-50 text-emerald-700" minWidth="min-w-[180px]" radius="rounded-2xl" />
             </div>
 
             {message && (
                 <div
-                    className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between border ${
+                    className={`px-5 py-3 rounded-2xl text-sm font-medium flex items-center justify-between border shadow-[0_1px_8px_rgba(25,40,75,0.06)] ${
                         message.type === 'success'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                             : 'bg-red-50 text-red-800 border-red-200'
@@ -242,6 +277,18 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                 </div>
             )}
 
+            {isAdminOnline === false && (
+                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-red-50 border border-red-200 text-red-800">
+                    <WifiOff size={18} className="shrink-0 text-red-600" />
+                    <div>
+                        <p className="font-semibold text-sm">You are currently offline</p>
+                        <p className="text-xs text-red-700 mt-0.5">
+                            No new delivery assignments can be made while you're offline. Go online from your dashboard to resume.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -250,7 +297,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         placeholder="Search customer, order ref, address, rider…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-card border border-gray-200 rounded-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                        className="w-full pl-10 pr-4 py-2.5 bg-card border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
                     />
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -262,8 +309,8 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                             onClick={() => setTypeFilter(t)}
                             className={`px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                                 typeFilter === t
-                                    ? 'bg-primary text-white border-primary'
-                                    : 'bg-card text-gray-600 border-gray-200 hover:border-gray-300'
+                                    ? 'bg-[#5f6db8] text-white border-[#5f6db8]'
+                                    : 'bg-card text-gray-600 border-stone-200 hover:border-stone-300'
                             }`}
                         >
                             {typeLabels[t]}
@@ -280,8 +327,8 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         onClick={() => setTabFilter(tab.key)}
                         className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                             tabFilter === tab.key
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-card text-gray-600 border-gray-200 hover:border-gray-300'
+                                ? 'bg-[#5f6db8] text-white border-[#5f6db8]'
+                                : 'bg-card text-gray-600 border-stone-200 hover:border-stone-300'
                         }`}
                     >
                         {tab.label}
@@ -308,10 +355,11 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                             }}
                             onStatusUpdate={handleStatusUpdate}
                             isUpdating={updatingId === order.id}
+                            isAdminOnline={isAdminOnline !== false}
                         />
                     ))
                 ) : (
-                    <div className="bg-card rounded-card p-12 text-center border border-dashed border-gray-200">
+                    <div className="bg-card rounded-2xl p-12 text-center border border-dashed border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.05)]">
                         <Package className="mx-auto text-gray-300 mb-4" size={40} />
                         <p className="text-gray-700 font-medium">No orders match</p>
                         <p className="text-gray-500 text-sm mt-1">Change filters or search.</p>
@@ -327,7 +375,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                     aria-labelledby="assign-modal-title"
                 >
                     <div
-                        className="bg-card rounded-card p-6 max-w-lg w-full shadow-card border border-gray-200"
+                        className="bg-card rounded-2xl p-6 max-w-lg w-full shadow-[0_8px_30px_rgba(15,23,42,0.16)] border border-stone-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-4">
@@ -379,42 +427,38 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Rider</label>
                             <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {riders.length > 0 ? (
-                                    riders.map(rider => (
+                                {riders.filter(r => r.is_available).length > 0 ? (
+                                    riders
+                                        .filter(r => r.is_available)
+                                        .map(rider => (
                                         <button
                                             key={rider.id}
                                             type="button"
                                             onClick={() => setSelectedRider(rider.id)}
                                             className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                                                 selectedRider === rider.id
-                                                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                                                    : 'border-gray-200 hover:border-gray-300 bg-card'
+                                                    ? 'border-[#5f6db8] bg-[#eef0fb] ring-2 ring-[#d5daf5]'
+                                                    : 'border-stone-200 hover:border-stone-300 bg-card'
                                             }`}
                                         >
-                                            <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                                                    rider.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
-                                                }`}
-                                            >
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold bg-emerald-100 text-emerald-800">
                                                 {rider.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-gray-900 text-sm truncate">{rider.name}</p>
                                                 <p className="text-xs text-gray-500 truncate">{rider.email}</p>
                                             </div>
-                                            <span
-                                                className={`text-xs px-2 py-1 rounded-md font-medium shrink-0 ${
-                                                    rider.is_available
-                                                        ? 'bg-emerald-100 text-emerald-800'
-                                                        : 'bg-amber-100 text-amber-800'
-                                                }`}
-                                            >
+                                            <span className="text-xs px-2 py-1 rounded-md font-medium shrink-0 bg-emerald-100 text-emerald-800">
                                                 {rider.active_deliveries} active
                                             </span>
                                         </button>
                                     ))
                                 ) : (
-                                    <p className="text-sm text-gray-500 text-center py-4">No riders available</p>
+                                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                                        <WifiOff size={28} className="text-gray-300" />
+                                        <p className="text-sm font-medium text-gray-600">No active riders available</p>
+                                        <p className="text-xs text-gray-400">All riders are currently inactive or offline.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -423,7 +467,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                             <button
                                 type="button"
                                 onClick={() => setAssigningOrder(null)}
-                                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
+                                className="flex-1 py-2.5 border border-stone-200 rounded-lg text-gray-700 font-medium hover:bg-stone-50"
                             >
                                 Cancel
                             </button>
@@ -431,9 +475,9 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                                 type="button"
                                 onClick={handleAssign}
                                 disabled={!selectedRider || assigning}
-                                className="flex-1 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="flex-1 py-2.5 bg-[#5f6db8] text-white rounded-xl font-medium hover:bg-[#4e5ba0] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                {assigning ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
+                                {assigning ? <InlineSpinner size={18} /> : <ArrowRight size={18} />}
                                 Assign
                             </button>
                         </div>
@@ -444,14 +488,28 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
     )
 }
 
-function StatCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: number; color: string }) {
+function StatCard({
+    icon: Icon,
+    label,
+    value,
+    color,
+    minWidth,
+    radius,
+}: {
+    icon: LucideIcon;
+    label: string;
+    value: number;
+    color: string;
+    minWidth: string;
+    radius: string;
+}) {
     return (
-        <div className="bg-card rounded-card p-4 border border-gray-200 shadow-card">
-            <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3`}>
-                <Icon size={20} />
+        <div className={`flex-1 ${minWidth} ${radius} bg-card p-5 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
+            <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center mb-3`}>
+                <Icon size={18} />
             </div>
-            <p className="text-2xl font-semibold text-gray-900">{value}</p>
-            <p className="text-sm text-gray-500">{label}</p>
+            <p className="text-2xl leading-none font-semibold tracking-[-0.02em] text-gray-900">{value}</p>
+            <p className="mt-1.5 text-sm text-gray-500">{label}</p>
         </div>
     )
 }
@@ -461,21 +519,22 @@ function OrderCard({
     onAssign,
     onStatusUpdate,
     isUpdating,
+    isAdminOnline,
 }: {
     order: DeliveryOrder
     onAssign: () => void
     onStatusUpdate: (order: DeliveryOrder, status: string) => void
     isUpdating: boolean
+    isAdminOnline: boolean
 }) {
     const statusKey = order.is_assigned ? (order.delivery_status ?? 'assigned') : 'unassigned'
     const statusCfg = deliveryStatusConfig[statusKey] ?? deliveryStatusConfig.unassigned
     const isFood = order.order_type === 'food'
     const timeAgo = getTimeAgo(order.created_at)
     const TypeIcon = isFood ? Utensils : ShoppingBag
-    const accent = isFood ? 'border-l-orange-500' : 'border-l-blue-600'
 
     return (
-        <div className={`bg-card rounded-card border border-gray-200 shadow-card hover:shadow-card-hover transition-shadow border-l-4 ${accent}`}>
+        <div className={`bg-card rounded-2xl border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition border-l-4 ${statusCfg.accent}`}>
             <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -486,8 +545,8 @@ function OrderCard({
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-semibold text-gray-900">{order.order_ref}</span>
                                 <span
-                                    className={`text-xs px-2 py-0.5 rounded-md font-medium ${
-                                        isFood ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+                                    className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                                        isFood ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'
                                     }`}
                                 >
                                     {isFood ? 'Food' : 'Laundry'}
@@ -496,7 +555,8 @@ function OrderCard({
                             <p className="text-xs text-gray-500 mt-0.5">{timeAgo}</p>
                         </div>
                     </div>
-                    <span className={`text-xs px-2.5 py-1 rounded-md font-medium ${statusCfg.bg} ${statusCfg.text}`}>
+                    <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
                         {statusCfg.label}
                     </span>
                 </div>
@@ -532,12 +592,12 @@ function OrderCard({
                 </div>
 
                 {order.is_assigned && order.rider_name && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 mb-4">
-                        <div className="w-8 h-8 bg-primary/15 text-primary rounded-full flex items-center justify-center text-xs font-semibold">
+                    <div className="flex items-center gap-3 p-3 bg-stone-50 rounded-xl border border-stone-200 mb-4">
+                        <div className="w-8 h-8 bg-[#e8ebfb] text-[#4a5497] rounded-full flex items-center justify-center text-xs font-semibold">
                             {order.rider_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">Rider: {order.rider_name}</p>
+                            <p className="text-sm font-medium text-gray-800">Rider: {order.rider_name}</p>
                             <p className="text-xs text-gray-500 truncate">{order.rider_email}</p>
                         </div>
                     </div>
@@ -545,22 +605,28 @@ function OrderCard({
 
                 <div className="flex flex-wrap gap-2">
                     {!order.is_assigned && (
-                        <button
-                            type="button"
-                            onClick={onAssign}
-                            className="px-4 py-2 bg-primary text-white rounded-lg font-medium text-sm hover:bg-primary/90 flex items-center gap-2"
-                        >
-                            <Truck size={16} /> Assign rider
-                        </button>
+                        isAdminOnline ? (
+                            <button
+                                type="button"
+                                onClick={onAssign}
+                                className="inline-flex min-w-[170px] px-4 py-2.5 bg-[#5f6db8] text-white rounded-lg font-medium text-sm hover:bg-[#4e5ba0] flex items-center gap-2"
+                            >
+                                <Truck size={16} /> Assign rider
+                            </button>
+                        ) : (
+                            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed min-w-[170px]">
+                                <WifiOff size={16} /> No delivery available
+                            </span>
+                        )
                     )}
                     {order.delivery_status === 'assigned' && (
                         <button
                             type="button"
                             onClick={() => onStatusUpdate(order, 'picked_up')}
                             disabled={isUpdating}
-                            className="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium text-sm hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
+                            className="inline-flex min-w-[170px] px-4 py-2.5 bg-amber-600 text-white rounded-xl font-medium text-sm hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
                         >
-                            {isUpdating ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
+                            {isUpdating ? <InlineSpinner size={16} /> : <Package size={16} />}
                             Mark picked up
                         </button>
                     )}
@@ -569,14 +635,14 @@ function OrderCard({
                             type="button"
                             onClick={() => onStatusUpdate(order, 'delivered')}
                             disabled={isUpdating}
-                            className="px-4 py-2 bg-secondary text-white rounded-lg font-medium text-sm hover:bg-secondary/90 disabled:opacity-50 flex items-center gap-2"
+                            className="inline-flex min-w-[170px] px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium text-sm hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
                         >
-                            {isUpdating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                            {isUpdating ? <InlineSpinner size={16} /> : <CheckCircle2 size={16} />}
                             Mark delivered
                         </button>
                     )}
                     {order.delivery_status === 'delivered' && (
-                        <span className="px-4 py-2 bg-emerald-50 text-emerald-800 rounded-lg text-sm font-medium flex items-center gap-2 border border-emerald-100">
+                        <span className="px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium flex items-center gap-2 border border-emerald-200">
                             <CheckCircle2 size={16} /> Completed
                         </span>
                     )}

@@ -18,7 +18,7 @@ const config: Config = {
         danger: '#EF4444',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['var(--font-body)', 'DM Sans', 'sans-serif'],
       },
       borderRadius: {
         'card': '12px',

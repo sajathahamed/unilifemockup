@@ -24,19 +24,15 @@ interface AttractionListProps {
 export default function AttractionList({ places, loading, onAdd, addedIds }: AttractionListProps) {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
+      <div className="flex items-center justify-center py-12 text-gray-500">
+        <Loader2 size={24} className="animate-spin mr-2" />
+        Finding attractions…
       </div>
     )
   }
 
   if (places.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <p>No attractions found near this destination.</p>
-        <p className="text-sm mt-1">Try a different location or check GOOGLE_MAPS_API_KEY.</p>
-      </div>
-    )
+    return <p className="text-sm text-gray-500 py-6 text-center">No attractions found near this location.</p>
   }
 
   return (

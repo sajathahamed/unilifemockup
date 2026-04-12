@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
+import { isDeliveryServiceAvailable } from '@/lib/delivery-availability.server'
 
 function isValidSriLankaPhone(value: unknown): boolean {
   const digits = String(value ?? '').replace(/[^\d]/g, '')
@@ -58,6 +59,11 @@ export async function POST(request: NextRequest) {
     const client = await createClient()
     const { data: shop } = await client.from('laundry_shops').select('id').eq('id', laundry_shop_id).single()
     if (!shop) return NextResponse.json({ message: 'Laundry shop not found' }, { status: 404 })
+
+    const deliveryAvailable = await isDeliveryServiceAvailable(client)
+    if (!deliveryAvailable) {
+      return NextResponse.json({ message: 'Delivery not available' }, { status: 409 })
+    }
 
     const { data, error } = await client
       .from('laundry_orders')

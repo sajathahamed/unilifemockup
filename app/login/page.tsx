@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock } from 'lucide-react'
@@ -10,7 +9,6 @@ import { getRoleBasedRedirect, UserRole } from '@/lib/auth'
 import { AuthLayout, GoogleButton, Button, Input, Alert } from '@/components'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -27,6 +25,13 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      // Guard: ensure Supabase env is configured (avoids opaque "Failed to fetch")
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'your_supabase_url') {
+        throw new Error('App is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.')
+      }
+
       const supabase = createClient()
       // Authenticate with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -66,13 +71,17 @@ export default function LoginPage() {
         throw new Error('User profile not found. Please contact support.')
       }
 
-      // Redirect based on role
+      // Full-page redirect so the destination loads in a normal request (avoids RSC fetch failure in router)
       const redirectPath = getRoleBasedRedirect(userRole as UserRole)
-      router.push(redirectPath)
-      router.refresh()
-
+      window.location.assign(redirectPath)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      // Map network/fetch errors to a user-friendly message
+      const friendlyMessage =
+        message === 'Failed to fetch' || message.toLowerCase().includes('fetch')
+          ? 'Unable to reach the server. Check your connection and that Supabase is configured (see .env.local). If using a free project, it may be paused.'
+          : message
+      setError(friendlyMessage)
     } finally {
       setIsLoading(false)
     }

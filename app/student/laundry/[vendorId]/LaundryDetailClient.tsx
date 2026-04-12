@@ -31,6 +31,7 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
     const [submitting, setSubmitting] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
+    const [deliveryAvailable, setDeliveryAvailable] = useState(true)
     const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'wallet'>('cod')
     const [cardNumber, setCardNumber] = useState('')
     const [cardName, setCardName] = useState('')
@@ -90,6 +91,13 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
         }
         fetchVendor()
     }, [vendorId])
+
+    useEffect(() => {
+        fetch('/api/delivery/availability', { cache: 'no-store' })
+            .then(async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }))
+            .then((res) => setDeliveryAvailable(Boolean(res.ok && res.data?.available)))
+            .catch(() => setDeliveryAvailable(false))
+    }, [])
 
     const todayLocalDateStr = (() => {
         const d = new Date()
@@ -163,6 +171,11 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
     const handleOrder = async (e: React.FormEvent) => {
         e.preventDefault()
         setFormError(null)
+
+        if (!deliveryAvailable) {
+            setFormError('Delivery not available')
+            return
+        }
 
         if (!validateSriLankaPhone(formData.contact)) {
             setFormError('Enter a valid Sri Lanka phone number (digits only, e.g. 0712345678).')
@@ -537,11 +550,17 @@ export default function LaundryDetailClient({ user, vendorId }: LaundryDetailCli
                                 <span className="text-lg font-black text-blue-800">Rs. {computedTotal.toLocaleString()}</span>
                             </div>
 
+                            {!deliveryAvailable && (
+                                <p className="text-sm text-red-700 font-semibold bg-red-50 border border-red-200 rounded-xl p-3">
+                                    Delivery not available
+                                </p>
+                            )}
+
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 type="submit"
-                                disabled={submitting}
+                                disabled={submitting || !deliveryAvailable}
                                 className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 ${submitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
                                     }`}
                             >

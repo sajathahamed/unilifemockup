@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
 
+/** Hardcoded accounts that must never appear in the riders list */
+const HIDDEN_EMAILS = new Set(['easytech6727@gmail.com'])
+
 /**
  * GET /api/delivery/riders — List all users with delivery role.
- * Returns rider info + phone from `rider_profiles` + count of active deliveries.
+ * Returns rider info + phone from `delivery_agents` + count of active deliveries.
+ * The is_available flag comes from delivery_agents table (admin-controlled toggle).
  */
 export async function GET() {
   try {
@@ -13,7 +17,7 @@ export async function GET() {
 
     const client = await createClient()
 
-    // Get all delivery-role users
+    // Get all delivery-role users (excluding hardcoded hidden accounts)
     const { data: users, error } = await client
       .from('users')
       .select('id, name, email, photo_url')
@@ -22,12 +26,12 @@ export async function GET() {
 
     if (error) return NextResponse.json({ message: error.message }, { status: 400 })
 
-    // Get phones from delivery_agents
+    // Get phones and availability (is_available) from delivery_agents
     const { data: profiles } = await client
       .from('delivery_agents')
-      .select('id, phone')
-      
-    const phoneMap = new Map((profiles ?? []).map(p => [String(p.id), p.phone]))
+      .select('id, phone, is_available')
+
+    const agentMap = new Map((profiles ?? []).map(p => [String(p.id), p]))
 
     // Get active delivery counts per rider
     const { data: deliveries } = await client
@@ -41,15 +45,22 @@ export async function GET() {
       activeCountMap.set(key, (activeCountMap.get(key) ?? 0) + 1)
     }
 
-    const riders = (users ?? []).map(u => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      phone: phoneMap.get(String(u.id)) || '',
-      photo_url: u.photo_url ?? null,
-      active_deliveries: activeCountMap.get(String(u.id)) ?? 0,
-      is_available: (activeCountMap.get(String(u.id)) ?? 0) < 5, // Available if fewer than 5 active
-    }))
+    const riders = (users ?? [])
+      .filter(u => !HIDDEN_EMAILS.has(u.email?.toLowerCase() ?? ''))
+      .map(u => {
+        const agent = agentMap.get(String(u.id))
+        // is_available: use DB value; default true if no agent record yet
+        const isAvailable = agent ? (agent.is_available ?? true) : true
+        return {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: agent?.phone || '',
+          photo_url: u.photo_url ?? null,
+          active_deliveries: activeCountMap.get(String(u.id)) ?? 0,
+          is_available: isAvailable,
+        }
+      })
 
     return NextResponse.json({ riders })
   } catch (e) {

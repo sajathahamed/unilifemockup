@@ -1,5 +1,18 @@
 import type { Metadata } from 'next'
+import { DM_Sans, Bricolage_Grotesque } from 'next/font/google'
 import './globals.css'
+
+const bodyFont = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
+  weight: ['400', '500', '700'],
+})
+
+const headingFont = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-heading',
+  weight: ['500', '600', '700'],
+})
 
 export const metadata: Metadata = {
   title: 'UniLife - Your Campus, Simplified',
@@ -12,13 +25,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="antialiased" data-scroll-behavior="smooth">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-      </head>
-      <body className="min-h-screen bg-gray-50">{children}</body>
+    <html
+      lang="en"
+      className={`${bodyFont.variable} ${headingFont.variable} antialiased`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen bg-stone-50">{children}</body>
     </html>
   )
 }

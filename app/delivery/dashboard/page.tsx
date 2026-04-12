@@ -1,5 +1,6 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import DeliveryStatusCard from '@/components/delivery/DeliveryStatusCard'
 import type { LucideIcon } from 'lucide-react'
 import {
   Truck,
@@ -19,26 +20,26 @@ export default async function DeliveryDashboard() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="space-y-6">
-        <div className="border-b border-gray-200 pb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Delivery overview</h1>
-          <p className="mt-1 text-sm text-gray-600">
+      <div className="space-y-7">
+        <div className="border-b border-stone-200 pb-6">
+          <h1 className="font-display text-[1.95rem] font-semibold tracking-[-0.018em] text-gray-900">Delivery overview</h1>
+          <p className="mt-1.5 text-[0.95rem] leading-6 text-gray-600">
             {firstName}, assign riders and track food and laundry deliveries from one place.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Truck} label="Today's deliveries" value="8" color="bg-primary" />
-          <StatCard icon={Clock} label="Avg. time" value="18 mins" color="bg-secondary" />
-          <StatCard icon={DollarSign} label="Today's earnings" value="Rs 4,200" color="bg-slate-600" />
-          <StatCard icon={MapPin} label="Distance" value="12.5 km" color="bg-slate-500" />
+        <div className="flex flex-wrap gap-5">
+          <StatCard icon={Truck} label="Today's deliveries" value="8" color="bg-[#e8ebfb] text-[#4a5497]" minWidth="min-w-[180px]" radius="rounded-2xl" />
+          <StatCard icon={Clock} label="Avg. time" value="18 mins" color="bg-emerald-50 text-emerald-700" minWidth="min-w-[170px]" radius="rounded-xl" />
+          <StatCard icon={DollarSign} label="Today's earnings" value="Rs 4,200" color="bg-sky-50 text-sky-700" minWidth="min-w-[220px]" radius="rounded-2xl" />
+          <StatCard icon={MapPin} label="Distance" value="12.5 km" color="bg-stone-100 text-stone-700" minWidth="min-w-[160px]" radius="rounded-lg" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-card rounded-card p-6 shadow-card border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Sample active deliveries</h2>
-              <Link href="/delivery/orders" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium">
+          <div className="lg:col-span-2 bg-card rounded-2xl p-6 shadow-[0_2px_12px_rgba(36,45,72,0.08)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display text-[1.08rem] font-semibold tracking-[-0.01em] text-gray-900">Sample active deliveries</h2>
+              <Link href="/delivery/orders" className="text-sm text-[#4a5497] hover:text-[#3e4678] flex items-center gap-1.5 font-medium">
                 Open orders <ArrowRight size={14} />
               </Link>
             </div>
@@ -75,31 +76,17 @@ export default async function DeliveryDashboard() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-card rounded-card p-6 shadow-card border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Your status</h2>
-              <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                <div className="flex items-center gap-3">
-                  <span className="w-2.5 h-2.5 bg-secondary rounded-full" aria-hidden />
-                  <div>
-                    <p className="font-medium text-emerald-800">Online</p>
-                    <p className="text-xs text-emerald-700">Accepting assignments</p>
-                  </div>
-                </div>
-                <button type="button" className="text-sm text-emerald-800 font-medium hover:underline">
-                  Go offline
-                </button>
-              </div>
-            </div>
+            <DeliveryStatusCard />
 
-            <div className="bg-card rounded-card p-6 shadow-card border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Today</h2>
+            <div className="bg-card rounded-2xl p-6 shadow-[0_2px_12px_rgba(36,45,72,0.08)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
+              <h2 className="font-display text-[1.04rem] font-semibold tracking-[-0.01em] text-gray-900 mb-4">Today</h2>
               <div className="space-y-3">
                 <SummaryItem label="Completed" value="8 deliveries" />
                 <SummaryItem label="Total earnings" value="Rs 4,200" highlight />
                 <div className="pt-2 border-t border-gray-100">
                   <Link
                     href="/delivery/laundry"
-                    className="flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
                   >
                     <div className="flex items-center gap-2">
                       <Truck size={16} className="text-gray-600" />
@@ -113,10 +100,10 @@ export default async function DeliveryDashboard() {
           </div>
         </div>
 
-        <div className="bg-card rounded-card p-6 shadow-card border border-gray-200">
+        <div className="bg-card rounded-xl p-6 shadow-[0_2px_12px_rgba(24,34,56,0.07)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Recent deliveries</h2>
-            <Link href="/delivery/orders" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium">
+            <h2 className="font-display text-[1.02rem] font-semibold tracking-[-0.012em] text-gray-900">Recent deliveries</h2>
+            <Link href="/delivery/orders" className="text-sm text-[#4a5497] hover:text-[#3e4678] flex items-center gap-1.5 font-medium">
               View in orders <ArrowRight size={14} />
             </Link>
           </div>
@@ -145,14 +132,21 @@ export default async function DeliveryDashboard() {
   )
 }
 
-function StatCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string; color: string }) {
+function StatCard({ icon: Icon, label, value, color, minWidth, radius }: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  color: string;
+  minWidth: string;
+  radius: string;
+}) {
   return (
-    <div className="bg-card rounded-card p-4 shadow-card border border-gray-200">
-      <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3`}>
-        <Icon size={20} className="text-white" />
+    <div className={`flex-1 ${minWidth} ${radius} bg-card p-5 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
+      <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center mb-3`}>
+        <Icon size={18} />
       </div>
-      <p className="text-2xl font-semibold text-gray-900">{value}</p>
-      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-2xl leading-none font-semibold tracking-[-0.02em] text-gray-900">{value}</p>
+      <p className="mt-1.5 text-sm leading-5 text-gray-500">{label}</p>
     </div>
   )
 }
@@ -162,17 +156,39 @@ function DeliveryCard({ id, pickup, dropoff, customer, distance, earnings, statu
   status: 'waiting' | 'pickup' | 'in-transit';
 }) {
   const statusConfig = {
-    waiting: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Waiting' },
-    pickup: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Pick up' },
-    'in-transit': { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'In transit' },
+    waiting: {
+      bg: 'bg-stone-50',
+      text: 'text-stone-700',
+      border: 'border-stone-200',
+      dot: 'bg-stone-500',
+      label: 'Waiting',
+      accent: 'border-l-stone-300',
+    },
+    pickup: {
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      border: 'border-amber-200',
+      dot: 'bg-amber-500',
+      label: 'Pick up',
+      accent: 'border-l-amber-300',
+    },
+    'in-transit': {
+      bg: 'bg-blue-50',
+      text: 'text-blue-700',
+      border: 'border-blue-200',
+      dot: 'bg-blue-500',
+      label: 'In transit',
+      accent: 'border-l-blue-300',
+    },
   }
   const config = statusConfig[status]
 
   return (
-    <div className="p-4 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
+    <div className={`p-5 rounded-xl border border-stone-200 border-l-4 ${config.accent} shadow-[0_2px_10px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
       <div className="flex items-center justify-between mb-3">
-        <span className="font-semibold text-gray-900">{id}</span>
-        <span className={`text-xs px-2 py-1 rounded-md ${config.bg} ${config.text}`}>
+        <span className="font-semibold text-gray-900 tracking-[-0.01em]">{id}</span>
+        <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${config.bg} ${config.text} ${config.border}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
           {config.label}
         </span>
       </div>
@@ -188,24 +204,26 @@ function DeliveryCard({ id, pickup, dropoff, customer, distance, earnings, statu
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-sm mb-3">
-        <span className="text-gray-500">{customer}</span>
-        <span className="text-gray-500">{distance}</span>
+      <div className="mb-4 flex items-center justify-between gap-3 text-sm">
+        <div className="min-w-0">
+          <p className="font-medium text-gray-800 truncate">{customer}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Distance {distance}</p>
+        </div>
         <span className="font-medium text-emerald-700">{earnings}</span>
       </div>
 
       {status === 'pickup' && (
-        <button type="button" className="w-full py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+        <button type="button" className="inline-flex min-w-[190px] py-2.5 px-4 bg-[#5f6db8] text-white text-sm font-medium rounded-lg hover:bg-[#4e5ba0] transition-colors items-center justify-center gap-2">
           <Navigation size={14} /> Navigate to pickup
         </button>
       )}
       {status === 'in-transit' && (
-        <button type="button" className="w-full py-2 bg-secondary text-white text-sm font-medium rounded-lg hover:bg-secondary/90 transition-colors flex items-center justify-center gap-2">
+        <button type="button" className="inline-flex min-w-[170px] py-2.5 px-4 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-colors items-center justify-center gap-2">
           <CheckCircle size={14} /> Mark delivered
         </button>
       )}
       {status === 'waiting' && (
-        <button type="button" className="w-full py-2 bg-gray-100 text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
+        <button type="button" className="inline-flex min-w-[150px] py-2.5 px-4 bg-stone-100 text-gray-800 text-sm font-medium rounded-lg hover:bg-stone-200 transition-colors">
           Accept order
         </button>
       )}

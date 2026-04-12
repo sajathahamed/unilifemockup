@@ -178,6 +178,7 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const [deliveryAddress, setDeliveryAddress] = useState('')
     const [mapLink, setMapLink] = useState('')
     const [formError, setFormError] = useState<string | null>(null)
+    const [deliveryAvailable, setDeliveryAvailable] = useState(true)
 
     const subtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0)
     const fee = deliveryMode === 'delivery' ? DELIVERY_FEE : 0
@@ -230,11 +231,26 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
         loadCartFromDb().catch(() => setCart([]))
     }, [cartKey])
 
+    useEffect(() => {
+        if (deliveryMode !== 'delivery') {
+            setDeliveryAvailable(true)
+            return
+        }
+        fetch('/api/delivery/availability', { cache: 'no-store' })
+            .then(async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }))
+            .then((res) => setDeliveryAvailable(Boolean(res.ok && res.data?.available)))
+            .catch(() => setDeliveryAvailable(false))
+    }, [deliveryMode])
+
     const placeOrder = async () => {
         setFormError(null)
         if (cart.length === 0) return
         if (!/^[+0-9][0-9\s-]{6,19}$/.test(contactNumber.trim())) {
             setFormError('Enter a valid contact number.')
+            return
+        }
+        if (deliveryMode === 'delivery' && !deliveryAvailable) {
+            setFormError('Delivery not available')
             return
         }
         if (deliveryMode === 'delivery' && deliveryAddress.trim().length < 4) {
@@ -464,6 +480,9 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                     </div>
                     {deliveryMode === 'delivery' && (
                         <>
+                            <p className={`text-xs rounded-lg px-3 py-2 border ${deliveryAvailable ? 'text-gray-500 bg-blue-50 border-blue-100' : 'text-red-700 bg-red-50 border-red-200'}`}>
+                                {deliveryAvailable ? 'Delivery is available.' : 'Delivery not available'}
+                            </p>
                             <div>
                                 <label className="text-sm font-semibold text-gray-700 mb-1 block">Delivery Address</label>
                                 <textarea
@@ -504,7 +523,7 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                 <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={placeOrder}
-                    disabled={placing || cart.length === 0}
+                    disabled={placing || cart.length === 0 || (deliveryMode === 'delivery' && !deliveryAvailable)}
                     className={`w-full py-4 rounded-2xl font-bold text-white text-base shadow-md transition-all ${cart.length === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'
                         }`}
                 >

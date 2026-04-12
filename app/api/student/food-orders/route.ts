@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
+import { isDeliveryServiceAvailable } from '@/lib/delivery-availability.server'
 
 function extractMeta(notes: string | null | undefined) {
   const text = String(notes || '')
@@ -134,6 +135,13 @@ export async function POST(request: NextRequest) {
     const client = await createClient()
     const { data: stall } = await client.from('food_stalls').select('id').eq('id', food_stall_id).maybeSingle()
     if (!stall) return NextResponse.json({ message: 'Food stall not found.' }, { status: 404 })
+
+    if (deliveryType === 'delivery') {
+      const deliveryAvailable = await isDeliveryServiceAvailable(client)
+      if (!deliveryAvailable) {
+        return NextResponse.json({ message: 'Delivery not available' }, { status: 409 })
+      }
+    }
 
     const typeNote = `Type: ${deliveryType}${cleanedMapLink ? ` | Map: ${cleanedMapLink}` : ''}`
     const paymentNote = `Payment: ${cleanedPayment.toUpperCase()}`
