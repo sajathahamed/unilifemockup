@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
 /**
  * PATCH /api/delivery/riders/manage — Update an existing rider.
  * Body: { rider_id, name?, phone?, email? }
+ * Sends SMS to the rider's (new) phone if any credential changes.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -151,17 +152,23 @@ export async function PATCH(request: NextRequest) {
 
     const client = await createClient()
 
-    // Verify rider exists
+    // Fetch existing rider data to compare and detect changes
     const { data: existing } = await client
       .from('users')
-      .select('id, role')
+      .select('id, name, email, role')
       .eq('id', rider_id)
       .eq('role', 'delivery')
       .single()
 
     if (!existing) return NextResponse.json({ message: 'Rider not found' }, { status: 404 })
 
-    const updates: Record<string, any> = {}
+    // Fetch existing phone from delivery_agents
+    const { data: existingAgent } = await client
+      .from('delivery_agents')
+      .select('phone')
+      .eq('id', rider_id)
+      .maybeSingle()
+
     const cleanName = name ? String(name).trim() : ''
     const cleanEmail = email ? String(email).trim().toLowerCase() : ''
     const cleanPhone = phone !== undefined ? normalizePhone(String(phone).trim()) : undefined
@@ -176,11 +183,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Phone number must be exactly 10 digits' }, { status: 400 })
     }
 
-    if (cleanName) updates.name = cleanName
-    if (cleanEmail) updates.email = cleanEmail
+    // Detect what changed for the SMS message
+    const nameChanged = cleanName && cleanName !== existing.name
+    const emailChanged = cleanEmail && cleanEmail !== existing.email
+    const phoneChanged = cleanPhone !== undefined && cleanPhone !== '' && cleanPhone !== (existingAgent?.phone ?? '')
 
-    if (Object.keys(updates).length > 0) {
-      const { error } = await client.from('users').update(updates).eq('id', rider_id)
+    const userUpdates: Record<string, any> = {}
+    if (cleanName) userUpdates.name = cleanName
+    if (cleanEmail) userUpdates.email = cleanEmail
+
+    if (Object.keys(userUpdates).length > 0) {
+      const { error } = await client.from('users').update(userUpdates).eq('id', rider_id)
       if (error) return NextResponse.json({ message: error.message }, { status: 400 })
     }
 
@@ -193,6 +206,24 @@ export async function PATCH(request: NextRequest) {
       await client.from('delivery_agents').upsert({ id: rider_id, ...agentUpdates })
     }
 
+    // Send SMS if any credential was changed
+    const anyChanged = nameChanged || emailChanged || phoneChanged
+    if (anyChanged) {
+      const finalPhone = cleanPhone && cleanPhone !== '' ? cleanPhone : (existingAgent?.phone ?? '')
+      if (finalPhone) {
+        const finalName = cleanName || existing.name
+        const finalEmail = cleanEmail || existing.email
+        const smsLines: string[] = [
+          `Hi ${finalName}, your UniLife rider account has been updated by admin.`,
+        ]
+        if (nameChanged) smsLines.push(`Username: ${finalName}`)
+        if (emailChanged) smsLines.push(`Email: ${finalEmail}`)
+        if (phoneChanged) smsLines.push(`Phone: ${cleanPhone}`)
+        smsLines.push('Please use the updated details to log in.')
+        await sendRiderWelcomeSms(finalPhone, smsLines.join('\n'))
+      }
+    }
+
     return NextResponse.json({ message: 'Rider updated successfully' })
   } catch (e) {
     console.error('Rider manage PATCH error:', e)
@@ -201,18 +232,21 @@ export async function PATCH(request: NextRequest) {
 }
 
 /**
- * DELETE /api/delivery/riders/manage — Delete a rider.
- * Body: { rider_id }
+ * PUT /api/delivery/riders/manage — Toggle active/inactive status of a rider.
+ * Body: { rider_id, is_available: boolean }
  */
-export async function DELETE(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
     const user = await verifyRole('delivery')
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { rider_id } = body
+    const { rider_id, is_available } = body
 
     if (!rider_id) return NextResponse.json({ message: 'rider_id is required' }, { status: 400 })
+    if (typeof is_available !== 'boolean') {
+      return NextResponse.json({ message: 'is_available must be a boolean' }, { status: 400 })
+    }
 
     const client = await createClient()
 
@@ -226,32 +260,27 @@ export async function DELETE(request: NextRequest) {
 
     if (!existing) return NextResponse.json({ message: 'Rider not found' }, { status: 404 })
 
-    // Check if rider has active deliveries
-    const { data: activeDeliveries } = await client
-      .from('deliveries')
-      .select('id')
-      .eq('delivery_agent_id', rider_id)
-      .in('status', ['assigned', 'picked_up'])
+    // Cannot deactivate a rider who has active deliveries
+    if (!is_available) {
+      const { data: activeDeliveries } = await client
+        .from('deliveries')
+        .select('id')
+        .eq('delivery_agent_id', rider_id)
+        .in('status', ['assigned', 'picked_up'])
 
-    if (activeDeliveries && activeDeliveries.length > 0) {
-      return NextResponse.json({
-        message: `Cannot delete rider "${existing.name}" — they have ${activeDeliveries.length} active deliveries`,
-      }, { status: 409 })
+      if (activeDeliveries && activeDeliveries.length > 0) {
+        return NextResponse.json({
+          message: `Cannot deactivate "${existing.name}" — they have ${activeDeliveries.length} active delivery(s). Reassign first.`,
+        }, { status: 409 })
+      }
     }
 
-    await client.from('delivery_agents').delete().eq('id', rider_id)
+    await client.from('delivery_agents').upsert({ id: rider_id, is_available })
 
-    // Delete rider
-    const { error } = await client
-      .from('users')
-      .delete()
-      .eq('id', rider_id)
-
-    if (error) return NextResponse.json({ message: error.message }, { status: 400 })
-
-    return NextResponse.json({ message: `Rider "${existing.name}" deleted successfully` })
+    const statusLabel = is_available ? 'activated' : 'deactivated'
+    return NextResponse.json({ message: `Rider "${existing.name}" ${statusLabel} successfully`, is_available })
   } catch (e) {
-    console.error('Rider manage DELETE error:', e)
+    console.error('Rider manage PUT error:', e)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
   }
 }

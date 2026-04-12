@@ -15,6 +15,7 @@ import {
     Filter,
     Utensils,
     ShoppingBag,
+    WifiOff,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { UserProfile } from '@/lib/auth'
@@ -104,6 +105,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
     const [search, setSearch] = useState('')
     const [tabFilter, setTabFilter] = useState<TabFilter>('all')
     const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+    const [isAdminOnline, setIsAdminOnline] = useState<boolean | null>(null)
 
     const [assigningOrder, setAssigningOrder] = useState<DeliveryOrder | null>(null)
     const [selectedRider, setSelectedRider] = useState<number>(0)
@@ -140,6 +142,11 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
 
     useEffect(() => {
         Promise.all([fetchOrders(), fetchRiders()]).finally(() => setLoading(false))
+        // Load admin online/offline status
+        fetch('/api/delivery/status')
+            .then(r => r.json())
+            .then(d => setIsAdminOnline(typeof d.is_online === 'boolean' ? d.is_online : true))
+            .catch(() => setIsAdminOnline(true))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -270,6 +277,18 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                 </div>
             )}
 
+            {isAdminOnline === false && (
+                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-red-50 border border-red-200 text-red-800">
+                    <WifiOff size={18} className="shrink-0 text-red-600" />
+                    <div>
+                        <p className="font-semibold text-sm">You are currently offline</p>
+                        <p className="text-xs text-red-700 mt-0.5">
+                            No new delivery assignments can be made while you're offline. Go online from your dashboard to resume.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -336,6 +355,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                             }}
                             onStatusUpdate={handleStatusUpdate}
                             isUpdating={updatingId === order.id}
+                            isAdminOnline={isAdminOnline !== false}
                         />
                     ))
                 ) : (
@@ -407,8 +427,10 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Rider</label>
                             <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {riders.length > 0 ? (
-                                    riders.map(rider => (
+                                {riders.filter(r => r.is_available).length > 0 ? (
+                                    riders
+                                        .filter(r => r.is_available)
+                                        .map(rider => (
                                         <button
                                             key={rider.id}
                                             type="button"
@@ -419,30 +441,24 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                                                     : 'border-stone-200 hover:border-stone-300 bg-card'
                                             }`}
                                         >
-                                            <div
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                                                    rider.is_available ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
-                                                }`}
-                                            >
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold bg-emerald-100 text-emerald-800">
                                                 {rider.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-gray-900 text-sm truncate">{rider.name}</p>
                                                 <p className="text-xs text-gray-500 truncate">{rider.email}</p>
                                             </div>
-                                            <span
-                                                className={`text-xs px-2 py-1 rounded-md font-medium shrink-0 ${
-                                                    rider.is_available
-                                                        ? 'bg-emerald-100 text-emerald-800'
-                                                        : 'bg-amber-100 text-amber-800'
-                                                }`}
-                                            >
+                                            <span className="text-xs px-2 py-1 rounded-md font-medium shrink-0 bg-emerald-100 text-emerald-800">
                                                 {rider.active_deliveries} active
                                             </span>
                                         </button>
                                     ))
                                 ) : (
-                                    <p className="text-sm text-gray-500 text-center py-4">No riders available</p>
+                                    <div className="flex flex-col items-center gap-2 py-6 text-center">
+                                        <WifiOff size={28} className="text-gray-300" />
+                                        <p className="text-sm font-medium text-gray-600">No active riders available</p>
+                                        <p className="text-xs text-gray-400">All riders are currently inactive or offline.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -503,11 +519,13 @@ function OrderCard({
     onAssign,
     onStatusUpdate,
     isUpdating,
+    isAdminOnline,
 }: {
     order: DeliveryOrder
     onAssign: () => void
     onStatusUpdate: (order: DeliveryOrder, status: string) => void
     isUpdating: boolean
+    isAdminOnline: boolean
 }) {
     const statusKey = order.is_assigned ? (order.delivery_status ?? 'assigned') : 'unassigned'
     const statusCfg = deliveryStatusConfig[statusKey] ?? deliveryStatusConfig.unassigned
@@ -587,13 +605,19 @@ function OrderCard({
 
                 <div className="flex flex-wrap gap-2">
                     {!order.is_assigned && (
-                        <button
-                            type="button"
-                            onClick={onAssign}
-                            className="inline-flex min-w-[170px] px-4 py-2.5 bg-[#5f6db8] text-white rounded-lg font-medium text-sm hover:bg-[#4e5ba0] flex items-center gap-2"
-                        >
-                            <Truck size={16} /> Assign rider
-                        </button>
+                        isAdminOnline ? (
+                            <button
+                                type="button"
+                                onClick={onAssign}
+                                className="inline-flex min-w-[170px] px-4 py-2.5 bg-[#5f6db8] text-white rounded-lg font-medium text-sm hover:bg-[#4e5ba0] flex items-center gap-2"
+                            >
+                                <Truck size={16} /> Assign rider
+                            </button>
+                        ) : (
+                            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed min-w-[170px]">
+                                <WifiOff size={16} /> No delivery available
+                            </span>
+                        )
                     )}
                     {order.delivery_status === 'assigned' && (
                         <button

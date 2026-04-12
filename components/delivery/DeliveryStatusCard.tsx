@@ -1,18 +1,41 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 
 export default function DeliveryStatusCard() {
-  const [isOnline, setIsOnline] = useState(true)
+  const [isOnline, setIsOnline] = useState<boolean | null>(null) // null = loading
   const [isSaving, setIsSaving] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+
+  // Load persisted status from DB on mount
+  useEffect(() => {
+    fetch('/api/delivery/status')
+      .then(res => res.json())
+      .then(data => {
+        setIsOnline(typeof data.is_online === 'boolean' ? data.is_online : true)
+      })
+      .catch(() => {
+        setLoadError(true)
+        setIsOnline(true) // fallback
+      })
+  }, [])
 
   const handleToggleStatus = async () => {
+    if (isOnline === null) return
+    const nextStatus = !isOnline
     setIsSaving(true)
     try {
-      // Simulate API call - replace with actual API in production
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setIsOnline(!isOnline)
+      const res = await fetch('/api/delivery/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_online: nextStatus }),
+      })
+      if (res.ok) {
+        setIsOnline(nextStatus)
+      } else {
+        console.error('Failed to update status')
+      }
     } catch (error) {
       console.error('Failed to update status:', error)
     } finally {
@@ -20,9 +43,23 @@ export default function DeliveryStatusCard() {
     }
   }
 
+  // Loading skeleton
+  if (isOnline === null) {
+    return (
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-blue-100">
+        <h2 className="font-display text-[1.02rem] font-medium tracking-[-0.008em] text-gray-900 mb-4">Your status</h2>
+        <div className="h-16 bg-gray-100 rounded-2xl animate-pulse" />
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-blue-100 hover:shadow-md transition">
       <h2 className="font-display text-[1.02rem] font-medium tracking-[-0.008em] text-gray-900 mb-4">Your status</h2>
+
+      {loadError && (
+        <p className="text-xs text-amber-600 mb-2">Could not load saved status — showing default.</p>
+      )}
       
       <div className={`flex items-center justify-between p-4 rounded-2xl border transition ${
         isOnline 

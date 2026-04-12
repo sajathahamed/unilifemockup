@@ -110,12 +110,6 @@ interface VendorOrdersClientProps {
   }
 }
 
-interface DeliveryAgent {
-  id: number
-  name: string
-  email: string
-}
-
 export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   const [orders, setOrders] = useState<Order[]>([])
   const [stalls, setStalls] = useState<{ id: number; shop_name: string }[]>([])
@@ -128,16 +122,14 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [deliveryAgents, setDeliveryAgents] = useState<DeliveryAgent[]>([])
   const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
+  const [deliveryAvailable, setDeliveryAvailable] = useState<boolean>(true)
   const [assignForm, setAssignForm] = useState<{
     deliveryType: 'pickup' | 'delivery'
-    deliveryAgentId: number | 0
     location: string
     mapLink: string
   }>({
     deliveryType: 'pickup',
-    deliveryAgentId: 0,
     location: '',
     mapLink: '',
   })
@@ -181,16 +173,6 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
     )
   }
 
-  const loadDeliveryAgents = async () => {
-    const r = await fetch('/api/vendor/delivery-agents')
-    const data = await r.json().catch(() => ({}))
-    if (!r.ok) {
-      setMessage({ type: 'error', text: getApiError(data, r.status, 'Failed to load delivery agents.') })
-      return
-    }
-    setDeliveryAgents(Array.isArray(data.agents) ? data.agents : [])
-  }
-
   useEffect(() => {
     fetch('/api/vendor/shops')
       .then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) }))
@@ -208,7 +190,6 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
           setNewOrder((p) => ({ ...p, stall_id: p.stall_id || firstStallId }))
           await loadOrders(firstStallId)
           await loadMenuItems(firstStallId)
-          await loadDeliveryAgents()
         } else {
           setOrders([])
           setMenuItems([])
@@ -350,10 +331,13 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
     setAssigningOrder(order)
     setAssignForm({
       deliveryType: 'pickup',
-      deliveryAgentId: 0,
       location: order.location || '',
       mapLink: '',
     })
+    fetch('/api/delivery/availability', { cache: 'no-store' })
+      .then(async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }))
+      .then((res) => setDeliveryAvailable(Boolean(res.ok && res.data?.available)))
+      .catch(() => setDeliveryAvailable(false))
   }
 
   const handleConfirmDelivery = async (e: React.FormEvent) => {
@@ -365,8 +349,8 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
     const mapLink = assignForm.mapLink.trim()
 
     if (assignForm.deliveryType === 'delivery') {
-      if (!assignForm.deliveryAgentId) {
-        setMessage({ type: 'error', text: 'Select a delivery person.' })
+      if (!deliveryAvailable) {
+        setMessage({ type: 'error', text: 'Delivery not available' })
         return
       }
       if (location.length < 4) {
@@ -388,7 +372,6 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
         body: JSON.stringify({
           status: 'completed',
           delivery_type: assignForm.deliveryType,
-          delivery_agent_id: assignForm.deliveryType === 'delivery' ? assignForm.deliveryAgentId : null,
           delivery_address: location || null,
           map_link: mapLink || null,
         }),
@@ -404,7 +387,7 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
       setMessage({
         type: 'success',
         text: assignForm.deliveryType === 'delivery'
-          ? 'Order confirmed and delivery person assigned.'
+          ? 'Order confirmed and sent to delivery admin.'
           : 'Order confirmed as pickup.',
       })
     } catch {
@@ -680,20 +663,8 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
               </div>
 
               {assignForm.deliveryType === 'delivery' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Person</label>
-                  <select
-                    value={assignForm.deliveryAgentId || ''}
-                    onChange={(e) => setAssignForm((p) => ({ ...p, deliveryAgentId: parseInt(e.target.value, 10) || 0 }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                  >
-                    <option value="">Select delivery person</option>
-                    {deliveryAgents.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} ({a.email})
-                      </option>
-                    ))}
-                  </select>
+                <div className={`text-xs rounded-lg px-3 py-2 border ${deliveryAvailable ? 'text-gray-500 bg-blue-50 border-blue-100' : 'text-red-700 bg-red-50 border-red-200'}`}>
+                  {deliveryAvailable ? 'This order will be sent to delivery admin for assignment.' : 'Delivery not available'}
                 </div>
               )}
 
@@ -701,7 +672,7 @@ export default function VendorOrdersClient({ user }: VendorOrdersClientProps) {
                 <button type="button" onClick={() => setAssigningOrder(null)} className="flex-1 py-2 border border-gray-200 rounded-lg text-gray-700">
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} className="flex-1 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="submit" disabled={saving || (assignForm.deliveryType === 'delivery' && !deliveryAvailable)} className="flex-1 py-2 bg-primary text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving ? <Loader2 size={18} className="animate-spin" /> : null}
                   Confirm
                 </button>

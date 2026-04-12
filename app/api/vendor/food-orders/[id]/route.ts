@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyRole } from '@/lib/auth.server'
 import { createClient } from '@/lib/supabase/server'
+import { isDeliveryServiceAvailable } from '@/lib/delivery-availability.server'
 
 /** PATCH /api/vendor/food-orders/[id] — update order status */
 export async function PATCH(
@@ -16,7 +17,7 @@ export async function PATCH(
     if (isNaN(numId)) return NextResponse.json({ message: 'Invalid ID' }, { status: 400 })
 
     const body = await request.json()
-    const { status, delivery_type, delivery_agent_id, delivery_address, map_link } = body
+    const { status, delivery_type, delivery_address, map_link } = body
     const valid = ['new', 'preparing', 'ready', 'completed', 'cancelled']
     if (!status || !valid.includes(status)) return NextResponse.json({ message: 'Invalid status' }, { status: 400 })
 
@@ -50,46 +51,19 @@ export async function PATCH(
       if (cleanedAddress) updates.delivery_address = cleanedAddress
 
       if (delivery_type === 'delivery') {
-        const agentId = Number(delivery_agent_id)
-        if (!Number.isFinite(agentId) || agentId <= 0) {
-          return NextResponse.json({ message: 'Select a delivery person.' }, { status: 400 })
-        }
         if (!cleanedAddress) {
           return NextResponse.json({ message: 'Delivery location is required.' }, { status: 400 })
         }
 
-        const { data: agent } = await client
-          .from('users')
-          .select('id, name, email, role')
-          .eq('id', agentId)
-          .single()
-        if (!agent || agent.role !== 'delivery') {
-          return NextResponse.json({ message: 'Selected user is not a delivery person.' }, { status: 400 })
+        const deliveryAvailable = await isDeliveryServiceAvailable(client)
+        if (!deliveryAvailable) {
+          return NextResponse.json({ message: 'Delivery not available' }, { status: 409 })
         }
 
-        // Keep one assignment row per order.
-        const { data: existingDelivery } = await client
-          .from('deliveries')
-          .select('id')
-          .eq('order_id', numId)
-          .maybeSingle()
-        if (existingDelivery?.id) {
-          const { error: updateDeliveryError } = await client
-            .from('deliveries')
-            .update({ delivery_agent_id: agentId, status: 'assigned' })
-            .eq('id', existingDelivery.id)
-          if (updateDeliveryError) return NextResponse.json({ message: updateDeliveryError.message }, { status: 400 })
-        } else {
-          const { error: insertDeliveryError } = await client
-            .from('deliveries')
-            .insert({ order_id: numId, delivery_agent_id: agentId, status: 'assigned' })
-          if (insertDeliveryError) return NextResponse.json({ message: insertDeliveryError.message }, { status: 400 })
-        }
-
-        // Notification entry for delivery audience with assignee context.
+        // Notification entry for delivery audience so delivery admin can assign riders.
         await client.from('announcements').insert({
-          title: `New delivery assigned (${numId})`,
-          body: `${agent.name} (${agent.email}) assigned for order #ORD-${numId}${cleanedAddress ? `. Drop: ${cleanedAddress}` : ''}${cleanedMapLink ? `. Map: ${cleanedMapLink}` : ''}`,
+          title: `New delivery request (${numId})`,
+          body: `Order #ORD-${numId} is ready for delivery assignment${cleanedAddress ? `. Drop: ${cleanedAddress}` : ''}${cleanedMapLink ? `. Map: ${cleanedMapLink}` : ''}`,
           target_audience: 'delivery',
           created_by: user.id,
         })

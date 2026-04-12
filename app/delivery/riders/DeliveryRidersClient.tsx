@@ -11,13 +11,17 @@ import {
     Users,
     Plus,
     Pencil,
-    Trash2,
     X,
     Phone,
+    ToggleLeft,
+    ToggleRight,
 } from 'lucide-react'
 import { UserProfile } from '@/lib/auth'
 import InlineSpinner from '@/components/ui/InlineSpinner'
 import Swal from 'sweetalert2'
+
+/** Hardcoded accounts hidden from the rider management list */
+const HIDDEN_EMAILS = new Set(['easytech6727@gmail.com'])
 
 interface Rider {
     id: number
@@ -34,13 +38,29 @@ const GMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@gmail\.com$/i
 const PHONE_PATTERN = /^\d{10}$/
 
 function validateRiderInput(name: string, email: string, phone: string): string | null {
+    if (!name) return 'Username is required'
     if (!USERNAME_PATTERN.test(name)) {
         return 'Username must start with a letter and contain only letters or numbers'
     }
+    if (!email) return 'Email is required'
     if (!GMAIL_PATTERN.test(email)) {
         return 'Email must be a valid Gmail address (example@gmail.com)'
     }
+    if (!phone) return 'Phone number is required'
     if (!PHONE_PATTERN.test(phone)) {
+        return 'Phone number must be exactly 10 digits'
+    }
+    return null
+}
+
+function validateEditInput(name: string, email: string, phone: string): string | null {
+    if (name && !USERNAME_PATTERN.test(name)) {
+        return 'Username must start with a letter and contain only letters or numbers'
+    }
+    if (email && !GMAIL_PATTERN.test(email)) {
+        return 'Email must be a valid Gmail address (example@gmail.com)'
+    }
+    if (phone && !PHONE_PATTERN.test(phone)) {
         return 'Phone number must be exactly 10 digits'
     }
     return null
@@ -60,8 +80,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
     const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' })
     const [saving, setSaving] = useState(false)
 
-    const [deletingRider, setDeletingRider] = useState<Rider | null>(null)
-    const [deleting, setDeleting] = useState(false)
+    const [togglingRiderId, setTogglingRiderId] = useState<number | null>(null)
 
     const showErrorAlert = (text: string) => {
         void Swal.fire({
@@ -77,7 +96,8 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
         try {
             const res = await fetch('/api/delivery/riders')
             const data = await res.json()
-            setRiders(data.riders ?? [])
+            // Filter hardcoded hidden accounts on client side as well
+            setRiders((data.riders ?? []).filter((r: Rider) => !HIDDEN_EMAILS.has(r.email?.toLowerCase() ?? '')))
         } catch (err) {
             console.error('Failed to fetch riders:', err)
         }
@@ -125,6 +145,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
 
     const openEdit = (rider: Rider) => {
         setEditingRider(rider)
+        // Pre-fill with existing values so admin sees current data
         setEditForm({ name: rider.name, email: rider.email, phone: rider.phone })
     }
 
@@ -135,9 +156,16 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
         const name = editForm.name.trim()
         const email = editForm.email.trim()
         const phone = editForm.phone.trim()
-        const inputError = validateRiderInput(name, email, phone)
+
+        const inputError = validateEditInput(name, email, phone)
         if (inputError) {
             showErrorAlert(inputError)
+            return
+        }
+
+        // Require at least one field to update
+        if (!name && !email && !phone) {
+            showErrorAlert('Please update at least one field')
             return
         }
 
@@ -148,14 +176,14 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     rider_id: editingRider.id,
-                    name,
-                    email,
-                    phone,
+                    name: name || undefined,
+                    email: email || undefined,
+                    phone: phone || undefined,
                 }),
             })
             const data = await res.json()
             if (res.ok) {
-                setMessage({ type: 'success', text: data.message || 'Rider updated.' })
+                setMessage({ type: 'success', text: data.message || 'Rider updated. SMS sent to rider.' })
                 setEditingRider(null)
                 await fetchRiders()
             } else {
@@ -168,28 +196,40 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
         }
     }
 
-    const handleDelete = async () => {
-        if (!deletingRider) return
+    const handleToggleActive = async (rider: Rider) => {
+        const newStatus = !rider.is_available
+        const actionLabel = newStatus ? 'activate' : 'deactivate'
+
+        const confirmed = await Swal.fire({
+            icon: 'question',
+            title: `${newStatus ? 'Activate' : 'Deactivate'} rider?`,
+            html: `<b>${rider.name}</b> will be ${newStatus ? 'activated and appear in assignments' : 'deactivated and removed from assignments'}.`,
+            showCancelButton: true,
+            confirmButtonText: newStatus ? 'Activate' : 'Deactivate',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: newStatus ? '#16a34a' : '#dc2626',
+        })
+        if (!confirmed.isConfirmed) return
+
+        setTogglingRiderId(rider.id)
         setMessage(null)
-        setDeleting(true)
         try {
             const res = await fetch('/api/delivery/riders/manage', {
-                method: 'DELETE',
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rider_id: deletingRider.id }),
+                body: JSON.stringify({ rider_id: rider.id, is_available: newStatus }),
             })
             const data = await res.json()
             if (res.ok) {
-                setMessage({ type: 'success', text: data.message || 'Rider removed.' })
-                setDeletingRider(null)
+                setMessage({ type: 'success', text: data.message || `Rider ${actionLabel}d.` })
                 await fetchRiders()
             } else {
-                showErrorAlert(data.message || 'Failed to delete rider')
+                showErrorAlert(data.message || `Failed to ${actionLabel} rider`)
             }
         } catch {
             showErrorAlert('Network error')
         } finally {
-            setDeleting(false)
+            setTogglingRiderId(null)
         }
     }
 
@@ -199,8 +239,8 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
         return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)
     })
 
-    const available = riders.filter(r => r.is_available).length
-    const busy = riders.filter(r => !r.is_available).length
+    const active = riders.filter(r => r.is_available).length
+    const inactive = riders.filter(r => !r.is_available).length
 
     if (loading) {
         return (
@@ -217,7 +257,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                 <div>
                     <h1 className="font-display text-[1.9rem] font-semibold tracking-[-0.016em] text-gray-900">Riders</h1>
                     <p className="mt-1.5 text-[0.95rem] leading-6 text-gray-600 max-w-xl">
-                        Add and edit delivery riders. Availability reflects active assignments.
+                        Add and manage delivery riders. Use the toggle to activate or deactivate.
                     </p>
                 </div>
                 <button
@@ -235,21 +275,21 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                         <Users size={20} />
                     </div>
                     <p className="text-2xl font-semibold text-gray-900">{riders.length}</p>
-                    <p className="text-sm text-gray-500">Total</p>
+                    <p className="text-sm text-gray-500">Total riders</p>
                 </div>
                 <div className="bg-card rounded-2xl p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)]">
                     <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center mb-3">
                         <CheckCircle2 size={20} />
                     </div>
-                    <p className="text-2xl font-semibold text-gray-900">{available}</p>
-                    <p className="text-sm text-gray-500">Available</p>
+                    <p className="text-2xl font-semibold text-gray-900">{active}</p>
+                    <p className="text-sm text-gray-500">Active</p>
                 </div>
                 <div className="flex-1 min-w-[170px] bg-card rounded-lg p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition">
-                    <div className="w-10 h-10 bg-amber-50 text-amber-700 rounded-xl flex items-center justify-center mb-3">
+                    <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3">
                         <Clock size={20} />
                     </div>
-                    <p className="text-2xl font-semibold text-gray-900">{busy}</p>
-                    <p className="text-sm text-gray-500">Busy</p>
+                    <p className="text-2xl font-semibold text-gray-900">{inactive}</p>
+                    <p className="text-sm text-gray-500">Inactive</p>
                 </div>
             </div>
 
@@ -284,14 +324,16 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                     {filtered.map(rider => (
                         <div
                             key={rider.id}
-                            className="bg-card rounded-2xl border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] p-5 hover:-translate-y-0.5 hover:shadow-md transition"
+                            className={`bg-card rounded-2xl border shadow-[0_2px_12px_rgba(30,41,59,0.07)] p-5 hover:-translate-y-0.5 hover:shadow-md transition ${
+                                rider.is_available ? 'border-stone-200' : 'border-gray-200 opacity-75'
+                            }`}
                         >
                             <div className="flex items-center gap-4 mb-4">
                                 <div
                                     className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-semibold shrink-0 ${
                                         rider.is_available
                                             ? 'bg-emerald-100 text-emerald-800'
-                                            : 'bg-amber-100 text-amber-800'
+                                            : 'bg-gray-100 text-gray-500'
                                     }`}
                                 >
                                     {rider.photo_url ? (
@@ -319,11 +361,11 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                                     className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${
                                         rider.is_available
                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                                            : 'bg-gray-100 text-gray-500 border-gray-200'
                                     }`}
                                 >
-                                    <span className={`h-1.5 w-1.5 rounded-full ${rider.is_available ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                    {rider.is_available ? 'Available' : 'Busy'}
+                                    <span className={`h-1.5 w-1.5 rounded-full ${rider.is_available ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                    {rider.is_available ? 'Active' : 'Inactive'}
                                 </span>
                             </div>
 
@@ -337,10 +379,22 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => { setDeletingRider(rider); setMessage(null) }}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 border border-red-100"
+                                    onClick={() => handleToggleActive(rider)}
+                                    disabled={togglingRiderId === rider.id}
+                                    title={rider.is_available ? 'Deactivate rider' : 'Activate rider'}
+                                    className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition ${
+                                        rider.is_available
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                    } disabled:opacity-50`}
                                 >
-                                    <Trash2 size={14} />
+                                    {togglingRiderId === rider.id ? (
+                                        <InlineSpinner size={16} />
+                                    ) : rider.is_available ? (
+                                        <ToggleRight size={20} />
+                                    ) : (
+                                        <ToggleLeft size={20} />
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -446,36 +500,51 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                                 <X size={20} className="text-gray-400" />
                             </button>
                         </div>
+                        <p className="text-xs text-gray-500 mb-4 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            An SMS will be sent to the rider with any updated credentials.
+                        </p>
                         <form onSubmit={handleEdit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                                <input
-                                    value={editForm.name}
-                                    onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                                    className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
-                                    placeholder="Username (e.g. Rider01)"
-                                />
+                                <div className="relative">
+                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                    <input
+                                        value={editForm.name}
+                                        onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                                        className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
+                                        placeholder="Username (e.g. Rider01)"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-400">Start with a letter, then letters/numbers only.</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input
-                                    type="email"
-                                    value={editForm.email}
-                                    onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
-                                    className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
-                                    placeholder="rider@gmail.com"
-                                />
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                    <input
+                                        type="email"
+                                        value={editForm.email}
+                                        onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                                        className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
+                                        placeholder="rider@gmail.com"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-400">Only Gmail addresses are allowed.</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                <input
-                                    value={editForm.phone}
-                                    onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
-                                    inputMode="numeric"
-                                    maxLength={10}
-                                    className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
-                                    placeholder="0771234567"
-                                />
+                                <div className="relative">
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                    <input
+                                        value={editForm.phone}
+                                        onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        className="w-full pl-10 pr-4 py-2.5 border border-stone-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
+                                        placeholder="0771234567"
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-gray-400">Enter exactly 10 digits (example: 0771234567).</p>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button
@@ -491,49 +560,13 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                                     className="flex-1 py-2.5 bg-[#5f6db8] text-white rounded-xl font-medium hover:bg-[#4e5ba0] disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {saving ? <InlineSpinner size={18} /> : <CheckCircle2 size={18} />}
-                                    Save
+                                    Save &amp; notify
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-
-            {deletingRider && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-                    <div
-                        className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-[0_2px_12px_rgba(30,41,59,0.07)] border border-stone-200 text-center"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <Trash2 size={22} />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete rider?</h3>
-                        <p className="text-gray-600 text-sm mb-6">
-                            Remove <strong>{deletingRider.name}</strong>? This cannot be undone.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setDeletingRider(null)}
-                                className="flex-1 py-2.5 border border-stone-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                disabled={deleting}
-                                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                    {deleting ? <InlineSpinner size={18} /> : <Trash2 size={18} />}
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
-
