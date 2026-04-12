@@ -159,39 +159,8 @@ export default function StudentProfileClient({ user, initialMobile }: { user: an
             {loading ? 'Saving...' : saved ? 'Saved Successfully!' : 'Save Phone Number'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => void sendTestSms()}
-            disabled={testSmsLoading || !initialMobile?.trim()}
-            title={
-              !initialMobile?.trim()
-                ? 'Save your number first (page refreshes after save)'
-                : 'Sends one test SMS via Dialog (same as class reminders)'
-            }
-            className="w-full py-3 border-2 border-primary/30 text-primary rounded-xl font-bold hover:bg-primary/5 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {testSmsLoading ? <Loader2 className="animate-spin" size={20} /> : <Phone size={20} />}
-            {testSmsLoading ? 'Sending test…' : 'Send test reminder SMS'}
-          </button>
-          <p className="text-xs text-gray-500 text-center -mt-2">
-            Sends to the number stored in the database. After you save a new number, the page refreshes—then tap test.
-          </p>
-
-          {testSmsOk && <p className="text-sm text-emerald-800 text-center font-medium">{testSmsOk}</p>}
+          {saved && <p className="text-sm text-emerald-800 text-center font-medium">Phone number saved! SMS reminders will be sent to this number.</p>}
           {error && <p className="text-sm text-red-600 text-center whitespace-pre-wrap">{error}</p>}
-
-          {gatewayDebug != null && (
-            <details className="text-xs border border-gray-200 rounded-lg p-3 bg-gray-50">
-              <summary className="cursor-pointer font-semibold text-gray-700">
-                Dialog gateway response (show this to your SMS provider if delivery fails)
-              </summary>
-              <pre className="mt-2 overflow-x-auto text-[11px] text-gray-800 whitespace-pre-wrap break-all">
-                {typeof gatewayDebug === 'string'
-                  ? gatewayDebug
-                  : JSON.stringify(gatewayDebug, null, 2)}
-              </pre>
-            </details>
-          )}
         </div>
       </div>
     </div>

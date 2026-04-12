@@ -36,7 +36,12 @@ export default async function StudentDashboard() {
     return row.day_of_week === today
   })
 
-  // 2. Fetch Recent Trips
+  // 2. Fetch Trips - total count and recent 3
+  const { count: totalTripsCount } = await supabase
+    .from('trips')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
   const { data: recentTrips } = await supabase
     .from('trips')
     .select('*')
@@ -83,7 +88,7 @@ export default async function StudentDashboard() {
           <StatCard
             icon={MapPin}
             label="Saved Trips"
-            value={recentTrips?.length ? `${recentTrips.length} Saved` : 'Plan a Trip'}
+            value={`${totalTripsCount || 0} Trips`}
             color="bg-blue-500"
             href="/trip-planner"
           />

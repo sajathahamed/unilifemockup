@@ -11,9 +11,13 @@ import {
   Bell,
   Clock,
   MessageSquareText,
+  Calendar,
+  TestTube2,
+  Info,
 } from 'lucide-react'
 import TimetableView from '@/components/timetable/TimetableView'
-import TimetableEntryModal from '@/components/student/TimetableEntryModal'
+import TimetableEntryModalEnhanced from '@/components/student/TimetableEntryModalEnhanced'
+import TimetableReminderToast, { type ReminderItem } from '@/components/student/TimetableReminderToast'
 import type { TimetableSlot } from '@/components/timetable/types'
 
 type UploadKind = 'class' | 'exam'
@@ -52,6 +56,11 @@ export default function StudentTimetableClient() {
   const [slotModalMode, setSlotModalMode] = useState<'add' | 'edit'>('add')
   const [slotModalSlot, setSlotModalSlot] = useState<TimetableSlot | null>(null)
 
+  // Reminder system with test mode
+  const [testMode, setTestMode] = useState(false)
+  const [reminders, setReminders] = useState<ReminderItem[]>([])
+  const [lastReminderUpdate, setLastReminderUpdate] = useState<number>(0)
+
   const loadTimetable = useCallback(async () => {
     try {
       setError(null)
@@ -71,6 +80,57 @@ export default function StudentTimetableClient() {
   useEffect(() => {
     loadTimetable()
   }, [loadTimetable])
+
+  // Build reminder items from schedules
+  useEffect(() => {
+    const now = new Date()
+    const today = now.getDay()
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+    const newReminders: ReminderItem[] = []
+
+    schedules.forEach(slot => {
+      const slotDay = dayNames.findIndex(d => d.toLowerCase() === slot.day_of_week.toLowerCase())
+      if (slotDay === -1) return
+
+      let daysUntil = slotDay - today
+      if (daysUntil < 0) daysUntil += 7
+      if (daysUntil === 0) {
+        const [hours, mins] = slot.start_time.split(':').map(Number)
+        const slotTime = new Date(now)
+        slotTime.setHours(hours, mins, 0, 0)
+        if (slotTime < now) daysUntil = 7
+      }
+
+      const triggerDate = new Date(now)
+      triggerDate.setDate(now.getDate() + daysUntil)
+      const [hours, mins] = slot.start_time.split(':').map(Number)
+      triggerDate.setHours(hours, mins, 0, 0)
+
+      const reminderMinutes = slot.reminder_minutes_before ?? reminderMins
+      triggerDate.setMinutes(triggerDate.getMinutes() - reminderMinutes)
+
+      newReminders.push({
+        id: `slot-${slot.id}-${lastReminderUpdate}`,
+        title: slot.subject || slot.courseName || 'Class',
+        time: slot.start_time,
+        location: slot.location || undefined,
+        triggerAt: triggerDate,
+        entryId: slot.id,
+      })
+    })
+
+    setReminders(newReminders)
+  }, [schedules, reminderMins, lastReminderUpdate])
+
+  const handleReminderTriggered = useCallback((reminder: ReminderItem) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('Timetable Reminder', {
+        body: `"${reminder.title}" starts at ${reminder.time}`,
+        icon: '/favicon.ico',
+      })
+    }
+  }, [])
 
   const fetchReminderPreview = async () => {
     setReminderPreviewLoading(true)
@@ -107,7 +167,7 @@ export default function StudentTimetableClient() {
   }
 
   const deleteSlot = async (slot: TimetableSlot) => {
-    if (!confirm(`Remove “${slot.subject || slot.courseName || 'this slot'}” from your timetable?`)) return
+    if (!confirm(`Remove "${slot.subject || slot.courseName || 'this entry'}" from your schedule?`)) return
     setError(null)
     try {
       const res = await fetch(`/api/student/timetable/entries/${slot.id}`, {
@@ -116,8 +176,9 @@ export default function StudentTimetableClient() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message || 'Could not delete')
-      setSuccess('Slot removed.')
-      setTimeout(() => setSuccess(null), 2500)
+      setSuccess('Entry removed. Reminder cancelled.')
+      setLastReminderUpdate(Date.now())
+      setTimeout(() => setSuccess(null), 3000)
       await loadTimetable()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed')
@@ -207,6 +268,13 @@ export default function StudentTimetableClient() {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* In-app reminder toasts */}
+      <TimetableReminderToast
+        reminders={reminders}
+        testMode={testMode}
+        onReminderTriggered={handleReminderTriggered}
+      />
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
@@ -225,6 +293,21 @@ export default function StudentTimetableClient() {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* Test mode toggle for in-app reminders */}
+          <button
+            type="button"
+            onClick={() => setTestMode(!testMode)}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
+              testMode
+                ? 'bg-amber-100 border-amber-300 text-amber-800 shadow-sm'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={testMode ? 'Test mode ON: Reminders in 1 minute' : 'Enable test mode to see reminders in 1 minute'}
+          >
+            <TestTube2 size={18} className={testMode ? 'text-amber-600' : 'text-gray-400'} />
+            {testMode ? 'Test Mode ON' : 'Test Mode'}
+          </button>
+
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
             <Bell size={16} className="text-primary" />
             <select
@@ -261,21 +344,6 @@ export default function StudentTimetableClient() {
           </div>
 
           <button
-            type="button"
-            onClick={() => void fetchReminderPreview()}
-            disabled={reminderPreviewLoading || schedules.length === 0}
-            title="See the exact SMS text the system will send (same as cron)"
-            className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 bg-white text-gray-800 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all disabled:opacity-40"
-          >
-            {reminderPreviewLoading ? (
-              <Loader2 size={18} className="animate-spin shrink-0" />
-            ) : (
-              <MessageSquareText size={18} className="shrink-0 text-primary" />
-            )}
-            Preview SMS
-          </button>
-
-          <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
             className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50"
@@ -287,83 +355,16 @@ export default function StudentTimetableClient() {
         </div>
       </div>
 
-      {reminderPreviewOpen && reminderPreviewData && (
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-bold text-gray-900 flex items-center gap-2">
-              <MessageSquareText size={20} className="text-primary" />
-              Reminder SMS preview
-            </h2>
-            <button
-              type="button"
-              onClick={() => setReminderPreviewOpen(false)}
-              className="text-sm text-gray-500 hover:text-gray-800"
-            >
-              Close
-            </button>
-          </div>
-          <p className="text-sm text-gray-600">
-            Default lead time: <span className="font-semibold">{reminderPreviewData.default_lead_minutes} min</span>
-            before start (unless you set a per-subject override). Text below is exactly what the SMS cron sends.
-          </p>
-          {reminderPreviewData.sms && !reminderPreviewData.sms.has_saved_phone && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              No mobile saved on your profile. Add your number under{' '}
-              <Link href="/student/profile" className="font-semibold underline">
-                Profile
-              </Link>{' '}
-              so timetable SMS can be delivered.
-            </div>
-          )}
-          {reminderPreviewData.sms?.has_saved_phone && (
-            <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
-              SMS will go to the number saved on your profile
-              {reminderPreviewData.sms.destination_last4
-                ? ` (ends with ···${reminderPreviewData.sms.destination_last4})`
-                : ''}
-              .
-            </p>
-          )}
-          {reminderPreviewData.scheduled_in_db.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
-                Queued in database (scheduled)
-              </p>
-              <ul className="space-y-2 text-sm">
-                {reminderPreviewData.scheduled_in_db.map((row) => (
-                  <li
-                    key={row.id}
-                    className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 font-mono text-emerald-900"
-                  >
-                    {row.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* Test mode info banner */}
+      {testMode && (
+        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <Info size={20} className="text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
-              Per slot (computed now)
+            <p className="text-sm font-semibold text-amber-800">Test Mode Active</p>
+            <p className="text-sm text-amber-700">
+              <strong>SMS:</strong> When you add or edit a slot, an SMS will be sent to your phone immediately (no waiting for reminder time).<br />
+              <strong>In-app:</strong> Toast reminders will appear 1 minute from now for today's classes/exams.
             </p>
-            <ul className="space-y-3">
-              {reminderPreviewData.preview.map((row, i) => (
-                <li
-                  key={i}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    row.would_schedule
-                      ? 'bg-slate-50 border-slate-200'
-                      : 'bg-amber-50 border-amber-100'
-                  }`}
-                >
-                  <p className="font-mono text-gray-900">{row.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {row.subject} · {row.entry_type} · {row.lead_minutes} min before
-                    {!row.would_schedule && row.skip_reason ? ` · ${row.skip_reason}` : ''}
-                    {row.notify_at ? ` · notify_at ${new Date(row.notify_at).toLocaleString()}` : ''}
-                  </p>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       )}
@@ -379,15 +380,49 @@ export default function StudentTimetableClient() {
         </div>
       )}
 
-      <TimetableEntryModal
+      <TimetableEntryModalEnhanced
         open={slotModalOpen}
         mode={slotModalMode}
         slot={slotModalSlot}
+        existingSlots={schedules}
+        testMode={testMode}
         onClose={() => setSlotModalOpen(false)}
-        onSaved={async () => {
-          setSuccess(slotModalMode === 'add' ? 'Slot added.' : 'Slot updated.')
-          setTimeout(() => setSuccess(null), 2500)
+        onSaved={async (entryData) => {
+          const baseMsg = slotModalMode === 'add' ? 'Slot added successfully!' : 'Slot updated successfully!'
+          
+          // Send test SMS immediately if test mode is enabled
+          if (testMode && entryData) {
+            try {
+              const smsRes = await fetch('/api/student/timetable/test-sms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  subject: entryData.subject,
+                  location: entryData.location,
+                  entry_type: entryData.entry_type,
+                  day_of_week: entryData.day_of_week,
+                  start_time: entryData.start_time,
+                }),
+              })
+              const smsData = await smsRes.json()
+              if (smsRes.ok) {
+                setSuccess(`${baseMsg} Test SMS sent to your phone!`)
+              } else {
+                setSuccess(baseMsg)
+                setError(smsData.message || 'Could not send test SMS')
+              }
+            } catch {
+              setSuccess(baseMsg)
+              setError('Failed to send test SMS')
+            }
+          } else {
+            setSuccess(baseMsg)
+          }
+          
+          setTimeout(() => setSuccess(null), 3500)
           await loadTimetable()
+          setLastReminderUpdate(Date.now())
         }}
       />
 

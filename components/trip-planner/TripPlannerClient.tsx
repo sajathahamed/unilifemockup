@@ -320,6 +320,24 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
       const newId = Number(data.id)
       if (Number.isFinite(newId)) setResolvedTripId(newId)
       setSaved(true)
+      
+      // Send SMS notification for saved trip
+      try {
+        await fetch('/api/trip/notify-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tripId: newId || editTripId,
+            destination: destination.trim(),
+            days,
+            travelers,
+            totalBudget: tripPlan.totalBudget,
+            isEdit: !!editTripId,
+          }),
+        })
+      } catch {
+        // SMS notification is non-critical, don't fail the save
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save trip')
     } finally {
