@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-// @ts-ignore
-import getLocations from 'restaurant-location-search-api'
 
 function logDebug(message: string) {
     if (process.env.NODE_ENV === 'development') {
@@ -62,21 +60,8 @@ async function fetchFromWoosmap(lat: string, lng: string) {
 }
 
 async function fetchChains(lat: number, lng: number) {
-    const chains = ['mcdonalds', 'burgerKing', 'tacoBell', 'popeyes', 'chipotle', 'wendys']
-    const results: any[] = []
-
-    for (const chain of chains) {
-        try {
-            // getLocations(spotName, {lat, long}, radius, maxResults)
-            const data = await getLocations(chain, { lat, long: lng }, '5', '3')
-            if (data && data.nearByStores) {
-                results.push(...data.nearByStores.map((s: any) => ({ ...s, chain_name: chain })))
-            }
-        } catch (e) {
-            console.error(`Failed to fetch chain ${chain}:`, e)
-        }
-    }
-    return results
+    // Chain store search is disabled because the third-party package contained a vulnerable axios dependency.
+    return []
 }
 
 export async function GET(request: NextRequest) {
@@ -95,31 +80,12 @@ export async function GET(request: NextRequest) {
 
     try {
         // Parallel fetch
-        const [osm, woos, chainData] = await Promise.all([
+        const [osm, woos] = await Promise.all([
             fetchFromOverpass(latStr, lngStr),
-            fetchFromWoosmap(latStr, lngStr),
-            fetchChains(lat, lng)
+            fetchFromWoosmap(latStr, lngStr)
         ])
 
         const results: any[] = []
-
-        // Map Chain results
-        chainData.forEach((s: any) => {
-            results.push({
-                place_id: `chain-${s.storeNumber || Math.random()}`,
-                name: s.chain_name.toUpperCase() + (s.address?.city ? ` - ${s.address.city}` : ''),
-                vicinity: s.address?.streetAddress || 'Nearby',
-                rating: 4.2,
-                user_ratings_total: 100,
-                price_level: 2,
-                types: ['restaurant', 'fast_food', s.chain_name],
-                opening_hours: { open_now: s.storeStatus === 'openNow' },
-                photo_url: CATEGORY_IMAGES[s.chain_name] || CATEGORY_IMAGES.fast_food,
-                distance: s.formattedDistance || null,
-                tags: ['Fast Food', s.chain_name.charAt(0).toUpperCase() + s.chain_name.slice(1)],
-                source: 'chain'
-            })
-        })
 
         // Map Woosmap results
         woos.results.forEach((w: any) => {

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { google } from '@ai-sdk/google'
+import { generateObject } from 'ai'
+import { z } from 'zod'
 
 /**
  * POST /api/trip/ai-budget
@@ -9,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
-    const { mode = 'estimate', destination, travelers = 1, totalBudget, days = 1, distanceKm = 0, places = [] } = body
+    const { mode = 'estimate', destination, travelers = 1, totalBudget, days = 1, distanceKm = 0, places = [], startLocation = 'Not specified' } = body
 
     if (!destination) {
       return NextResponse.json({ message: 'Destination is required' }, { status: 400 })
@@ -19,15 +22,25 @@ export async function POST(request: NextRequest) {
       if (!totalBudget || Number(totalBudget) <= 0) {
         return NextResponse.json({ message: 'Total budget is required' }, { status: 400 })
       }
-      const plan = generateTripPlan({
+      
+      const planVars: PlanInput = {
+        startLocation: String(startLocation),
         destination: String(destination),
         travelers: Number(travelers),
         totalBudget: Number(totalBudget),
         days: Number(days),
         distanceKm: Number(distanceKm),
         places: places as string[],
-      })
-      return NextResponse.json(plan, { status: 200 })
+      }
+
+      try {
+        const aiPlan = await generateAITripPlan(planVars)
+        return NextResponse.json(aiPlan, { status: 200 })
+      } catch (aiError) {
+        console.warn('AI plan generation failed, falling back to rule-based generation:', aiError)
+        const plan = generateTripPlan(planVars)
+        return NextResponse.json(plan, { status: 200 })
+      }
     }
 
     // Default: estimate mode
@@ -41,6 +54,99 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Zod Schema matching TripPlan interface
+const tripPlanSchema = z.object({
+  destination: z.string(),
+  days: z.number(),
+  travelers: z.number(),
+  totalBudget: z.number(),
+  tier: z.string(),
+  breakdown: z.object({
+    stay: z.number(),
+    travel: z.number(),
+    food: z.number(),
+    activities: z.number(),
+    emergency: z.number(),
+  }),
+  perPersonBudget: z.number(),
+  hotelReco: z.string(),
+  travelReco: z.string(),
+  foodReco: z.string(),
+  dailyPlan: z.array(z.object({
+    day: z.number(),
+    morning: z.string(),
+    afternoon: z.string(),
+    evening: z.string(),
+    meals: z.string(),
+    timeline: z.array(z.object({
+      time: z.string().describe('Time in HH:MM AM/PM format'),
+      title: z.string().describe('Short title of activity or location'),
+      description: z.string().describe('Detailed description or tip'),
+      type: z.string().describe('Categorize the activity (e.g. flight, transport, hotel, food, activity, coffee)'),
+      lat: z.number().nullable().describe('Latitude of the location. MUST provide a valid GPS coordinate.'),
+      lng: z.number().nullable().describe('Longitude of the location. MUST provide a valid GPS coordinate.'),
+    })).min(3).describe('Strict chronological timeline of all full day activities'),
+  })),
+  tips: z.array(z.string()),
+  warning: z.string().nullable(),
+})
+
+async function generateAITripPlan(input: PlanInput) {
+  const { startLocation, destination, travelers, totalBudget, days, places, distanceKm } = input
+  
+  const tierInfo = getTier(destination)
+  const tierStr = tierInfo === 'premium' ? 'Luxury' : tierInfo === 'midrange' ? 'Medium' : 'Low'
+
+  const sysPrompt = `You are a professional travel planner specializing in local travel.
+Create a highly accurate, time-planned detailed trip itinerary based on the following details:
+
+Destination: ${destination}
+Starting Location: ${startLocation || 'Unknown'}
+Number of Days: ${days}
+Number of People: ${travelers}
+Total Budget: Rs ${totalBudget} LKR
+Budget Type: ${tierStr}
+Preferred Attractions (MUST include ALL of these in the timeline): ${places.join(', ')}
+
+Requirements:
+1. Generate an accurate full-day, day-by-day itinerary incorporating travel times and realistic durations.
+2. Under "timeline", map out each activity strictly chronologically providing exact times (e.g. 08:30 AM, 10:00 AM) and categorize it under 'type'.
+3. **CRITICAL**: Do NOT use generic names like "Find Lunch", "Local Restaurant", or "Arrive at Hotel". You must provide specific, well-rated names of actual restaurants and hotels in or near ${destination} that fit the ${tierStr} budget.
+4. For lunch and dinner, suggest specific, existing food spots.
+5. For the stay, suggest a specific, real hotel or guesthouse name that fits the Rs ${totalBudget} budget constraint.
+6. Suggest nearby places to visit to optimize routes.
+7. **CRITICAL**: Provide accurate \`lat\` and \`lng\` coordinates for every suggested location and activity to allow path drawing on maps.
+8. Ensure the itinerary is complete from check-in/start on Day 1 until departure on the final day.
+5. Provide a short description for each place or activity under the timeline.
+6. Estimate total budget breakdown (must absolutely sum to exactly ${totalBudget}):
+    - stay (Accommodation, calculate for exactly ${days > 1 ? days - 1 : 0} nights at ${tierStr} rates)
+    - food
+    - travel (Transport, distance is roughly ${distanceKm} km)
+    - activities (Entry fees, tours)
+    - emergency
+7. Keep the plan realistic and suitable for the given budget in Sri Lankan Rupees (LKR).
+8. Ensure perPersonBudget exactly equals Total Budget divided by travelers.
+9. Make the recommendations (hotelReco, travelReco, foodReco) practical, descriptive, and fitting the budget.
+10. **MANDATORY**: You must include EVERY SINGLE ONE of the 'Preferred Attractions' in the itinerary timeline. Spread them out across the days if necessary, but do NOT skip any of them.
+11. **GEOGRAPHY**: Logically sequence all stops based on their physical map route (minimize travel time). Do not jump randomly between distant locations.
+`
+
+  const { object } = await generateObject({
+    model: google('gemini-1.5-flash'),
+    schema: tripPlanSchema,
+    prompt: sysPrompt,
+  })
+
+  // Ensure strict overrides
+  object.destination = destination
+  object.days = days
+  object.travelers = travelers
+  object.totalBudget = totalBudget
+  object.perPersonBudget = Math.round(totalBudget / Math.max(1, travelers))
+  
+  return object
 }
 
 
@@ -87,6 +193,7 @@ function estimateSriLankaTrip(destination: string, travelers: number) {
 // PLAN MODE: split total budget into a full trip plan
 // ─────────────────────────────────────────────
 interface PlanInput {
+  startLocation: string
   destination: string
   travelers: number
   totalBudget: number
@@ -101,6 +208,7 @@ interface DayActivity {
   afternoon: string
   evening: string
   meals: string
+  timeline?: { time: string; title: string; description: string; type: string }[]
 }
 
 interface TripPlan {
@@ -135,35 +243,37 @@ function generateTripPlan(input: PlanInput): TripPlan {
   const transportPerKm = tier === 'premium' ? 50 : tier === 'midrange' ? 35 : 20
   const estimatedMinTransport = Math.round((distanceKm || 0) * transportPerKm)
   
-  // Default split: stay 35%, travel 25%, food 28%, activities 7%, emergency 5%
-  let split = { stay: 35, travel: 25, food: 28, activities: 7, emergency: 5 }
+  // 2. Dynamic Budget Split
+  // User says 35% for stay on a 2-day trip is too much. 
+  // Correct logic: stay should be proportional to (Days - 1) nights.
+  const nightCount = Math.max(0, days - 1)
   
-  // Calculate base travel budget
-  const baseTravel = Math.round(totalBudget * (split.travel / 100))
+  // Base percentages for a standard 4-day trip
+  const baseSplit = { stay: 35, travel: 25, food: 28, activities: 7, emergency: 5 }
   
-  // If actual distance requirement is higher than 25%, we steal from Stay/Food (but keep mins)
-  let finalTravel = baseTravel
-  if (estimatedMinTransport > baseTravel) {
-     // Cap travel at 45% of total budget to avoid starving the user
-     finalTravel = Math.min(estimatedMinTransport, Math.round(totalBudget * 0.45))
-     
-     // Re-calculate percentages for everything else
-     const remaining = 100 - Math.round((finalTravel / totalBudget) * 100)
-     const factor = remaining / (split.stay + split.food + split.activities + split.emergency)
-     
-     split.stay = Math.round(split.stay * factor)
-     split.food = Math.round(split.food * factor)
-     split.activities = Math.round(split.activities * factor)
-     split.emergency = Math.round(split.emergency * factor)
-  }
+  // Dynamic Stay Calculation: If 1 day trip, stay = 0. If 2 day, stay = 1/2 of base (~17.5%)
+  // Scale stay based on actual nights vs expected days
+  const stayFactor = days > 0 ? nightCount / days : 0
+  const dynamicStayPerc = Math.round(baseSplit.stay * (days === 1 ? 0 : days === 2 ? 0.6 : 1))
+  
+  let split = { ...baseSplit, stay: dynamicStayPerc }
+  
+  // Re-balance remaining split to sum to 100
+  const currentSum = split.stay + split.travel + split.food + split.activities + split.emergency
+  const rebalanceFactor = (100 - split.stay) / (100 - baseSplit.stay)
+  
+  split.travel = Math.round(baseSplit.travel * rebalanceFactor)
+  split.food = Math.round(baseSplit.food * rebalanceFactor)
+  split.activities = Math.round(baseSplit.activities * rebalanceFactor)
+  split.emergency = 100 - (split.stay + split.travel + split.food + split.activities)
 
   const stay       = Math.round(totalBudget * (split.stay / 100))
-  const travel     = finalTravel
+  const travel     = Math.max(estimatedMinTransport, Math.round(totalBudget * (split.travel / 100)))
   const food       = Math.round(totalBudget * (split.food / 100))
   const activities = Math.round(totalBudget * (split.activities / 100))
-  const emergency  = Math.round(totalBudget * (split.emergency / 100))
+  const emergency  = totalBudget - (stay + travel + food + activities)
 
-  const hotelPerNight = Math.round(stay / Math.max(days, 1))
+  const hotelPerNight = nightCount > 0 ? Math.round(stay / nightCount) : 0
   const foodPerDay    = Math.round(food / Math.max(days, 1))
 
   // Tier-based recommendations
@@ -209,23 +319,68 @@ function generateTripPlan(input: PlanInput): TripPlan {
   }
 
   // Generate daily plan
-  const topPlaces = places.slice(0, Math.min(places.length, days * 2))
   const dailyPlan: DayActivity[] = []
+  const placesPerDay = Math.max(1, Math.ceil(places.length / days))
+
   for (let d = 1; d <= days; d++) {
-    const placeSlot = topPlaces.slice((d - 1) * 2, d * 2)
+    const placeSlot = places.slice((d - 1) * placesPerDay, d * placesPerDay)
+    
+    const timeline = []
+    let hour = 9
+
+    if (placeSlot.length === 0) {
+      timeline.push({ time: '09:00 AM', title: `Explore ${destination}`, description: `Start the day exploring ${destination}.`, type: 'activity' })
+      hour = 12
+    } else {
+      placeSlot.forEach((place, index) => {
+        const timePrefix = hour < 12 ? 'AM' : 'PM'
+        const displayHour = hour > 12 ? hour - 12 : hour
+        const timeStr = `${displayHour < 10 ? '0' : ''}${displayHour}:00 ${timePrefix}`
+        timeline.push({ 
+          time: timeStr, 
+          title: place, 
+          description: `Enjoy visiting ${place}.`, 
+          type: 'activity' 
+        })
+        hour += 2 // Give 2 hours per attraction
+      })
+    }
+
+    if (hour <= 13) hour = 13
+    timeline.push({ time: '01:30 PM', title: 'Lunch at popular local eatery', description: 'Enjoy authentic Sri Lankan cuisine at a well-rated local restaurant.', type: 'food' })
+    hour = Math.max(hour, 15)
+
+    timeline.push({ 
+      time: '07:00 PM', 
+      title: d === days ? 'Prepare for Departure' : 'Check-in at recommended stay', 
+      description: d === days ? 'Final wraps and heading to exit point.' : 'Spend the night at a budget-friendly guesthouse or hotel.', 
+      type: 'hotel' 
+    })
+
+    // Sort timeline chronologically to prevent 1:30 PM lunch dropping to the bottom
+    timeline.sort((a, b) => {
+      const parseTime = (t: string) => {
+        const [time, period] = t.split(' ')
+        const [h, m] = time.split(':').map(Number)
+        let hours = h
+        if (period === 'PM' && hours !== 12) hours += 12
+        if (period === 'AM' && hours === 12) hours = 0
+        return hours * 60 + m
+      }
+      return parseTime(a.time) - parseTime(b.time)
+    })
+
     const morning = placeSlot[0] ? `Visit ${placeSlot[0]}` : `Explore ${destination} city center`
-    const afternoon = placeSlot[1] ? `Visit ${placeSlot[1]}` : d === days ? 'Pack and head to departure point' : 'Free time / local market visit'
-    const evening = d === days
-      ? 'Departure / farewells'
-      : d === 1
-        ? `Arrive, check-in at hotel, dinner in ${destination}`
-        : 'Sunset viewing, dinner at local restaurant'
+    const afternoon = placeSlot.length > 1 ? `Visit ${placeSlot[placeSlot.length - 1]}` : d === days ? 'Pack and head to departure point' : 'Free time / local market visit'
+    const evening = d === days ? 'Departure / farewells' : d === 1 ? `Arrive, check-in at hotel, dinner in ${destination}` : 'Sunset viewing, dinner at local restaurant'
+
     dailyPlan.push({
       day: d,
       morning,
       afternoon,
       evening,
       meals: `Rs ${foodPerDay.toLocaleString()} for all meals`,
+      timeline
     })
   }
 

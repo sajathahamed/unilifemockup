@@ -78,6 +78,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
               longitude?: number | null
               place_id?: string | null
               image_url?: string | null
+              description?: string | null
             }) => ({
               id: p.place_id != null ? String(p.place_id) : null,
               name: String(p.place_name ?? ''),
@@ -86,6 +87,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
               longitude: p.longitude != null ? Number(p.longitude) : null,
               address: null,
               imageUrl: p.image_url != null ? String(p.image_url) : null,
+              description: p.description != null ? String(p.description) : null,
               _key: `db-${p.id ?? p.place_name}`,
             })
           )
@@ -159,6 +161,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'plan',
+          startLocation: startLocation.trim(),
           destination: destination.trim(),
           travelers,
           totalBudget: budget,
@@ -239,21 +242,29 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
       {editTripId && (
-        <div className="surface-card-sm !py-4 flex flex-wrap items-center justify-between gap-3 border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50">
-          <p className="text-sm text-indigo-950 font-medium pl-1">
-            Editing trip <span className="tabular-nums">#{editTripId}</span> — save to update your plan and budget.
-          </p>
-          <Link href="/trip-planner" className="btn-secondary !py-2 text-xs sm:text-sm shrink-0">
-            New trip instead
-          </Link>
+        <div className="rounded-[26px] border border-indigo-100 bg-gradient-to-r from-indigo-50/80 to-violet-50/60 p-4 sm:p-5 shadow-card">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.28em] text-indigo-600 font-semibold mb-1">Editing mode</p>
+              <p className="text-sm font-semibold text-slate-900">
+                Trip <span className="tabular-nums">#{editTripId}</span> is loaded. Save to update this itinerary.
+              </p>
+            </div>
+            <Link
+              href="/trip-planner"
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              New trip instead
+            </Link>
+          </div>
         </div>
       )}
 
       {/* Step indicator */}
-      <div className="surface-card-sm !py-4 !px-3 sm:!px-5 overflow-x-auto">
-        <div className="flex items-center gap-1 min-w-min sm:gap-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-card overflow-x-auto">
+        <div className="flex items-center md:justify-center gap-2 min-w-max w-full">
           {(['search', 'attractions', 'budget', 'plan'] as Step[]).map((s, i) => {
             const labels = ['Search', 'Attractions', 'Budget', 'Trip plan']
             const active = s === step
@@ -261,18 +272,16 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
               ['search', 'attractions', 'budget', 'plan'].indexOf(s) <
               ['search', 'attractions', 'budget', 'plan'].indexOf(step)
             return (
-              <div key={s} className="flex items-center gap-1 sm:gap-2 shrink-0">
-                {i > 0 && <ChevronRight size={14} className="text-gray-300 hidden sm:inline" />}
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
-                    active
-                      ? 'bg-primary text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-200/50'
-                      : done
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
-                        : 'bg-gray-100 text-gray-500 border border-transparent'
-                  }`}
-                >
-                  {done && <CheckCircle2 size={14} className="text-emerald-600" />}
+              <div key={s} className="flex items-center gap-2 shrink-0">
+                {i > 0 && <ChevronRight size={16} className="text-slate-300" />}
+                <div className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap border transition ${
+                  active
+                    ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
+                    : done
+                      ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}>
+                  {done && <CheckCircle2 size={16} className={active ? 'text-white' : 'text-emerald-600'} />}
                   {labels[i]}
                 </div>
               </div>
@@ -289,151 +298,245 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
 
       {/* ── STEP 1: SEARCH ── */}
       {step === 'search' && (
-        <div className="surface-card space-y-6">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-primary">
-              <MapPin size={20} strokeWidth={2.25} />
-            </span>
-            Plan your trip
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-3">
+              <div className="inline-flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 border border-indigo-100">
+                <MapPin size={18} /> Start with your destination
+              </div>
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight text-slate-900">Plan a smarter trip</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                  Enter your start point and destination, then refine days, travelers and attractions for a polished itinerary.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4 shadow-sm border border-slate-200">
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-500 font-semibold mb-2">Quick stats</p>
+              <div className="grid grid-cols-2 gap-3 text-sm text-slate-700">
+                <div>
+                  <p className="text-xs uppercase text-slate-400">Days</p>
+                  <p className="font-semibold">{days}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-400">Travelers</p>
+                  <p className="font-semibold">{travelers}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
             <LocationAutocompleteInput label="Start location" value={startLocation} onChange={setStartLocation} placeholder="e.g. Colombo" />
             <LocationAutocompleteInput label="Destination" value={destination} onChange={setDestination} placeholder="e.g. Kandy" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Days counter */}
-            <div>
-              <span className="text-sm font-medium text-gray-700 block mb-1">Days</span>
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                <button type="button" onClick={() => { const v = Math.max(1, days - 1); setDays(v); setDaysInput(String(v)) }}
-                  className="px-4 py-2.5 text-xl font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors select-none">−</button>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={daysInput}
-                  onChange={e => setDaysInput(e.target.value)}
-                  onBlur={() => { const v = Math.max(1, parseInt(daysInput) || 1); setDays(v); setDaysInput(String(v)) }}
-                  className="flex-1 text-center font-semibold text-gray-900 text-base py-2.5 border-x border-gray-200 focus:outline-none focus:bg-primary/5 w-0"
-                />
-                <button type="button" onClick={() => { const v = days + 1; setDays(v); setDaysInput(String(v)) }}
-                  className="px-4 py-2.5 text-xl font-bold text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors select-none">+</button>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {[
+              { label: 'Days', value: days, input: daysInput, setInput: setDaysInput, onChange: (v: number) => { setDays(v); setDaysInput(String(v)) } },
+              { label: 'Travelers', value: travelers, input: travelersInput, setInput: setTravelersInput, onChange: (v: number) => { setTravelers(v); setTravelersInput(String(v)) } },
+            ].map(({ label, value, input, setInput, onChange }) => (
+              <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-700 mb-3">{label}</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onChange(Math.max(1, value - 1))}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onBlur={() => { const v = Math.max(1, parseInt(input) || 1); onChange(v) }}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-lg font-semibold text-slate-900 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onChange(value + 1)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary text-white shadow-sm transition hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
-            {/* Travelers counter */}
-            <div>
-              <span className="text-sm font-medium text-gray-700 block mb-1">Travelers</span>
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                <button type="button" onClick={() => { const v = Math.max(1, travelers - 1); setTravelers(v); setTravelersInput(String(v)) }}
-                  className="px-4 py-2.5 text-xl font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors select-none">−</button>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={travelersInput}
-                  onChange={e => setTravelersInput(e.target.value)}
-                  onBlur={() => { const v = Math.max(1, parseInt(travelersInput) || 1); setTravelers(v); setTravelersInput(String(v)) }}
-                  className="flex-1 text-center font-semibold text-gray-900 text-base py-2.5 border-x border-gray-200 focus:outline-none focus:bg-primary/5 w-0"
-                />
-                <button type="button" onClick={() => { const v = travelers + 1; setTravelers(v); setTravelersInput(String(v)) }}
-                  className="px-4 py-2.5 text-xl font-bold text-primary hover:bg-primary/10 active:bg-primary/20 transition-colors select-none">+</button>
-              </div>
-            </div>
+            ))}
           </div>
 
-
-          <button
-            type="button"
-            onClick={fetchDistanceAndPlaces}
-            disabled={placesLoading || distanceLoading}
-            className="btn-primary-lg w-full"
-          >
-            {placesLoading ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
-            Find attractions & continue
-          </button>
+          <div className="mt-6 flex justify-center sm:justify-start">
+            <button
+              type="button"
+              onClick={fetchDistanceAndPlaces}
+              disabled={placesLoading || distanceLoading}
+              className="btn-primary-lg w-full sm:w-auto disabled:cursor-not-allowed"
+            >
+              {placesLoading ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
+              Find attractions
+            </button>
+          </div>
         </div>
       )}
 
       {/* ── STEP 2: ATTRACTIONS & ITINERARY ── */}
       {step === 'attractions' && (
-        <div className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Attractions near {destination}</h2>
-              {distanceKm && <p className="text-sm text-gray-500">Distance: <strong>{distanceKm} km</strong></p>}
-            </div>
-            <button type="button" onClick={() => setStep('search')} className="btn-ghost text-sm">
-              ← Change destination
-            </button>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2 surface-card-sm">
-              <h3 className="font-semibold text-gray-900 mb-3">Nearby Attractions</h3>
-              <AttractionList places={places} loading={placesLoading} onAdd={addToItinerary} addedIds={addedIds} />
-            </div>
-            <div className="space-y-4">
-              <div className="surface-card-sm">
-                <h3 className="font-semibold text-gray-900 mb-3">My itinerary ({itinerary.length})</h3>
-                <ItineraryList places={itinerary} onRemove={removeFromItinerary} />
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.85fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Attractions near {destination}</h2>
+                {distanceKm && <p className="mt-2 text-sm text-slate-500">Distance estimate: <span className="font-semibold text-slate-900">{distanceKm} km</span></p>}
               </div>
-              <button type="button" onClick={() => setStep('budget')} className="btn-primary-lg w-full">
-                <Wallet size={18} /> Set budget →
+              <button
+                type="button"
+                onClick={() => setStep('search')}
+                className="btn-outline rounded-xl px-4 py-2 text-sm"
+              >
+                ← Change destination
               </button>
             </div>
+
+            <div className="mt-6">
+              <h3 className="mb-4 text-lg font-semibold text-slate-900">Nearby attractions</h3>
+              <AttractionList places={places} loading={placesLoading} onAdd={addToItinerary} addedIds={addedIds} />
+            </div>
           </div>
+
+          <aside className="space-y-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-card">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-slate-500">Itinerary</p>
+                  <p className="text-2xl font-semibold text-slate-900">{itinerary.length} stops</p>
+                </div>
+                <div className="rounded-2xl bg-white p-3 text-primary shadow-sm border border-slate-200">
+                  <Wallet size={22} />
+                </div>
+              </div>
+              <p className="mt-4 text-sm text-slate-600">Add the best stops to your itinerary, then continue to build your budget and full plan.</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-slate-500">Trip summary</p>
+                  <p className="text-lg font-semibold text-slate-900">Details</p>
+                </div>
+              </div>
+              <div className="space-y-3 text-sm text-slate-700">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <span className="text-slate-500">From</span>
+                  <span className="font-medium text-slate-900">{startLocation || 'Not set'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <span className="text-slate-500">To</span>
+                  <span className="font-medium text-slate-900">{destination}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <span className="text-slate-500">Days</span>
+                  <span className="font-medium text-slate-900">{days}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-500">Travelers</span>
+                  <span className="font-medium text-slate-900">{travelers}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setStep('budget')}
+              className="btn-primary-lg w-full sm:w-auto"
+            >
+              <Wallet size={18} /> Set budget
+            </button>
+          </aside>
         </div>
       )}
 
       {/* ── STEP 3: BUDGET INPUT ── */}
       {step === 'budget' && (
-        <div className="max-w-lg mx-auto space-y-5">
-          <div className="surface-card">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={20} className="text-primary" />
-              <h2 className="text-lg font-semibold text-gray-900">What&apos;s your total budget?</h2>
-            </div>
-            <p className="text-sm text-gray-500 mb-5">
-              Enter your total budget for the trip to {destination} ({days} day{days > 1 ? 's' : ''}, {travelers} traveler{travelers > 1 ? 's' : ''}).
-              Our AI will break it down into stay, travel, food, and activities.
-            </p>
-
-            <div className="relative mb-4">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">Rs</span>
-              <input
-                type="number"
-                min={0}
-                step={1000}
-                value={totalBudget}
-                onChange={e => setTotalBudget(e.target.value)}
-                placeholder="e.g. 50000"
-                className="w-full pl-10 pr-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary font-semibold"
-              />
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="rounded-2xl bg-primary/10 p-3 text-primary border border-indigo-100">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Set your budget</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Enter the total amount you want to spend for {destination}. The AI will split it into stay, travel, food, and activities.
+                </p>
+              </div>
             </div>
 
-            {/* Quick presets */}
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-3">Total budget</label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">Rs</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={totalBudget}
+                  onChange={e => setTotalBudget(e.target.value)}
+                  placeholder="e.g. 50000"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-4 pl-14 pr-4 text-lg font-semibold text-slate-900 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 mb-6">
               {[20000, 50000, 100000, 200000].map(amt => (
-                <button key={amt} onClick={() => setTotalBudget(String(amt))}
-                  className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${totalBudget === String(amt) ? 'bg-primary text-white border-primary' : 'border-gray-200 text-gray-600 hover:border-primary hover:text-primary'}`}>
+                <button
+                  key={amt}
+                  onClick={() => setTotalBudget(String(amt))}
+                  className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                    totalBudget === String(amt)
+                      ? 'border-primary bg-primary text-white shadow-sm shadow-primary/20 hover:bg-indigo-600'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
                   Rs {amt.toLocaleString()}
                 </button>
               ))}
             </div>
 
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setStep('attractions')} className="btn-secondary flex-1">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => setStep('attractions')} className="btn-secondary w-full rounded-2xl px-5 py-3 text-sm">
                 ← Back
               </button>
               <button
                 type="button"
                 onClick={generatePlan}
                 disabled={planLoading || !totalBudget}
-                className="btn-primary flex-[1.4] min-w-0"
+                className="btn-primary-lg w-full sm:w-auto disabled:cursor-not-allowed"
               >
                 {planLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
                 Generate plan
               </button>
             </div>
           </div>
+
+          <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-card">
+            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-slate-500 mb-4">Ready to plan</p>
+            <div className="space-y-4 text-sm text-slate-700">
+              <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200">
+                <p className="text-slate-500">Destination</p>
+                <p className="mt-1 font-semibold text-slate-900">{destination || 'Not selected'}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200">
+                <p className="text-slate-500">Trip length</p>
+                <p className="mt-1 font-semibold text-slate-900">{days} day{days > 1 ? 's' : ''}</p>
+              </div>
+              <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-200">
+                <p className="text-slate-500">Travelers</p>
+                <p className="mt-1 font-semibold text-slate-900">{travelers}</p>
+              </div>
+            </div>
+          </aside>
         </div>
       )}
 
@@ -456,7 +559,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
             type="button"
             onClick={saveTrip}
             disabled={saveLoading || saved}
-            className={`btn-primary-lg w-full ${saved ? '!bg-emerald-600 hover:!bg-emerald-600 shadow-emerald-500/25' : ''}`}
+            className={`btn-primary-lg ${saved ? '!bg-emerald-600 hover:!bg-emerald-600 shadow-emerald-500/25' : ''} mx-auto`}
           >
             {saveLoading && <Loader2 size={20} className="animate-spin" />}
             {saveLoading

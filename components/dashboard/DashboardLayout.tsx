@@ -157,8 +157,27 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
   useEffect(() => {
     setSupabase(createClient())
   }, [])
-  const navItems = roleNavItems[user.role]
-  const roleInfo = roleConfig[user.role]
+
+  // Clear navigation state when route changes
+  useEffect(() => {
+    setIsNavigating(false)
+    setNavigatingTo(null)
+  }, [pathname])
+
+  // Handle navigation with loading state
+  const handleNavigation = (href: string) => {
+    if (href !== pathname) {
+      setIsNavigating(true)
+      setNavigatingTo(href)
+    }
+    setIsSidebarOpen(false)
+  }
+
+  const fallbackNav = roleNavItems[user.role] ?? roleNavItems['vendor-food'] ?? []
+  const navItems: NavItem[] = apiNavItems != null ? apiNavItems : fallbackNav
+  const roleInfo = roleConfig[user.role] ?? roleConfig['vendor-food']
+  const isDeliveryUI = user.role === 'delivery'
+  const activeNavLabel = navItems.find((item) => item.href === pathname)?.label
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -324,36 +343,47 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-indigo-100">
-          <div className="flex items-center justify-between px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200 active:scale-[0.98]"
-              aria-label="Open menu"
-            >
-              <Menu size={22} strokeWidth={2.25} />
-            </button>
-
-            <div className="flex items-center gap-4 ml-auto">
-              {/* Notifications */}
+        <header className="sticky top-0 z-30 border-b border-blue-100 bg-white/90 backdrop-blur-md shadow-sm">
+          <div className="mx-auto flex max-w-[110rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
+            <div className="flex items-center gap-3 min-w-0">
               <button
-                type="button"
-                className="relative inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200"
-                aria-label="Notifications"
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                aria-label="Open navigation"
               >
-                <Bell size={22} strokeWidth={2} className="text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                <Menu size={20} />
+              </button>
+
+              <Link href={`/${pathSegment}/dashboard`} className="hidden sm:flex items-center gap-2.5 min-w-0">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-200">
+                  <GraduationCap className="h-5 w-5 text-white" />
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <p className="font-display text-[15px] font-bold tracking-[-0.02em] text-slate-900 truncate">UniLife</p>
+                  <p className="text-xs text-slate-500 truncate">{activeNavLabel ?? 'Dashboard'}</p>
+                </div>
+              </Link>
+
+              <div className="sm:hidden min-w-0">
+                <p className="text-sm font-semibold text-slate-900 truncate">{activeNavLabel ?? 'Dashboard'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Notifications */}
+              <button className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50" aria-label="Notifications">
+                <Bell size={20} className="text-slate-600" />
+                <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-red-500" />
               </button>
 
               {/* Mobile profile */}
               <div className="lg:hidden">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center border border-slate-200 shadow-sm overflow-hidden">
                   {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
                       alt={user.name}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     <span className="text-xs font-semibold text-primary">

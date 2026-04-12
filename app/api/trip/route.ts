@@ -95,8 +95,33 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
         .single()
       
+      let mapUrl = ''
+      if (plan_json && plan_json.dailyPlan) {
+        const timeline = plan_json.dailyPlan.flatMap((d: any) => d.timeline || [])
+        // Filter: Keep if has coordinates, OR if it's a fallback title that isn't totally generic
+        const validPoints = timeline.filter((t: any) => {
+          if (t.lat && t.lng) return true
+          if (!t.title) return false
+          const low = t.title.toLowerCase()
+          return !low.includes('prepare') && !low.includes('departure') && !low.includes('check') && !low.includes('lunch') && !low.includes('dinner') && !low.includes('breakfast')
+        })
+        
+        if (validPoints.length === 0) {
+          mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination).replace(/%20/g, '+')}`
+        } else {
+          const getPos = (item: any) => {
+            if (item.lat && item.lng) return `${item.lat},${item.lng}`
+            return encodeURIComponent(item.title.replace(/^Visit\s+/i, '')).replace(/%20/g, '+')
+          }
+          const origin = getPos(validPoints[0])
+          const dest = getPos(validPoints[validPoints.length - 1])
+          const waypoints = validPoints.slice(1, -1).map(getPos).join('|')
+          mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`
+        }
+      }
+
       const mobile = String(phoneData?.mobile ?? '').trim() || '94700000000'
-      const msg = `Trip Planner: You have a new trip to ${destination} for ${days} days. Total Budget: Rs ${total_budget}. Safe travels!`
+      const msg = `Trip Planner: You have a new trip to ${destination} for ${days} days. Budget: Rs ${total_budget}. Route: ${mapUrl}`
 
       void sendDialogSms({
         number: mobile,

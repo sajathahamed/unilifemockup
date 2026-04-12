@@ -9,7 +9,14 @@ export interface TripPlan {
   hotelReco: string
   travelReco: string
   foodReco: string
-  dailyPlan: { day: number; morning: string; afternoon: string; evening: string; meals: string }[]
+  dailyPlan: { 
+    day: number; 
+    morning: string; 
+    afternoon: string; 
+    evening: string; 
+    meals: string;
+    timeline?: { time: string; title: string; description: string; type: string; lat?: number | null; lng?: number | null }[];
+  }[]
   tips: string[]
   warning: string | null
 }
@@ -53,12 +60,28 @@ export function normalizeTripPlan(x: unknown): TripPlan | null {
   if (!Array.isArray(dailyRaw) || dailyRaw.length === 0) return null
   const dailyPlan = dailyRaw.map((row, idx) => {
     const r = row && typeof row === 'object' ? (row as Record<string, unknown>) : {}
+    const timelineRaw = r.timeline
+    const timeline = Array.isArray(timelineRaw) 
+      ? timelineRaw.map(t => {
+          const item = (t && typeof t === 'object' ? t : {}) as Record<string, unknown>
+          return {
+            time: String(item.time || ''),
+            title: String(item.title || ''),
+            description: String(item.description || ''),
+            type: String(item.type || 'activity'),
+            lat: item.lat != null ? Number(item.lat) : null,
+            lng: item.lng != null ? Number(item.lng) : null
+          }
+        })
+      : undefined
+
     return {
       day: Math.max(1, Math.round(Number(r.day) || idx + 1)),
       morning: r.morning != null ? String(r.morning) : '',
       afternoon: r.afternoon != null ? String(r.afternoon) : '',
       evening: r.evening != null ? String(r.evening) : '',
       meals: r.meals != null ? String(r.meals) : '',
+      timeline
     }
   })
 

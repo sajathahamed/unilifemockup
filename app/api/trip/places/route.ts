@@ -5,6 +5,19 @@ import { NextRequest, NextResponse } from 'next/server'
  * Fetch tourist attractions near the given location using Google Places API.
  * Tries Places API (New) first, then falls back to classic Nearby Search.
  */
+
+function buildPlaceDescription(name: string, address: string | null) {
+  const safeName = name?.trim()
+  if (!safeName) return 'A great tourist attraction nearby.'
+  if (!address?.trim()) return `Enjoy ${safeName}. Local highlights and flexible exploration nearby.`
+
+  // Google addresses usually look like: "Area, City, Country". Keep it clean and not too long.
+  const area = address.split(',').slice(0, 2).join(',').trim()
+  if (!area) return `Enjoy ${safeName}. Local highlights and flexible exploration nearby.`
+
+  return `Enjoy ${safeName} near ${area}. Explore local highlights at your own pace.`
+}
+
 export async function GET(request: NextRequest) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY
   if (!apiKey) {
@@ -85,6 +98,7 @@ export async function GET(request: NextRequest) {
           longitude: p.location?.longitude ?? null,
           address: p.formattedAddress ?? null,
           imageUrl,
+          description: buildPlaceDescription(p.displayName?.text ?? 'Unnamed place', p.formattedAddress ?? null),
         }
       })
 
@@ -146,6 +160,7 @@ export async function GET(request: NextRequest) {
         longitude: p.geometry?.location?.lng ?? null,
         address: p.vicinity ?? null,
         imageUrl,
+        description: buildPlaceDescription(p.name ?? 'Unnamed place', p.vicinity ?? null),
       }
     })
 
