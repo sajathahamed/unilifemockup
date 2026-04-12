@@ -141,7 +141,7 @@ export default function VendorFulfillmentClient({ user }: VendorFulfillmentClien
                 <CheckCircle className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Delivered</p>
+                <p className="text-sm text-gray-500">Completed</p>
                 <p className="text-xl font-bold text-gray-900">{fulfillments.filter((o) => o.status === 'completed').length}</p>
               </div>
             </div>

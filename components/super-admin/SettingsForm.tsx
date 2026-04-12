@@ -38,11 +38,19 @@ const LABELS: Record<string, string> = {
   maintenance_end_time: 'Warning End Time',
 }
 
+// Returns current datetime in 'YYYY-MM-DDTHH:MM' format required by datetime-local min attribute
+function getNowMin(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
+}
+
 export default function SettingsForm() {
   const [settings, setSettings] = useState<SettingsState>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [nowMin] = useState(getNowMin)
 
   useEffect(() => {
     fetch('/api/super-admin/settings')
@@ -215,6 +223,7 @@ export default function SettingsForm() {
               <input
                 type="datetime-local"
                 value={settings.maintenance_start_time ?? ''}
+                min={nowMin}
                 onChange={(e) => handleChange('maintenance_start_time', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
@@ -224,6 +233,7 @@ export default function SettingsForm() {
               <input
                 type="datetime-local"
                 value={settings.maintenance_end_time ?? ''}
+                min={settings.maintenance_start_time || nowMin}
                 onChange={(e) => handleChange('maintenance_end_time', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import { ArrowLeft, Plus, Minus, ShoppingBag, Bike, Store, Trash2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Minus, ShoppingBag, Bike, Store, Trash2, CheckCircle, Bell } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserProfile } from '@/lib/auth'
 
@@ -179,6 +179,8 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const [mapLink, setMapLink] = useState('')
     const [formError, setFormError] = useState<string | null>(null)
     const [deliveryAvailable, setDeliveryAvailable] = useState(true)
+    const [prevCartLength, setPrevCartLength] = useState(0)
+    const [showNotification, setShowNotification] = useState(false)
 
     const subtotal = cart.reduce((acc, i) => acc + i.price * i.qty, 0)
     const fee = deliveryMode === 'delivery' ? DELIVERY_FEE : 0
@@ -232,6 +234,15 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     }, [cartKey])
 
     useEffect(() => {
+        if (cart.length > prevCartLength) {
+            setShowNotification(true)
+            const timer = setTimeout(() => setShowNotification(false), 3000)
+            return () => clearTimeout(timer)
+        }
+        setPrevCartLength(cart.length)
+    }, [cart.length, prevCartLength])
+
+    useEffect(() => {
         if (deliveryMode !== 'delivery') {
             setDeliveryAvailable(true)
             return
@@ -245,8 +256,9 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
     const placeOrder = async () => {
         setFormError(null)
         if (cart.length === 0) return
-        if (!/^[+0-9][0-9\s-]{6,19}$/.test(contactNumber.trim())) {
-            setFormError('Enter a valid contact number.')
+        const slNumber = contactNumber.replace(/\s/g, '')
+        if (!/^07[124567890]\d{7}$/.test(slNumber)) {
+            setFormError('Enter a valid Sri Lankan mobile number (e.g. 0712345678). Must start with 071, 072, 074, 075, 076, 077, or 078.')
             return
         }
         if (deliveryMode === 'delivery' && !deliveryAvailable) {
@@ -323,7 +335,29 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
 
     return (
         <DashboardLayout user={user}>
-            <div className="max-w-lg mx-auto pb-10">
+            <div className="max-w-lg mx-auto pb-10 relative">
+                {/* Notification Bell */}
+                <AnimatePresence>
+                    {showNotification && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                            className="fixed top-4 right-4 z-50"
+                        >
+                            <div className="flex items-center gap-2 bg-orange-500 text-white px-4 py-3 rounded-full shadow-lg animate-pulse">
+                                <motion.div
+                                    animate={{ rotate: [0, -15, 15, -15, 0] }}
+                                    transition={{ duration: 0.5, repeat: 2 }}
+                                >
+                                    <Bell size={20} className="fill-white" />
+                                </motion.div>
+                                <span className="font-semibold text-sm">New item added to cart!</span>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
                 <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors">
                     <ArrowLeft size={16} /> Back to Shop
                 </button>
@@ -473,10 +507,13 @@ export default function OrderClient({ user, shopId }: { user: UserProfile; shopI
                         <label className="text-sm font-semibold text-gray-700 mb-1 block">Contact Number</label>
                         <input
                             value={contactNumber}
-                            onChange={(e) => setContactNumber(e.target.value)}
+                            onChange={(e) => setContactNumber(e.target.value.replace(/[^\d]/g, '').slice(0, 10))}
                             placeholder="0712345678"
+                            inputMode="numeric"
+                            maxLength={10}
                             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
+                        <p className="text-xs text-gray-400 mt-1">Sri Lankan mobile</p>
                     </div>
                     {deliveryMode === 'delivery' && (
                         <>

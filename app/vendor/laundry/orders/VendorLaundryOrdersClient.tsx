@@ -41,7 +41,6 @@ function timeAgo(dateStr: string): string {
 
 const statusConfig = {
   pending: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Pending' },
-  new: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'New' },
   washing: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Washing' },
   ironing: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Ironing' },
   ready: { bg: 'bg-green-100', text: 'text-green-700', label: 'Ready' },

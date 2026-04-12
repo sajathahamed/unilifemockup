@@ -39,6 +39,37 @@ type LaundryOrderRow = {
   created_at: string
 }
 
+function getStatusColor(status: string): { bg: string; text: string } {
+  const s = (status || '').toLowerCase()
+  switch (s) {
+    case 'pending':
+    case 'new':
+      return { bg: 'bg-blue-100', text: 'text-blue-700' }
+    case 'confirmed':
+    case 'accepted':
+      return { bg: 'bg-purple-100', text: 'text-purple-700' }
+    case 'processing':
+    case 'in_progress':
+    case 'washing':
+      return { bg: 'bg-yellow-100', text: 'text-yellow-700' }
+    case 'preparing':
+    case 'ironing':
+      return { bg: 'bg-amber-100', text: 'text-amber-700' }
+    case 'ready':
+    case 'ready_for_delivery':
+      return { bg: 'bg-green-100', text: 'text-green-700' }
+    case 'out_for_delivery':
+    case 'delivered':
+    case 'done':
+    case 'completed':
+      return { bg: 'bg-emerald-100', text: 'text-emerald-700' }
+    case 'cancelled':
+      return { bg: 'bg-red-100', text: 'text-red-700' }
+    default:
+      return { bg: 'bg-gray-100', text: 'text-gray-700' }
+  }
+}
+
 export default function StudentFoodCartPageClient({ user }: { user: UserProfile }) {
   const [cartItems, setCartItems] = useState<CartRow[]>([])
   const [orders, setOrders] = useState<FoodOrderRow[]>([])
@@ -115,7 +146,10 @@ export default function StudentFoodCartPageClient({ user }: { user: UserProfile 
                 <div key={o.id} className="border border-gray-100 rounded-xl p-3">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-gray-900">Order #{o.id}</p>
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{o.status || 'new'}</span>
+                    {(() => {
+                      const { bg, text } = getStatusColor(o.status)
+                      return <span className={`text-xs px-2 py-1 rounded-full ${bg} ${text} capitalize`}>{o.status || 'new'}</span>
+                    })()}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">Customer: {o.customer_name}</p>
                   <p className="text-sm text-gray-600">Order details: {Array.isArray(o.items) ? o.items.map((it: any) => `${it.name} x${it.quantity}`).join(', ') : '—'}</p>
@@ -144,7 +178,10 @@ export default function StudentFoodCartPageClient({ user }: { user: UserProfile 
                 <div key={o.id} className="border border-gray-100 rounded-xl p-3">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-gray-900">Laundry Order #{o.id}</p>
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{o.status || 'pending'}</span>
+                    {(() => {
+                      const { bg, text } = getStatusColor(o.status)
+                      return <span className={`text-xs px-2 py-1 rounded-full ${bg} ${text} capitalize`}>{o.status || 'pending'}</span>
+                    })()}
                   </div>
                   <p className="text-sm text-gray-600 mt-1">Customer: {o.customer_name}</p>
                   <p className="text-sm text-gray-600">Order details: {o.items_description_final}</p>
