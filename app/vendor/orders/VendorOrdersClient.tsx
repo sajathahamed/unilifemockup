@@ -95,7 +95,7 @@ const statusConfig = {
   new: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'New', color: 'text-blue-600' },
   preparing: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Preparing', color: 'text-yellow-600' },
   ready: { bg: 'bg-green-100', text: 'text-green-700', label: 'Ready', color: 'text-green-600' },
-  completed: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Completed', color: 'text-purple-600' },
+  completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Completed', color: 'text-emerald-600' },
   cancelled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Cancelled', color: 'text-red-600' },
 }
 

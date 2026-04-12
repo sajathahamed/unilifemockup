@@ -5,18 +5,18 @@
 @tailwind utilities;
 
 :root {
-  --primary: #2ec118;
-  --primary-dark: #25a015;
-  --primary-light: #5dd842;
-  --background: #0a0a0f;
-  --card: #12121a;
-  --card-light: #1a1a24;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --glass: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --border-color: rgba(255, 255, 255, 0.1);
+  --primary: #22c55e;
+  --primary-dark: #16a34a;
+  --primary-light: #4ade80;
+  --background: #f8fafc;
+  --card: #ffffff;
+  --card-light: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --glass: rgba(0, 0, 0, 0.03);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --border-color: rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="light"] {
@@ -322,4 +322,40 @@ tbody tr:hover { background: var(--glass); }
 
 .tab-active {
   @apply text-primary border-b-2 border-primary;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Light theme: fix white / near-white text on white & missing gradient fills   */
+/* (Tailwind semantic `text-text-*` is tuned for dark UI; auth cards are white) */
+/* -------------------------------------------------------------------------- */
+
+[data-theme="light"] .bg-white .text-text-primary,
+[data-theme="light"] .bg-white input.text-text-primary,
+[data-theme="light"] .bg-white textarea.text-text-primary {
+  color: #0f172a;
+}
+
+[data-theme="light"] .bg-white .text-text-secondary {
+  color: #475569;
+}
+
+[data-theme="light"] .bg-white .text-text-muted {
+  color: #64748b;
+}
+
+/* Primary CTA: readable dark label on soft green (avoids white-on-white if bg missing) */
+[data-theme="light"] button.bg-gradient-primary.text-white,
+[data-theme="light"] a.bg-gradient-primary.text-white {
+  background-image: linear-gradient(135deg, #d1fae5 0%, #bbf7d0 45%, #86efac 100%);
+  color: #0f172a;
+}
+
+[data-theme="light"] button.bg-gradient-primary.text-white:hover,
+[data-theme="light"] a.bg-gradient-primary.text-white:hover {
+  color: #020617;
+}
+
+/* Fallback fill when only this class is present (e.g. non-light or older markup) */
+.bg-gradient-primary {
+  background-image: linear-gradient(135deg, #15803d 0%, #22c55e 42%, #16a34a 100%);
 }

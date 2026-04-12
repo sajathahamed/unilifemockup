@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, User, Building2, Shield, Loader2, ArrowLeft, Save } from 'lucide-react'
+import { Mail, User, Building2, Shield, Loader2, ArrowLeft, Save, ToggleLeft, ToggleRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { UserRole } from '@/lib/auth'
 import { Button, Input, Select, Alert } from '@/components'
@@ -14,12 +14,19 @@ interface UserData {
     email: string
     role: string
     uni_id: number | null
+    is_active?: boolean
 }
 
 interface EditUserFormProps {
     userId: string
     currentUserRole: UserRole
     onSuccess?: () => void
+}
+
+function parseUserId(raw: string): number | null {
+    const n = parseInt(String(raw), 10)
+    if (!raw || String(raw) === 'undefined' || Number.isNaN(n) || n < 1) return null
+    return n
 }
 
 export default function EditUserForm({ userId, currentUserRole, onSuccess }: EditUserFormProps) {
@@ -29,6 +36,7 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
         email: '',
         role: '',
         university: '',
+        isActive: true,
     })
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [generalError, setGeneralError] = useState<string | null>(null)
@@ -59,12 +67,19 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
     useEffect(() => {
         const fetchUser = async () => {
             setIsLoading(true)
+            setGeneralError(null)
+            const numericId = parseUserId(userId)
+            if (numericId == null) {
+                setGeneralError('Invalid user id.')
+                setIsLoading(false)
+                return
+            }
             try {
                 const supabase = createClient()
                 const { data, error } = await supabase
                     .from('users')
                     .select('*')
-                    .eq('id', userId)
+                    .eq('id', numericId)
                     .single()
 
                 if (error) throw error
@@ -74,6 +89,7 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
                         email: data.email || '',
                         role: data.role || '',
                         university: data.uni_id?.toString() || '',
+                        isActive: data.is_active !== false,
                     })
                 }
             } catch (err) {
@@ -89,8 +105,7 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {}
         if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required'
-        if (!formData.email.trim()) newErrors.email = 'Email is required'
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email'
+        if (!formData.email.trim()) newErrors.email = 'Email is missing for this account'
         if (!formData.role) newErrors.role = 'Role is required'
 
         setErrors(newErrors)
@@ -104,6 +119,12 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
 
         if (!validateForm()) return
 
+        const numericId = parseUserId(userId)
+        if (numericId == null) {
+            setGeneralError('Invalid user id.')
+            return
+        }
+
         setIsSaving(true)
 
         try {
@@ -113,12 +134,12 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
             const { error: profileError } = await supabase
                 .from('users')
                 .update({
-                    email: formData.email,
                     name: formData.fullName,
                     role: formData.role,
                     uni_id: formData.university ? parseInt(formData.university) : null,
+                    is_active: formData.isActive,
                 })
-                .eq('id', userId)
+                .eq('id', numericId)
 
             if (profileError) throw profileError
 
@@ -145,6 +166,26 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
             <div className="bg-white rounded-2xl p-12 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-gray-500">
                 <Loader2 size={32} className="animate-spin mb-4 text-primary" />
                 <p>Loading user details...</p>
+            </div>
+        )
+    }
+
+    if (parseUserId(userId) == null) {
+        return (
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 space-y-4">
+                <Alert
+                    type="error"
+                    message={generalError || 'Invalid or missing user id. Open this page from the user list.'}
+                    onClose={() => setGeneralError(null)}
+                />
+                <button
+                    type="button"
+                    onClick={() => router.back()}
+                    className="flex items-center gap-2 text-sm text-primary font-medium hover:underline"
+                >
+                    <ArrowLeft size={16} />
+                    Go back
+                </button>
             </div>
         )
     }
@@ -207,14 +248,17 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
                     />
 
                     <Input
-                        label="Email Address"
+                        label="Email address"
                         type="email"
-                        placeholder="john@example.com"
+                        placeholder="—"
                         icon={Mail}
                         value={formData.email}
-                        onChange={(e) => updateField('email', e.target.value)}
+                        readOnly
+                        aria-readonly="true"
+                        helperText="Email is tied to sign-in and cannot be changed here."
                         error={errors.email}
                         disabled={isSaving}
+                        className="bg-gray-50 cursor-default text-gray-700"
                     />
                 </div>
 
@@ -240,24 +284,57 @@ export default function EditUserForm({ userId, currentUserRole, onSuccess }: Edi
                     />
                 </div>
 
-                <div className="pt-6 border-t border-gray-50 flex justify-end gap-3">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => router.back()}
-                        disabled={isSaving}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        type="submit"
-                        size="lg"
-                        isLoading={isSaving}
-                        className="min-w-[160px]"
-                    >
-                        <Save size={18} className="mr-2" />
-                        Save Changes
-                    </Button>
+                <div className="pt-6 border-t border-gray-50 flex justify-between">
+                    <div className="flex gap-3">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (!confirm(`Are you sure you want to ${formData.isActive ? 'deactivate' : 'activate'} this account?`)) return
+                                const numericId = parseUserId(userId)
+                                if (numericId == null) {
+                                    setGeneralError('Invalid user id.')
+                                    return
+                                }
+                                setIsSaving(true)
+                                try {
+                                    const supabase = createClient()
+                                    await supabase.from('users').update({ is_active: !formData.isActive }).eq('id', numericId)
+                                    setFormData(prev => ({ ...prev, isActive: !prev.isActive }))
+                                    setGeneralSuccess(!formData.isActive ? 'Account activated!' : 'Account deactivated!')
+                                } catch (err) {
+                                    setGeneralError(err instanceof Error ? err.message : 'Failed to update status')
+                                } finally {
+                                    setIsSaving(false)
+                                }
+                            }}
+                            disabled={isSaving}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors ${formData.isActive 
+                                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' 
+                                : 'border-green-200 text-green-700 hover:bg-green-50'}`}
+                        >
+                            {formData.isActive ? <ToggleLeft size={18} /> : <ToggleRight size={18} />}
+                            {formData.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => router.back()}
+                            disabled={isSaving}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            size="lg"
+                            isLoading={isSaving}
+                            className="min-w-[160px]"
+                        >
+                            <Save size={18} className="mr-2" />
+                            Save Changes
+                        </Button>
+                    </div>
                 </div>
             </form>
         </div>

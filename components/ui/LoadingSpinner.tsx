@@ -24,8 +24,8 @@ const spinnerConfig = {
   },
   food: {
     icon: Utensils,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-100',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
   },
   laundry: {
     icon: Truck,
@@ -39,8 +39,8 @@ const spinnerConfig = {
   },
   users: {
     icon: Users,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
   },
 }
 

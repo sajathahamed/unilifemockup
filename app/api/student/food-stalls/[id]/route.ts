@@ -137,11 +137,17 @@ export async function GET(
           const owner = (ownerMatches.map((r: any) => r.data).find((d: any) => d?.id) as any) ?? null
 
           if (owner?.id) {
-            const { data: items, error: itemsErr } = await client
+            const stallNumeric = typeof stallId === 'number' ? stallId : null
+            let itemsQuery = client
               .from('food_items')
               .select('id, name, price, is_available, category_id')
-              .eq('vendor_id', owner.id)
               .order('id', { ascending: true })
+            if (stallNumeric != null) {
+              itemsQuery = itemsQuery.or(`vendor_id.eq.${owner.id},vendor_id.eq.${stallNumeric}`)
+            } else {
+              itemsQuery = itemsQuery.eq('vendor_id', owner.id)
+            }
+            const { data: items, error: itemsErr } = await itemsQuery
             if (!itemsErr && Array.isArray(items)) {
               // Fetch category names by the category_id values present in the items.
               // This works for both numeric IDs and UUID IDs.

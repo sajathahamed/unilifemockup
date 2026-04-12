@@ -13,7 +13,7 @@ export default async function EditTripPage({ params }: { params: Promise<{ id: s
     <div className="space-y-8">
       <div className="page-hero flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-indigo-500/30">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-emerald-500/30">
             <MapPin size={24} strokeWidth={2.25} />
           </span>
           <div>

@@ -115,7 +115,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-8 py-8 shadow-lg mb-8 mt-4"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-8 py-8 shadow-lg mb-8 mt-4"
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-24 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4 flex-wrap">
@@ -126,7 +126,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
             <p className="text-white/90 text-lg">Create and manage assignments</p>
             <Button
               onClick={openCreate}
-              className="mt-4 bg-white text-violet-600 hover:bg-gray-50"
+              className="mt-4 bg-white text-emerald-700 hover:bg-gray-50"
               leftIcon={<Plus size={18} />}
             >
               Create assignment
@@ -148,7 +148,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
         <select
           value={filterYear}
           onChange={(e) => setFilterYear(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
         >
           {ACADEMIC_YEAR_OPTIONS.map((opt) => (
             <option key={opt.value || 'all'} value={opt.value}>
@@ -165,7 +165,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
           <FileText size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500">No assignments yet.</p>
           <p className="text-sm text-gray-400 mt-1 mb-4">Create your first assignment using the button above.</p>
-          <Button onClick={openCreate} leftIcon={<Plus size={18} />} className="bg-violet-600 text-white hover:bg-violet-700">
+          <Button onClick={openCreate} leftIcon={<Plus size={18} />} className="bg-emerald-600 text-white hover:bg-emerald-700">
             Create assignment
           </Button>
         </div>
@@ -184,7 +184,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-semibold text-gray-900">{a.title}</h2>
                     {a.academic_year != null && (
-                      <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded text-xs font-medium">
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-xs font-medium">
                         Year {a.academic_year}
                       </span>
                     )}
@@ -203,7 +203,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
                 </div>
                 <Link
                   href={`/lecturer/assignments/${a.id}`}
-                  className="inline-flex items-center gap-2 text-violet-600 hover:text-violet-700 font-medium text-sm"
+                  className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium text-sm"
                 >
                   View submissions <ArrowRight size={14} />
                 </Link>

@@ -141,7 +141,7 @@ export default function VendorDashboardClient({ userName, userRole }: { userName
         <StatCard icon={Package} label="Today's Orders" value={String(todayOrderCount)} color="bg-blue-500" />
         <StatCard icon={Clock} label="Pending" value={String(pendingCount)} color="bg-yellow-500" />
         <StatCard icon={DollarSign} label="Today's Revenue" value={`RS ${todayRevenue.toLocaleString()}`} color="bg-green-500" />
-        <StatCard icon={TrendingUp} label="This Week" value={`RS ${weekRevenue.toLocaleString()}`} color="bg-purple-500" />
+        <StatCard icon={TrendingUp} label="This Week" value={`RS ${weekRevenue.toLocaleString()}`} color="bg-emerald-500" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">

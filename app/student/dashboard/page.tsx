@@ -4,10 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { 
   Clock, 
   Users, 
+  User,
   ArrowRight,
   Bell,
   Calendar,
-  LucideIcon,
+  Compass,
+  MapPin,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -80,10 +82,10 @@ export default async function StudentDashboard() {
     <DashboardLayout user={user}>
       <div className="space-y-6">
         {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-primary to-indigo-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
+        <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
           <div className="relative z-10">
             <h1 className="text-2xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
-            <p className="mt-1 text-indigo-100 italic">Your uni-life, simplified.</p>
+            <p className="mt-1 text-emerald-100 italic">Your uni-life, simplified.</p>
           </div>
           <Compass className="absolute -right-6 -bottom-6 text-white/10 w-48 h-48 rotate-12" />
         </div>
@@ -94,7 +96,7 @@ export default async function StudentDashboard() {
             icon={Calendar}
             label="Today's Classes"
             value={timetableEntries?.length ? `${timetableEntries.length} Classes` : 'No Classes'}
-            color="bg-violet-500"
+            color="bg-emerald-500"
             href="/student/timetable"
           />
           <StatCard
@@ -134,10 +136,10 @@ export default async function StudentDashboard() {
             </div>
             
             <div className="space-y-3">
-              {timetableToday.length === 0 ? (
+              {timetableEntries.length === 0 ? (
                 <p className="text-gray-500 text-sm py-4">No classes scheduled for today.</p>
               ) : (
-                timetableToday.map((entry) => {
+                timetableEntries.map((entry) => {
                   const status = getStatus(entry.start_time, entry.end_time)
                   const title = entry.course_name ? `${entry.course_code || ''} - ${entry.course_name}`.trim() : `Course #${entry.course_id}`
                   return (
@@ -163,11 +165,11 @@ export default async function StudentDashboard() {
             <div className="space-y-4">
               {notifications && notifications.length > 0 ? (
                 notifications.map((n) => (
-                  <NotificationItem
+                  <AnnouncementItem
                     key={n.id}
                     title={n.message || 'New reminder'}
                     time={new Date(n.notify_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    status={n.status}
+                    isNew={String(n.status).toLowerCase() === 'scheduled'}
                   />
                 ))
               ) : (

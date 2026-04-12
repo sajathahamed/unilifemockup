@@ -29,7 +29,7 @@ export default async function AdminNewUserPage() {
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6 text-orange-800">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-emerald-800">
                     <h3 className="font-semibold mb-2 flex items-center gap-2">
                         Important Note
                     </h3>

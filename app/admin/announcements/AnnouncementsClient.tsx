@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { requireMinLen10 } from '@/lib/admin/validation'
 
 type Announcement = {
   id: number
@@ -19,6 +20,7 @@ export default function AnnouncementsClient() {
   const [audience, setAudience] = useState('all')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{ title?: string; body?: string }>({})
 
   const readJsonSafe = async (res: Response) => {
     const ct = res.headers.get('content-type') || ''
@@ -52,7 +54,13 @@ export default function AnnouncementsClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    setFieldErrors({})
+    const tErr = requireMinLen10(title, 'Title')
+    const bErr = requireMinLen10(body, 'Message')
+    if (tErr || bErr) {
+      setFieldErrors({ ...(tErr ? { title: tErr } : {}), ...(bErr ? { body: bErr } : {}) })
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
@@ -83,36 +91,37 @@ export default function AnnouncementsClient() {
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Post announcement</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Create a new notice for students and staff. Optionally set target audience.
+          Title and message must be at least 10 characters. Pick who should see the notice.
         </p>
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Title * (min 10 characters)</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/20 focus:border-primary"
               placeholder="Announcement title"
-              required
             />
+            {fieldErrors.title && <p className="mt-1.5 text-sm text-red-500">{fieldErrors.title}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Message * (min 10 characters)</label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              rows={4}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary/20 focus:border-primary"
               placeholder="Full message..."
             />
+            {fieldErrors.body && <p className="mt-1.5 text-sm text-red-500">{fieldErrors.body}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Audience</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Audience</label>
             <select
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 bg-white cursor-pointer focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="all">Everyone</option>
               <option value="student">Students</option>
@@ -127,7 +136,7 @@ export default function AnnouncementsClient() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center rounded-xl bg-primary text-white px-4 py-2 font-medium hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex items-center rounded-xl bg-primary text-white px-5 py-2.5 text-sm font-medium shadow-sm hover:bg-primary/90 disabled:opacity-50"
           >
             {submitting ? 'Posting...' : 'Post Announcement'}
           </button>

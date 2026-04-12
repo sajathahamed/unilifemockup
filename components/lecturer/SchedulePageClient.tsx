@@ -44,7 +44,7 @@ const sampleSchedules: Schedule[] = [
     endTime: '11:30',
     location: 'Lab 2',
     capacity: 30,
-    color: 'bg-purple-500',
+    color: 'bg-emerald-600',
     lecturer: 'Dr. Smith',
   },
   {
@@ -68,7 +68,7 @@ const sampleSchedules: Schedule[] = [
     endTime: '10:30',
     location: 'Hall B',
     capacity: 45,
-    color: 'bg-orange-500',
+    color: 'bg-emerald-500',
     lecturer: 'Dr. Smith',
   },
   {
@@ -145,11 +145,11 @@ export default function SchedulePageClient() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-8 py-8 shadow-lg mb-8 mt-4"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-8 py-8 shadow-lg mb-8 mt-4"
       >
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-24 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-400/10 rounded-full -ml-36 -mb-24 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-emerald-400/10 rounded-full -ml-36 -mb-24 blur-3xl" />
 
         {/* Content */}
         <div className="relative flex items-start justify-between gap-4">
@@ -159,7 +159,7 @@ export default function SchedulePageClient() {
             <div className="flex gap-2">
               <Button
                 onClick={() => setIsFormOpen(true)}
-                className="bg-white text-violet-600 hover:bg-gray-50"
+                className="bg-white text-emerald-700 hover:bg-gray-50"
               >
                 <Plus size={18} className="mr-2" />
                 Add New Schedule
@@ -192,14 +192,14 @@ export default function SchedulePageClient() {
               placeholder="Search by course name or code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
         </div>
         <select
           value={filterYear}
           onChange={(e) => setFilterYear(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
           aria-label="Academic year"
         >
           {academicYears.map((y) => (
@@ -209,7 +209,7 @@ export default function SchedulePageClient() {
         <select
           value={filterDay}
           onChange={(e) => setFilterDay(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
           aria-label="Day filter"
         >
           <option>All</option>
@@ -251,7 +251,7 @@ export default function SchedulePageClient() {
                       setSearchQuery('')
                       setFilterDay('All')
                     }}
-                    className="text-xs text-violet-600 hover:text-violet-700 mt-2 font-medium"
+                    className="text-xs text-emerald-600 hover:text-emerald-700 mt-2 font-medium"
                   >
                     Clear filters
                   </button>
@@ -264,7 +264,7 @@ export default function SchedulePageClient() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200 hover:border-violet-300 hover:shadow-md transition-all group"
+                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all group"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-start gap-3 flex-1">
@@ -293,7 +293,7 @@ export default function SchedulePageClient() {
                   <div className="space-y-1.5 text-xs text-gray-600 ml-4.5">
                     {schedule.studyYear && (
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-medium">{schedule.studyYear}</span>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-medium">{schedule.studyYear}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2">

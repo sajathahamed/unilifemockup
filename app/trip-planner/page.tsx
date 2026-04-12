@@ -12,7 +12,7 @@ export default async function TripPlannerPage() {
       <div className="page-hero flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-indigo-500/30">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-emerald-500/30">
               <MapPin size={24} strokeWidth={2.25} />
             </span>
             Trip Planner

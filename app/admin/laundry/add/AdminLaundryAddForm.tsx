@@ -2,11 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { apiErrorMessage } from '@/lib/admin/form-feedback'
+import {
+  digitsOnlyPhone,
+  isValidEmail,
+  minLen10IfPresent,
+  requireMinLen10,
+  validatePhone10Required,
+  validatePositiveNumber,
+} from '@/lib/admin/validation'
 import { Truck, Loader2, Save, Plus, Trash2, MapPin, Edit2 } from 'lucide-react'
 
 const SECTION_STYLE = 'border-b border-gray-200 pb-6 last:border-0'
-const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1'
-const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1.5'
+const INPUT_STYLE = 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white text-gray-900 placeholder:text-gray-400'
 const SELECT_STYLE = `${INPUT_STYLE} bg-white cursor-pointer`
 
 const feedbackBoxClass = (type: 'success' | 'error') =>
@@ -15,8 +23,6 @@ const feedbackBoxClass = (type: 'success' | 'error') =>
     : 'bg-red-50 text-red-900 border border-red-200'
 
 const SERVICE_OPTIONS = ['Wash', 'Dry Clean', 'Iron', 'Express Service']
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_RE = /^[+\d][\d\s-]{6,19}$/
 
 function isValidUrl(value: string): boolean {
   try {
@@ -47,9 +53,6 @@ const emptyForm = () => ({
   delivery_radius: '',
   opening_time: '',
   closing_time: '',
-  logo: '',
-  banner: '',
-  gallery: [] as string[],
 })
 
 export default function AdminLaundryAddForm() {
@@ -199,12 +202,22 @@ export default function AdminLaundryAddForm() {
     const opening = form.opening_time.trim()
     const closing = form.closing_time.trim()
 
-    if (!shopName || shopName.length < 2) return setMessage({ type: 'error', text: 'Laundry shop name must be at least 2 characters.' })
-    if (!ownerName || ownerName.length < 2) return setMessage({ type: 'error', text: 'Owner name must be at least 2 characters.' })
+    const errShop = requireMinLen10(shopName, 'Laundry shop name')
+    if (errShop) return setMessage({ type: 'error', text: errShop })
+    const errOwner = requireMinLen10(ownerName, 'Owner name')
+    if (errOwner) return setMessage({ type: 'error', text: errOwner })
     if (!ownerEmail) return setMessage({ type: 'error', text: 'Select a laundry vendor account from the list.' })
-    if (!EMAIL_RE.test(ownerEmail)) return setMessage({ type: 'error', text: 'Owner email format is invalid.' })
-    if (phone && !PHONE_RE.test(phone)) return setMessage({ type: 'error', text: 'Phone number format is invalid.' })
-    if (whatsapp && !PHONE_RE.test(whatsapp)) return setMessage({ type: 'error', text: 'WhatsApp number format is invalid.' })
+    if (!isValidEmail(ownerEmail)) return setMessage({ type: 'error', text: 'Owner email format is invalid.' })
+    const errPh = validatePhone10Required(phone, 'Phone number')
+    if (errPh) return setMessage({ type: 'error', text: errPh })
+    const errWa = validatePhone10Required(whatsapp, 'WhatsApp number')
+    if (errWa) return setMessage({ type: 'error', text: errWa })
+    const errAddr = requireMinLen10(form.address, 'Address')
+    if (errAddr) return setMessage({ type: 'error', text: errAddr })
+    const errCity = minLen10IfPresent(form.city, 'City')
+    if (errCity) return setMessage({ type: 'error', text: errCity })
+    const errArea = minLen10IfPresent(form.area, 'Area')
+    if (errArea) return setMessage({ type: 'error', text: errArea })
     if ((latStr && !lngStr) || (!latStr && lngStr)) return setMessage({ type: 'error', text: 'Provide both latitude and longitude together.' })
     if (latStr) {
       const latNum = Number(latStr)
@@ -214,20 +227,16 @@ export default function AdminLaundryAddForm() {
     }
     if ((opening && !closing) || (!opening && closing)) return setMessage({ type: 'error', text: 'Provide both opening and closing time together.' })
     if (opening && closing && opening >= closing) return setMessage({ type: 'error', text: 'Closing time must be after opening time.' })
-    if (deliveryRadius && (Number.isNaN(Number(deliveryRadius)) || Number(deliveryRadius) < 0)) {
-      return setMessage({ type: 'error', text: 'Delivery radius must be a valid non-negative number.' })
-    }
-    if (form.logo.trim() && !isValidUrl(form.logo.trim())) return setMessage({ type: 'error', text: 'Logo URL is invalid.' })
-    if (form.banner.trim() && !isValidUrl(form.banner.trim())) return setMessage({ type: 'error', text: 'Banner URL is invalid.' })
-    if (form.gallery.some((g) => g?.trim() && !isValidUrl(String(g).trim()))) {
-      return setMessage({ type: 'error', text: 'One or more gallery URLs are invalid.' })
+    if (deliveryRadius) {
+      const er = validatePositiveNumber(deliveryRadius, 'Delivery radius (km)', false)
+      if (er) return setMessage({ type: 'error', text: er })
     }
     for (const [i, p] of priceItems.entries()) {
       const hasAny = p.service.trim() || p.price.trim()
       if (!hasAny) continue
       if (!p.service.trim()) return setMessage({ type: 'error', text: `Price row #${i + 1}: service is required.` })
-      if (p.price.trim() === '' || Number.isNaN(Number(p.price)) || Number(p.price) < 0) {
-        return setMessage({ type: 'error', text: `Price row #${i + 1}: price must be a valid non-negative number.` })
+      if (p.price.trim() === '' || Number.isNaN(Number(p.price)) || Number(p.price) <= 0) {
+        return setMessage({ type: 'error', text: `Price row #${i + 1}: price must be greater than 0.` })
       }
     }
 
@@ -245,8 +254,8 @@ export default function AdminLaundryAddForm() {
         shop_name: shopName,
         owner_name: ownerName,
         owner_email: ownerEmail,
-        phone: phone || '',
-        whatsapp: whatsapp || '',
+        phone: digitsOnlyPhone(phone, 10),
+        whatsapp: digitsOnlyPhone(whatsapp, 10),
         lat: latStr ? parseFloat(latStr) : null,
         lng: lngStr ? parseFloat(lngStr) : null,
         delivery_radius: deliveryRadius ? parseFloat(deliveryRadius) : null,
@@ -275,15 +284,15 @@ export default function AdminLaundryAddForm() {
 
   return (
     <>
-    <form noValidate onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-4">
+    <form noValidate onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100">
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/90">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <Truck size={24} className="text-white" />
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Truck size={22} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Laundry Shop Registration</h2>
-            <p className="text-blue-100 text-sm">Owner email: choose a laundry vendor account created in Super Admin.</p>
+            <h2 className="text-lg font-semibold text-gray-900">Laundry shop registration</h2>
+            <p className="text-sm text-gray-500">Owner: pick a laundry vendor account from Super Admin. Phone fields are 10 digits only.</p>
           </div>
         </div>
       </div>
@@ -303,11 +312,11 @@ export default function AdminLaundryAddForm() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={LABEL_STYLE}>Laundry Shop Name *</label>
+              <label className={LABEL_STYLE}>Laundry shop name * (min 10 characters)</label>
               <input type="text" value={form.shop_name} onChange={(e) => setForm((p) => ({ ...p, shop_name: e.target.value }))} placeholder="e.g. Fresh Laundry Hub" className={INPUT_STYLE} />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Owner Name *</label>
+              <label className={LABEL_STYLE}>Owner name * (min 10 characters)</label>
               <input type="text" value={form.owner_name} onChange={(e) => setForm((p) => ({ ...p, owner_name: e.target.value }))} placeholder="Full name" className={INPUT_STYLE} />
             </div>
             <div>
@@ -335,12 +344,29 @@ export default function AdminLaundryAddForm() {
               )}
             </div>
             <div>
-              <label className={LABEL_STYLE}>Phone Number</label>
-              <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="+94..." className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>Phone number * (10 digits)</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                value={form.phone}
+                onChange={(e) => setForm((p) => ({ ...p, phone: digitsOnlyPhone(e.target.value) }))}
+                placeholder="0771234567"
+                maxLength={10}
+                className={INPUT_STYLE}
+              />
             </div>
             <div>
-              <label className={LABEL_STYLE}>WhatsApp Number</label>
-              <input type="tel" value={form.whatsapp} onChange={(e) => setForm((p) => ({ ...p, whatsapp: e.target.value }))} placeholder="+94..." className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>WhatsApp * (10 digits)</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.whatsapp}
+                onChange={(e) => setForm((p) => ({ ...p, whatsapp: digitsOnlyPhone(e.target.value) }))}
+                placeholder="0771234567"
+                maxLength={10}
+                className={INPUT_STYLE}
+              />
             </div>
           </div>
         </section>
@@ -351,8 +377,8 @@ export default function AdminLaundryAddForm() {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className={LABEL_STYLE}>Address</label>
-              <input type="text" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder="Street, building" className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>Address * (min 10 characters)</label>
+              <input type="text" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder="Street, building, area…" className={INPUT_STYLE} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -429,21 +455,6 @@ export default function AdminLaundryAddForm() {
                 <label className={LABEL_STYLE}>Closing Time</label>
                 <input type="time" value={form.closing_time} onChange={(e) => setForm((p) => ({ ...p, closing_time: e.target.value }))} className={INPUT_STYLE} />
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className={SECTION_STYLE}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Media URLs</h3>
-          <p className="text-sm text-gray-500 mb-3">Enter image URLs (upload to your storage first).</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={LABEL_STYLE}>Shop Logo URL</label>
-              <input type="url" value={form.logo} onChange={(e) => setForm((p) => ({ ...p, logo: e.target.value }))} placeholder="https://..." className={INPUT_STYLE} />
-            </div>
-            <div>
-              <label className={LABEL_STYLE}>Shop Banner URL</label>
-              <input type="url" value={form.banner} onChange={(e) => setForm((p) => ({ ...p, banner: e.target.value }))} placeholder="https://..." className={INPUT_STYLE} />
             </div>
           </div>
         </section>

@@ -31,7 +31,7 @@ export default function TripPlanDisplay({
         {actions}
       </div>
 
-      <div className="surface-card-sm !p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-indigo-100/80 bg-gradient-to-r from-indigo-50/50 to-white">
+      <div className="surface-card-sm !p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-emerald-100/80 bg-gradient-to-r from-emerald-50/50 to-white">
         <p className="text-sm text-gray-700 font-medium">Download a PDF or share your plan.</p>
         <TripPlanExportBar tripPlan={tripPlan} shareUrl={shareUrl} />
       </div>
@@ -51,8 +51,8 @@ export default function TripPlanDisplay({
           {(
             [
               { label: 'Stay', icon: Hotel, amount: tripPlan.breakdown.stay, box: 'bg-blue-50', ic: 'text-blue-500', amt: 'text-blue-700' },
-              { label: 'Travel', icon: Car, amount: tripPlan.breakdown.travel, box: 'bg-purple-50', ic: 'text-purple-500', amt: 'text-purple-700' },
-              { label: 'Food', icon: Utensils, amount: tripPlan.breakdown.food, box: 'bg-orange-50', ic: 'text-orange-500', amt: 'text-orange-700' },
+              { label: 'Travel', icon: Car, amount: tripPlan.breakdown.travel, box: 'bg-teal-50', ic: 'text-teal-600', amt: 'text-teal-800' },
+              { label: 'Food', icon: Utensils, amount: tripPlan.breakdown.food, box: 'bg-emerald-50', ic: 'text-emerald-600', amt: 'text-emerald-800' },
               { label: 'Activities', icon: Star, amount: tripPlan.breakdown.activities, box: 'bg-green-50', ic: 'text-green-500', amt: 'text-green-700' },
               { label: 'Emergency', icon: ShieldCheck, amount: tripPlan.breakdown.emergency, box: 'bg-red-50', ic: 'text-red-500', amt: 'text-red-700' },
             ] as const
@@ -114,7 +114,7 @@ export default function TripPlanDisplay({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/50 p-5 sm:p-6 shadow-sm ring-1 ring-indigo-100/40">
+      <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 via-white to-green-50/50 p-5 sm:p-6 shadow-sm ring-1 ring-emerald-100/40">
         <h3 className="font-semibold text-gray-900 mb-3">💡 Smart Travel Tips</h3>
         <ul className="space-y-2">
           {tripPlan.tips.map((tip, i) => (

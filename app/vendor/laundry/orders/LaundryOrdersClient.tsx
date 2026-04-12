@@ -109,7 +109,7 @@ export default function LaundryOrdersClient({ user }: { user: UserProfile }) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatBox label="New Requests" value={orders.filter(o => o.status === 'pending').length} color="blue" />
                 <StatBox label="To Pick Up" value={orders.filter(o => o.status === 'accepted').length} color="amber" />
-                <StatBox label="In Wash" value={orders.filter(o => o.status === 'processing').length} color="indigo" />
+                <StatBox label="In Wash" value={orders.filter(o => o.status === 'processing').length} color="green" />
                 <StatBox label="Ready Today" value={orders.filter(o => o.status === 'ready').length} color="emerald" />
             </div>
 
@@ -143,7 +143,7 @@ function StatBox({ label, value, color }: { label: string, value: number, color:
     const colors: any = {
         blue: 'bg-blue-50 text-blue-600 border-blue-100',
         amber: 'bg-amber-50 text-amber-600 border-amber-100',
-        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+        green: 'bg-green-50 text-green-600 border-green-100',
         emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100'
     }
     return (
@@ -163,7 +163,7 @@ function LaundryOrderCard({ order, isExpanded, onToggle, onStatusUpdate }: {
     const statusColors = {
         pending: 'bg-blue-50 text-blue-600 border-blue-100',
         accepted: 'bg-amber-50 text-amber-600 border-amber-100',
-        processing: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+        processing: 'bg-green-50 text-green-700 border-green-100',
         ready: 'bg-emerald-50 text-emerald-600 border-emerald-100',
         completed: 'bg-gray-50 text-gray-500 border-gray-100'
     }
@@ -265,7 +265,7 @@ function LaundryOrderCard({ order, isExpanded, onToggle, onStatusUpdate }: {
                                 {order.status === 'accepted' && (
                                     <button
                                         onClick={() => onStatusUpdate(order.id, 'processing')}
-                                        className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all"
+                                        className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all"
                                     >
                                         Mark as Processing
                                     </button>

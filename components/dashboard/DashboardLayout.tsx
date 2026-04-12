@@ -35,7 +35,6 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { UserRole } from '@/lib/auth'
-import ThemeToggle from '@/components/ThemeToggle'
 
 interface NavItem {
   label: string
@@ -159,9 +158,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 // Role display names and colors
 const roleConfig: Record<UserRole, { label: string; color: string }> = {
-  student: { label: 'Student', color: 'bg-blue-100 text-blue-800' },
-  lecturer: { label: 'Lecturer', color: 'bg-purple-100 text-purple-800' },
-  admin: { label: 'Admin', color: 'bg-orange-100 text-orange-800' },
+  student: { label: 'Student', color: 'bg-green-100 text-green-800' },
+  lecturer: { label: 'Lecturer', color: 'bg-lime-100 text-lime-900' },
+  admin: { label: 'Admin', color: 'bg-emerald-100 text-emerald-800' },
   vendor: { label: 'Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-food': { label: 'Food Vendor', color: 'bg-green-100 text-green-800' },
   'vendor-laundry': { label: 'Laundry Vendor', color: 'bg-teal-100 text-teal-800' },
@@ -262,7 +261,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       <aside
         className={`
           fixed top-0 left-0 z-50 h-full w-64 border-r
-          ${isDeliveryUI ? 'bg-gradient-to-b from-blue-50 to-blue-50/80 border-blue-200/40' : 'bg-gradient-to-b from-blue-50 to-blue-50/80 border-blue-200/40'}
+          ${isDeliveryUI ? 'bg-gradient-to-b from-green-50 to-green-50/80 border-green-200/40' : 'bg-gradient-to-b from-green-50 to-green-50/80 border-green-200/40'}
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -270,12 +269,12 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between p-5 border-b border-blue-200/40">
+          <div className="flex items-center justify-between p-5 border-b border-green-200/40">
             <Link href={`/${pathSegment}/dashboard`} className="flex items-center gap-3 hover:opacity-80 transition">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-200">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-200">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold font-display tracking-[-0.018em] text-blue-900">UniLife</span>
+              <span className="text-lg font-bold font-display tracking-[-0.018em] text-green-900">UniLife</span>
             </Link>
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -297,7 +296,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                       onClick={() => handleNavigation(item.href)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-4 transition-all duration-200 ${
                         isActive
-                          ? 'border-blue-500 bg-white text-blue-700 font-semibold shadow-sm shadow-blue-100'
+                          ? 'border-green-500 bg-white text-green-700 font-semibold shadow-sm shadow-green-100'
                           : 'border-transparent text-gray-600 hover:bg-white/60 hover:text-gray-700'
                       } ${
                         isNavigating && navigatingTo === item.href ? 'opacity-60 cursor-wait' : ''
@@ -313,13 +312,13 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
           </nav>
 
           {/* User profile section */}
-          <div className="p-5 border-t border-blue-200/40">
+          <div className="p-5 border-t border-green-200/40">
             <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-colors hover:bg-white/60"
               >
-                <div className="w-11 h-11 rounded-2xl flex items-center justify-center ring-2 bg-white ring-blue-200 shadow-sm">
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center ring-2 bg-white ring-green-200 shadow-sm">
                   {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
@@ -354,7 +353,7 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
                   >
                     <Link
                       href={`/${pathSegment}/settings`}
-                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-green-50 transition-colors"
                     >
                       <Settings size={18} />
                       <span className="text-sm">Settings</span>
@@ -388,8 +387,6 @@ export default function DashboardLayout({ children, user }: DashboardLayoutProps
             </button>
 
             <div className="flex items-center gap-4 ml-auto">
-              <ThemeToggle />
-              
               {/* Notifications */}
               <button className="relative p-2 hover:bg-glass rounded-lg transition-colors">
                 <Bell size={20} className="text-text-secondary" />

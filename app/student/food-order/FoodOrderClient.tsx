@@ -10,8 +10,6 @@ import {
     Filter,
     ChevronRight,
     Loader2,
-    Wifi,
-    WifiOff,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserProfile } from '@/lib/auth'
@@ -111,7 +109,7 @@ function ShopCard({ shop, onClick }: { shop: Shop; onClick: () => void }) {
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-3">
                     {shop.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                        <span key={tag} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
                             {tag}
                         </span>
                     ))}
@@ -132,7 +130,6 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
     const [shops, setShops] = useState<Shop[]>([])
     const [filtered, setFiltered] = useState<Shop[]>([])
     const [loading, setLoading] = useState(false)
-    const [refreshing, setRefreshing] = useState(false)
     const [search, setSearch] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
     const [budgetOnly, setBudgetOnly] = useState(false)
@@ -141,7 +138,6 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
     const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
     const [apiError, setApiError] = useState<string | null>(null)
     const fetchShops = useCallback(async (lat?: number, lng?: number) => {
-        setRefreshing(true)
         setApiError(null)
         try {
             // Merge DB stalls + nearby places (Google/OSM/etc)
@@ -162,30 +158,8 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         } catch (err: any) {
             console.warn('[FoodOrder] fetch failed:', err)
             setApiError(`Fetch error: ${err?.message ?? err}`)
-        } finally {
-            setRefreshing(false)
         }
     }, [])
-
-    const handleRefresh = () => {
-        if (typeof navigator !== 'undefined' && navigator.geolocation) {
-            setLoading(true)
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const { latitude, longitude } = pos.coords
-                    setLocationGranted(true)
-                    setCoords({ lat: latitude, lng: longitude })
-                    fetchShops(latitude, longitude).finally(() => setLoading(false))
-                },
-                (err) => {
-                    setLocationGranted(false)
-                    fetchShops().finally(() => setLoading(false))
-                }
-            )
-        } else {
-            fetchShops()
-        }
-    }
 
     const hasFetched = useRef(false)
 
@@ -254,32 +228,14 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
         <DashboardLayout user={user}>
             <div className="space-y-6 pb-10">
                 {/* Header gradient */}
-                <div className="bg-gradient-to-r from-orange-500 via-rose-500 to-purple-600 rounded-2xl p-6 text-white">
+                <div className="bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-800 rounded-2xl p-6 text-white">
                     <div className="flex items-center gap-3 mb-1">
                         <span className="text-3xl">🍕</span>
                         <h1 className="text-2xl font-bold">Food Near You</h1>
                     </div>
-                    <p className="text-orange-100 text-sm">
+                    <p className="text-emerald-100 text-sm">
                         Affordable eats for uni students · Sorted by price &amp; rating
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                        {refreshing && (
-                            <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
-                                <Loader2 size={12} className="animate-spin" /> Updating…
-                            </span>
-                        )}
-                        {!refreshing && (dataSource === 'mixed' || dataSource === 'database' || dataSource === 'google') ? (
-                            <span className="flex items-center gap-1.5 text-xs bg-white/20 text-white px-3 py-1 rounded-full">
-                                <Wifi size={12} /> Live Data
-                            </span>
-                        ) : null}
-                        <button
-                            onClick={handleRefresh}
-                            className="flex items-center gap-1.5 text-xs bg-white text-orange-600 px-3 py-1 rounded-full font-bold hover:bg-orange-50 transition-colors"
-                        >
-                            {refreshing ? <Loader2 size={12} className="animate-spin" /> : '🔄'} Refresh
-                        </button>
-                    </div>
                 </div>
 
                 {/* Debug info bar */}
@@ -316,7 +272,7 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                             placeholder="Search shops, cuisine, food…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 text-sm"
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
                         />
                     </div>
                     <button
@@ -337,8 +293,8 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
                             className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeCategory === cat.id
-                                ? 'bg-orange-500 text-white shadow-sm'
-                                : 'bg-white text-gray-600 border border-gray-200 hover:border-orange-400'
+                                ? 'bg-emerald-500 text-white shadow-sm'
+                                : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-400'
                                 }`}
                         >
                             <span>{cat.emoji}</span> {cat.label}
@@ -349,7 +305,7 @@ export default function FoodOrderClient({ user }: { user: UserProfile }) {
                 {/* Results */}
                 {loading || (locationGranted === null && shops.length === 0) ? (
                     <div className="flex flex-col items-center justify-center py-24 gap-4">
-                        <Loader2 className="w-10 h-10 text-orange-400 animate-spin" />
+                        <Loader2 className="w-10 h-10 text-emerald-400 animate-spin" />
                         <p className="text-gray-500 text-sm">
                             {locationGranted === null ? 'Getting your location to find nearby shops…' : 'Finding food near you…'}
                         </p>

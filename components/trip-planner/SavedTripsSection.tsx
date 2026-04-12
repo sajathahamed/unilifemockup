@@ -53,7 +53,7 @@ export default function SavedTripsSection() {
   return (
     <div className="surface-card space-y-5">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-primary">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-primary">
           <MapPin size={20} strokeWidth={2.25} />
         </span>
         <div>
@@ -69,7 +69,7 @@ export default function SavedTripsSection() {
           return (
             <li
               key={t.id}
-              className="group flex flex-col gap-4 rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50/80 to-white p-4 transition-all hover:border-indigo-200/80 hover:shadow-md hover:shadow-indigo-500/5 sm:flex-row sm:items-center sm:justify-between"
+              className="group flex flex-col gap-4 rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50/80 to-white p-4 transition-all hover:border-emerald-200/80 hover:shadow-md hover:shadow-emerald-500/5 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <p className="font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">

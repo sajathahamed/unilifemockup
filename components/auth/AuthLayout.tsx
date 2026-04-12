@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion'
 import { GraduationCap } from 'lucide-react'
-import ThemeToggle from '@/components/ThemeToggle'
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -11,17 +10,8 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
-  const isDark = typeof window !== 'undefined' && document.body.classList.contains('dark-mode')
-
   return (
-    <div 
-      className={`min-h-screen flex relative overflow-hidden ${isDark ? 'bg-mesh grid-pattern' : 'bg-gray-50'}`}
-    >
-      {/* Theme Toggle */}
-      <div className="absolute top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
-
+    <div className="min-h-screen flex relative overflow-hidden bg-gray-50">
       {/* Left side - Branding */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -37,15 +27,15 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
             >
               <GraduationCap className="w-7 h-7 text-white" />
             </div>
-            <span className="text-2xl font-bold" style={{ color: isDark ? '#ffffff' : '#000000' }}>UniLife</span>
+            <span className="text-2xl font-bold text-gray-900">UniLife</span>
           </div>
         </div>
         
         <div className="space-y-6">
-          <h1 className="text-4xl xl:text-5xl font-bold leading-tight" style={{ color: isDark ? '#ffffff' : '#000000' }}>
+          <h1 className="text-4xl xl:text-5xl font-bold leading-tight text-gray-900">
             Your Campus,<br />Reimagined.
           </h1>
-          <p className="text-lg max-w-md" style={{ color: isDark ? '#94a3b8' : '#4b5563' }}>
+          <p className="text-lg max-w-md text-gray-600">
             The all-in-one platform for university life. Manage courses, connect with peers, 
             order food, and so much more — all in one place.
           </p>
@@ -62,8 +52,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
-                className="flex items-center gap-2"
-                style={{ color: isDark ? '#94a3b8' : '#6b7280' }}
+                className="flex items-center gap-2 text-gray-500"
               >
                 <span className="text-xl">{feature.icon}</span>
                 <span className="text-sm">{feature.label}</span>
@@ -72,7 +61,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
           </div>
         </div>
         
-        <div className="text-sm" style={{ color: isDark ? '#64748b' : '#9ca3af' }}>
+        <div className="text-sm text-gray-400">
           © 2026 UniLife. All rights reserved.
         </div>
       </motion.div>
@@ -93,23 +82,18 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
             >
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold" style={{ color: isDark ? '#ffffff' : '#000000' }}>UniLife</span>
+            <span className="text-xl font-bold text-gray-900">UniLife</span>
           </div>
           
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold" style={{ color: isDark ? '#ffffff' : '#000000' }}>{title}</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{title}</h2>
             {subtitle && (
-              <p className="mt-2" style={{ color: isDark ? '#94a3b8' : '#4b5563' }}>{subtitle}</p>
+              <p className="mt-2 text-gray-600">{subtitle}</p>
             )}
           </div>
           
           <div 
-            className="rounded-2xl p-8"
-            style={{ 
-              backgroundColor: isDark ? '#1e293b' : '#ffffff',
-              border: `1px solid ${isDark ? '#334155' : '#e5e7eb'}`,
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 15px rgba(0,0,0,0.08)'
-            }}
+            className="rounded-2xl p-8 bg-white border border-gray-200 shadow-md"
           >
             {children}
           </div>

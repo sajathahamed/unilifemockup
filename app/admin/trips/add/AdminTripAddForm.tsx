@@ -1,11 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import {
+  digitsOnlyPhone,
+  isValidEmail,
+  localTodayISODate,
+  minLen10IfPresent,
+  requireMinLen10,
+  validateDateNotPast,
+  validatePhone10Required,
+  validatePositiveInt,
+  validatePositiveNumber,
+  validateReturnOnOrAfterDeparture,
+} from '@/lib/admin/validation'
 import { MapPin, Loader2, Save, Plus, Trash2, Calendar, Route, Edit2 } from 'lucide-react'
 
 const SECTION_STYLE = 'border-b border-gray-200 pb-6 last:border-0'
-const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1'
-const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1.5'
+const INPUT_STYLE = 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white text-gray-900 placeholder:text-gray-400'
 
 type ItineraryItem = { day_number: number; activity: string }
 type TripRow = { id: number; destination: string; organizer_name: string; organizer_email: string; address?: string; trip_type?: string }
@@ -32,9 +44,6 @@ const emptyForm = (): Record<string, string> & { status: TripStatus } => ({
   departure_date: '',
   return_date: '',
   max_participants: '',
-  logo_url: '',
-  banner_url: '',
-  gallery_urls: '',
   status: 'draft',
 })
 
@@ -73,7 +82,6 @@ export default function AdminTripAddForm() {
       const res = await fetch(`/api/admin/trips/${id}`)
       if (!res.ok) throw new Error('Failed to load')
       const trip = await res.json()
-      const gallery = trip.gallery_urls
       setForm({
         destination: trip.destination || '',
         organizer_name: trip.organizer_name || '',
@@ -94,9 +102,6 @@ export default function AdminTripAddForm() {
         departure_date: trip.departure_date ? String(trip.departure_date).slice(0, 10) : '',
         return_date: trip.return_date ? String(trip.return_date).slice(0, 10) : '',
         max_participants: trip.max_participants != null ? String(trip.max_participants) : '',
-        logo_url: trip.logo_url || '',
-        banner_url: trip.banner_url || '',
-        gallery_urls: Array.isArray(gallery) ? gallery.join('\n') : '',
         status: ((trip.status || 'draft') as TripStatus),
       })
       const items = trip.itinerary ?? []
@@ -134,32 +139,70 @@ export default function AdminTripAddForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage(null)
-    if (!form.destination.trim()) {
-      setMessage({ type: 'error', text: 'Destination is required' })
-      return
+    const dest = form.destination.trim()
+    const orgName = form.organizer_name.trim()
+    const orgEmail = form.organizer_email.trim()
+    const phone = digitsOnlyPhone(form.phone, 10)
+    const whatsapp = digitsOnlyPhone(form.whatsapp, 10)
+
+    const errDest = requireMinLen10(dest, 'Destination')
+    if (errDest) return setMessage({ type: 'error', text: errDest })
+    const errOrg = requireMinLen10(orgName, 'Organizer name')
+    if (errOrg) return setMessage({ type: 'error', text: errOrg })
+    if (!orgEmail) return setMessage({ type: 'error', text: 'Organizer email is required.' })
+    if (!isValidEmail(orgEmail)) return setMessage({ type: 'error', text: 'Organizer email is invalid.' })
+    const errPh = validatePhone10Required(phone, 'Phone number')
+    if (errPh) return setMessage({ type: 'error', text: errPh })
+    const errWa = validatePhone10Required(whatsapp, 'WhatsApp number')
+    if (errWa) return setMessage({ type: 'error', text: errWa })
+    const errDesc = requireMinLen10(form.description, 'Description')
+    if (errDesc) return setMessage({ type: 'error', text: errDesc })
+    const errInc = requireMinLen10(form.inclusions, 'Inclusions')
+    if (errInc) return setMessage({ type: 'error', text: errInc })
+    const errAddr = requireMinLen10(form.address, 'Address')
+    if (errAddr) return setMessage({ type: 'error', text: errAddr })
+    const errCity = minLen10IfPresent(form.city, 'City')
+    if (errCity) return setMessage({ type: 'error', text: errCity })
+    const errArea = minLen10IfPresent(form.area, 'Area / region')
+    if (errArea) return setMessage({ type: 'error', text: errArea })
+    const errDays = validatePositiveInt(form.days, 'Number of days', true)
+    if (errDays) return setMessage({ type: 'error', text: errDays })
+    const errBudget = validatePositiveNumber(form.estimated_budget, 'Estimated budget (LKR)', true)
+    if (errBudget) return setMessage({ type: 'error', text: errBudget })
+    const errMax = validatePositiveInt(form.max_participants, 'Max participants', true)
+    if (errMax) return setMessage({ type: 'error', text: errMax })
+    if (!form.departure_date.trim()) return setMessage({ type: 'error', text: 'Departure date is required.' })
+    if (!form.return_date.trim()) return setMessage({ type: 'error', text: 'Return date is required.' })
+    const errDep = validateDateNotPast(form.departure_date, 'Departure date')
+    if (errDep) return setMessage({ type: 'error', text: errDep })
+    const errRet = validateDateNotPast(form.return_date, 'Return date')
+    if (errRet) return setMessage({ type: 'error', text: errRet })
+    const errOrder = validateReturnOnOrAfterDeparture(form.departure_date, form.return_date)
+    if (errOrder) return setMessage({ type: 'error', text: errOrder })
+
+    const filledItinerary = itinerary.filter((d) => d.activity.trim())
+    if (filledItinerary.length === 0) {
+      return setMessage({ type: 'error', text: 'Add at least one itinerary day with an activity (min 10 characters).' })
     }
-    if (!form.organizer_name.trim()) {
-      setMessage({ type: 'error', text: 'Organizer name is required' })
-      return
+    for (let i = 0; i < filledItinerary.length; i++) {
+      const d = filledItinerary[i]
+      const dn = validatePositiveInt(String(d.day_number), `Itinerary day #${i + 1} number`, true)
+      if (dn) return setMessage({ type: 'error', text: dn })
+      const act = requireMinLen10(d.activity, `Itinerary day #${i + 1} activity`)
+      if (act) return setMessage({ type: 'error', text: act })
     }
-    if (!form.organizer_email.trim()) {
-      setMessage({ type: 'error', text: 'Organizer email is required' })
-      return
-    }
+
     setSaving(true)
     try {
-      const gallery = form.gallery_urls
-        .split('\n')
-        .map((u) => u.trim())
-        .filter(Boolean)
       const payload = {
         ...form,
+        phone,
+        whatsapp,
         days: form.days ? parseInt(form.days, 10) : null,
         estimated_budget: form.estimated_budget ? parseFloat(form.estimated_budget) : null,
         max_participants: form.max_participants ? parseInt(form.max_participants, 10) : null,
         lat: form.lat ? parseFloat(form.lat) : null,
         lng: form.lng ? parseFloat(form.lng) : null,
-        gallery_urls: gallery,
         itinerary: itinerary.filter((d) => d.activity.trim()),
       }
       const url = editingId ? `/api/admin/trips/${editingId}` : '/api/admin/trips'
@@ -185,15 +228,15 @@ export default function AdminTripAddForm() {
 
   return (
     <>
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100">
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/90">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <MapPin size={24} className="text-white" />
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <MapPin size={22} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Trip Location Registration</h2>
-            <p className="text-emerald-100 text-sm">Add trip destinations with itinerary and details.</p>
+            <h2 className="text-lg font-semibold text-gray-900">Trip location registration</h2>
+            <p className="text-sm text-gray-500">Budget, participants, and days must be above 0. Dates cannot be in the past.</p>
           </div>
         </div>
       </div>
@@ -209,11 +252,11 @@ export default function AdminTripAddForm() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={LABEL_STYLE}>Destination *</label>
+              <label className={LABEL_STYLE}>Destination * (min 10 characters)</label>
               <input type="text" value={form.destination} onChange={(e) => setForm((p) => ({ ...p, destination: e.target.value }))} placeholder="e.g. Ella, Galle Fort" required className={INPUT_STYLE} />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Organizer Name *</label>
+              <label className={LABEL_STYLE}>Organizer name * (min 10 characters)</label>
               <input type="text" value={form.organizer_name} onChange={(e) => setForm((p) => ({ ...p, organizer_name: e.target.value }))} placeholder="Trip organizer name" required className={INPUT_STYLE} />
             </div>
             <div>
@@ -229,12 +272,28 @@ export default function AdminTripAddForm() {
               />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Phone Number</label>
-              <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="+94..." className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>Phone * (10 digits)</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.phone}
+                onChange={(e) => setForm((p) => ({ ...p, phone: digitsOnlyPhone(e.target.value) }))}
+                placeholder="0771234567"
+                maxLength={10}
+                className={INPUT_STYLE}
+              />
             </div>
             <div>
-              <label className={LABEL_STYLE}>WhatsApp Number</label>
-              <input type="tel" value={form.whatsapp} onChange={(e) => setForm((p) => ({ ...p, whatsapp: e.target.value }))} placeholder="+94..." className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>WhatsApp * (10 digits)</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.whatsapp}
+                onChange={(e) => setForm((p) => ({ ...p, whatsapp: digitsOnlyPhone(e.target.value) }))}
+                placeholder="0771234567"
+                maxLength={10}
+                className={INPUT_STYLE}
+              />
             </div>
             <div>
               <label className={LABEL_STYLE}>Trip Type</label>
@@ -257,27 +316,27 @@ export default function AdminTripAddForm() {
               </select>
             </div>
             <div>
-              <label className={LABEL_STYLE}>Description</label>
+              <label className={LABEL_STYLE}>Description * (min 10 characters)</label>
               <textarea rows={3} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="About this trip destination..." className={INPUT_STYLE} />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Inclusions</label>
+              <label className={LABEL_STYLE}>Inclusions * (min 10 characters)</label>
               <textarea rows={3} value={form.inclusions} onChange={(e) => setForm((p) => ({ ...p, inclusions: e.target.value }))} placeholder="Transport, meals, hotel..." className={INPUT_STYLE} />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3 mt-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={LABEL_STYLE}>Number of Days</label>
+                <label className={LABEL_STYLE}>Number of days * (&gt; 0)</label>
                 <input type="number" min="1" value={form.days} onChange={(e) => setForm((p) => ({ ...p, days: e.target.value }))} placeholder="3" className={INPUT_STYLE} />
               </div>
               <div>
-                <label className={LABEL_STYLE}>Estimated Budget (LKR)</label>
-                <input type="number" step="0.01" min="0" value={form.estimated_budget} onChange={(e) => setForm((p) => ({ ...p, estimated_budget: e.target.value }))} placeholder="15000" className={INPUT_STYLE} />
+                <label className={LABEL_STYLE}>Estimated budget (LKR) * (&gt; 0)</label>
+                <input type="number" step="0.01" min="0.01" value={form.estimated_budget} onChange={(e) => setForm((p) => ({ ...p, estimated_budget: e.target.value }))} placeholder="15000" className={INPUT_STYLE} />
               </div>
             </div>
             <div>
-              <label className={LABEL_STYLE}>Max Participants</label>
+              <label className={LABEL_STYLE}>Max participants * (&gt; 0)</label>
               <input type="number" min="1" value={form.max_participants} onChange={(e) => setForm((p) => ({ ...p, max_participants: e.target.value }))} placeholder="20" className={INPUT_STYLE} />
             </div>
           </div>
@@ -289,7 +348,7 @@ export default function AdminTripAddForm() {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className={LABEL_STYLE}>Address</label>
+              <label className={LABEL_STYLE}>Address * (min 10 characters)</label>
               <input type="text" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder="Street, area" className={INPUT_STYLE} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -321,12 +380,24 @@ export default function AdminTripAddForm() {
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={LABEL_STYLE}>Departure Date</label>
-              <input type="date" value={form.departure_date} onChange={(e) => setForm((p) => ({ ...p, departure_date: e.target.value }))} className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>Departure date *</label>
+              <input
+                type="date"
+                min={localTodayISODate()}
+                value={form.departure_date}
+                onChange={(e) => setForm((p) => ({ ...p, departure_date: e.target.value }))}
+                className={INPUT_STYLE}
+              />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Return Date</label>
-              <input type="date" value={form.return_date} onChange={(e) => setForm((p) => ({ ...p, return_date: e.target.value }))} className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>Return date *</label>
+              <input
+                type="date"
+                min={form.departure_date || localTodayISODate()}
+                value={form.return_date}
+                onChange={(e) => setForm((p) => ({ ...p, return_date: e.target.value }))}
+                className={INPUT_STYLE}
+              />
             </div>
           </div>
         </section>
@@ -354,25 +425,6 @@ export default function AdminTripAddForm() {
             <button type="button" onClick={addDay} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-gray-300 text-gray-600 hover:bg-gray-50">
               <Plus size={18} /> Add Day
             </button>
-          </div>
-        </section>
-
-        <section className={SECTION_STYLE}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Media URLs</h3>
-          <p className="text-sm text-gray-500 mb-3">Upload images to storage first, then paste URLs here.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={LABEL_STYLE}>Logo URL</label>
-              <input type="url" value={form.logo_url} onChange={(e) => setForm((p) => ({ ...p, logo_url: e.target.value }))} placeholder="https://..." className={INPUT_STYLE} />
-            </div>
-            <div>
-              <label className={LABEL_STYLE}>Banner URL</label>
-              <input type="url" value={form.banner_url} onChange={(e) => setForm((p) => ({ ...p, banner_url: e.target.value }))} placeholder="https://..." className={INPUT_STYLE} />
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className={LABEL_STYLE}>Gallery URLs (one per line)</label>
-            <textarea rows={4} value={form.gallery_urls} onChange={(e) => setForm((p) => ({ ...p, gallery_urls: e.target.value }))} placeholder={'https://...\nhttps://...'} className={INPUT_STYLE} />
           </div>
         </section>
 

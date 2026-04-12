@@ -40,7 +40,7 @@ export default function AttractionList({ places, loading, onAdd, addedIds }: Att
         return (
           <div
             key={place.id ?? `${place.name}-${idx}`}
-            className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3 hover:border-indigo-200 transition-colors"
+            className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3 hover:border-emerald-200 transition-colors"
           >
             {place.imageUrl && (
               <img

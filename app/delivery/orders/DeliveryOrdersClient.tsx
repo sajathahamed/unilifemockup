@@ -374,13 +374,13 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         <div
                             className={`p-4 rounded-lg border mb-4 ${
                                 assigningOrder.order_type === 'food'
-                                    ? 'bg-orange-50 border-orange-100'
+                                    ? 'bg-emerald-50 border-emerald-100'
                                     : 'bg-blue-50 border-blue-100'
                             }`}
                         >
                             <div className="flex items-center gap-2 mb-2">
                                 {assigningOrder.order_type === 'food' ? (
-                                    <Utensils size={18} className="text-orange-700" />
+                                    <Utensils size={18} className="text-emerald-700" />
                                 ) : (
                                     <ShoppingBag size={18} className="text-blue-700" />
                                 )}
@@ -388,7 +388,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                                 <span
                                     className={`text-xs px-2 py-0.5 rounded-md font-medium ${
                                         assigningOrder.order_type === 'food'
-                                            ? 'bg-orange-200 text-orange-900'
+                                            ? 'bg-emerald-200 text-emerald-900'
                                             : 'bg-blue-200 text-blue-900'
                                     }`}
                                 >
@@ -520,7 +520,7 @@ function OrderCard({
             <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isFood ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isFood ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
                             <TypeIcon size={18} />
                         </div>
                         <div>
@@ -528,7 +528,7 @@ function OrderCard({
                                 <span className="font-semibold text-gray-900">{order.order_ref}</span>
                                 <span
                                     className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
-                                        isFood ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'
+                                        isFood ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'
                                     }`}
                                 >
                                     {isFood ? 'Food' : 'Laundry'}

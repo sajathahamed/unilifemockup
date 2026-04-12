@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import Link from 'next/link'
+import { AdminPageHero, AdminPageStack, AdminBackToDashboard } from '@/components'
 import ReportsClient from './ReportsClient'
 
 export default async function AdminReportsPage() {
@@ -8,20 +8,14 @@ export default async function AdminReportsPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white">
-          <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="mt-1 text-orange-100">Generate and view campus reports.</p>
-        </div>
-
+      <AdminPageStack>
+        <AdminPageHero
+          title="Reports"
+          subtitle="Generate and view campus reports. Export CSV for external analysis."
+        />
         <ReportsClient />
-
-        <div className="flex justify-center">
-          <Link href="/admin/dashboard" className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50">
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
+        <AdminBackToDashboard />
+      </AdminPageStack>
     </DashboardLayout>
   )
 }

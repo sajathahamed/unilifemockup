@@ -199,10 +199,10 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-green-50">
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 relative animate-pulse" />
-          <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse animation-delay-4000" />
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 relative animate-pulse" />
+          <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-pulse animation-delay-4000" />
         </div>
 
         <motion.div
@@ -225,7 +225,7 @@ export default function SignupPage() {
           </div>
           <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 mb-3 tracking-tight">Check your email</h2>
           <p className="text-gray-500 mb-8 text-lg font-medium">
-            We've sent a verification link to <span className="font-bold text-indigo-600 block mt-1">{formData.email}</span>
+            We've sent a verification link to <span className="font-bold text-emerald-700 block mt-1">{formData.email}</span>
           </p>
           <Link
             href="/login"
@@ -242,14 +242,14 @@ export default function SignupPage() {
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-[#f4f7fb]">
       {/* Dynamic Background */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-indigo-500/10 rounded-full filter blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-purple-500/10 rounded-full filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute -top-32 -left-32 w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-emerald-500/10 rounded-full filter blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-green-500/10 rounded-full filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
       <div className="relative z-10 w-full max-w-[1200px] mx-auto flex flex-col lg:flex-row shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] rounded-[2.5rem] overflow-hidden bg-white/70 backdrop-blur-xl border border-white m-4 lg:m-8">
         
         {/* Left Side: Editorial Banner */}
-        <div className="hidden lg:flex w-[48%] bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 p-12 flex-col justify-between relative overflow-hidden text-white">
+        <div className="hidden lg:flex w-[48%] bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-900 p-12 flex-col justify-between relative overflow-hidden text-white">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
           
           <div className="relative z-10">
@@ -264,16 +264,16 @@ export default function SignupPage() {
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-[3.5rem] font-black leading-[1.05] tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-indigo-200"
+              className="text-[3.5rem] font-black leading-[1.05] tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-emerald-200"
             >
-              Start your<br/>campus journey<br/><span className="text-indigo-400">today.</span>
+              Start your<br/>campus journey<br/><span className="text-emerald-400">today.</span>
             </motion.h1>
             
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-lg text-indigo-100/70 max-w-sm font-medium leading-relaxed"
+              className="text-lg text-emerald-100/70 max-w-sm font-medium leading-relaxed"
             >
               Join thousands of students and staff making campus life easier, smarter, and more connected.
             </motion.p>
@@ -290,10 +290,10 @@ export default function SignupPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 + (i * 0.1) }}
-                  className="flex flex-col gap-1 border-l-2 border-indigo-500/30 pl-4"
+                  className="flex flex-col gap-1 border-l-2 border-emerald-500/30 pl-4"
                 >
                   <span className="font-bold text-white tracking-wide">{item.title}</span>
-                  <span className="text-sm text-indigo-300/70">{item.desc}</span>
+                  <span className="text-sm text-emerald-300/70">{item.desc}</span>
                 </motion.div>
               ))}
             </div>
@@ -309,7 +309,7 @@ export default function SignupPage() {
           >
             {/* Mobile Title */}
             <div className="lg:hidden mb-10 text-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-900 to-slate-900 rounded-2xl flex items-center justify-center mx-auto shadow-lg mb-6">
                  <span className="text-2xl font-black text-white">UL</span>
               </div>
               <h2 className="text-3xl font-black text-gray-900 tracking-tight">Create account</h2>
@@ -422,7 +422,7 @@ export default function SignupPage() {
                   <input
                     type="checkbox"
                     required
-                    className="w-4 h-4 mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 shadow-sm"
+                    className="w-4 h-4 mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 shadow-sm"
                   />
                   <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition-colors">
                     I agree to the{' '}
@@ -450,7 +450,7 @@ export default function SignupPage() {
               Already have an account?{' '}
               <Link
                 href="/login"
-                className="text-indigo-600 hover:text-indigo-700 font-bold tracking-wide"
+                className="text-emerald-600 hover:text-emerald-700 font-bold tracking-wide"
               >
                 Sign in securely
               </Link>

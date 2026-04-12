@@ -19,13 +19,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             {label}
           </label>
         )}
         <div className="relative">
           {Icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <Icon size={18} />
             </div>
           )}
@@ -34,17 +34,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             type={isPassword ? (showPassword ? 'text' : 'password') : type}
             suppressHydrationWarning={true}
             className={`
-              w-full px-4 py-3 rounded-xl border bg-glass border-glassBorder
-              transition-all duration-200 outline-none text-text-primary
+              w-full px-4 py-3 rounded-xl border bg-white border-gray-200
+              transition-all duration-200 outline-none text-gray-900 caret-gray-900
               ${Icon ? 'pl-10' : ''}
               ${isPassword ? 'pr-10' : ''}
               ${error
                 ? 'border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-                : 'border-glassBorder focus:border-primary focus:ring-2 focus:ring-primary/20'
+                : 'focus:border-primary focus:ring-2 focus:ring-primary/20'
               }
-              placeholder:text-text-muted
+              placeholder:text-gray-400
               disabled:opacity-50 disabled:cursor-not-allowed
-              hover:border-primary/50
+              hover:border-gray-300
               ${className}
             `}
             {...props}
@@ -53,7 +53,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -69,7 +69,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           </motion.p>
         )}
         {helperText && !error && (
-          <p className="mt-1.5 text-sm text-text-muted">{helperText}</p>
+          <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>
         )}
       </div>
     )

@@ -32,6 +32,8 @@ export type UserRow = {
     role: string
     uni_id: number | null
     created_at: string
+    /** When false, account is soft-deactivated (login may still be blocked separately). */
+    is_active?: boolean | null
 }
 
 /**
@@ -47,7 +49,7 @@ export async function fetchAllUsers(): Promise<UserRow[]> {
         })
         const { data, error } = await adminClient
             .from('users')
-            .select('id, auth_id, name, email, role, uni_id, created_at')
+            .select('id, auth_id, name, email, role, uni_id, created_at, is_active')
             .order('created_at', { ascending: false })
         if (!error && data && data.length >= 0) return data as UserRow[]
     }
@@ -56,7 +58,7 @@ export async function fetchAllUsers(): Promise<UserRow[]> {
     const sessionClient = await createClient()
     const { data } = await sessionClient
         .from('users')
-        .select('id, auth_id, name, email, role, uni_id, created_at')
+        .select('id, auth_id, name, email, role, uni_id, created_at, is_active')
         .order('created_at', { ascending: false })
     return (data || []) as UserRow[]
 }
@@ -70,7 +72,7 @@ export async function fetchAllUsersForSuperAdmin(): Promise<{ users: UserRow[]; 
         const admin = getAdminClient()
         const { data, error } = await admin
             .from('users')
-            .select('id, auth_id, name, email, role, uni_id, created_at')
+            .select('id, auth_id, name, email, role, uni_id, created_at, is_active')
             .order('created_at', { ascending: false })
         if (!error && data) return { users: data as UserRow[], limited: false }
     } catch {
@@ -79,7 +81,7 @@ export async function fetchAllUsersForSuperAdmin(): Promise<{ users: UserRow[]; 
     const sessionClient = await createClient()
     const { data } = await sessionClient
         .from('users')
-        .select('id, auth_id, name, email, role, uni_id, created_at')
+        .select('id, auth_id, name, email, role, uni_id, created_at, is_active')
         .order('created_at', { ascending: false })
     return { users: (data || []) as UserRow[], limited: true }
 }

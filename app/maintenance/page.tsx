@@ -6,8 +6,8 @@ export default function MaintenancePage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden text-center">
         <div className="p-8">
-          <div className="w-16 h-16 mx-auto bg-orange-100 rounded-full flex items-center justify-center mb-6">
-            <AlertCircle className="w-8 h-8 text-orange-500" />
+          <div className="w-16 h-16 mx-auto bg-emerald-100 rounded-full flex items-center justify-center mb-6">
+            <AlertCircle className="w-8 h-8 text-emerald-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">System Maintenance</h1>
           <p className="text-gray-600 mb-6">

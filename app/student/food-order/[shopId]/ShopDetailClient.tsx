@@ -64,14 +64,14 @@ function MenuItemCard({ item, onAdd }: { item: MenuItemWithStock; onAdd: (i: Men
     const available = item.available !== false
     return (
         <div className="flex items-center gap-4 py-4 border-b border-gray-50 last:border-0">
-            <div className="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-2xl flex-shrink-0">
+            <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center text-2xl flex-shrink-0">
                 {item.emoji}
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <h4 className="font-medium text-gray-900 text-sm">{item.name}</h4>
                     {item.popular && (
-                        <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">
                             Popular
                         </span>
                     )}
@@ -85,7 +85,7 @@ function MenuItemCard({ item, onAdd }: { item: MenuItemWithStock; onAdd: (i: Men
             <button
                 onClick={() => onAdd(item)}
                 disabled={!available}
-                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-sm ${available ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors shadow-sm ${available ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
                 <Plus size={18} />
             </button>
@@ -252,7 +252,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
         return (
             <DashboardLayout user={user}>
                 <div className="max-w-3xl mx-auto py-20 flex flex-col items-center justify-center gap-4">
-                    <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+                    <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
                     <p className="text-gray-500">Loading stall details…</p>
                 </div>
             </DashboardLayout>
@@ -264,7 +264,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
             <DashboardLayout user={user}>
                 <div className="max-w-3xl mx-auto py-20 text-center">
                     <p className="text-red-500 font-medium">{error}</p>
-                    <button onClick={() => router.back()} className="mt-4 text-sm text-orange-500 hover:underline">
+                    <button onClick={() => router.back()} className="mt-4 text-sm text-emerald-500 hover:underline">
                         Back to Food
                     </button>
                 </div>
@@ -344,7 +344,7 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
                             <button
                                 key={cat.id}
                                 onClick={() => setActiveCategory(cat.id)}
-                                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeCategory === cat.id ? 'bg-orange-500 text-white' : 'text-gray-500 hover:bg-gray-100'
+                                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeCategory === cat.id ? 'bg-emerald-500 text-white' : 'text-gray-500 hover:bg-gray-100'
                                     }`}
                             >
                                 {cat.emoji} {cat.label}
@@ -369,17 +369,17 @@ export default function ShopDetailClient({ user, shopId }: { user: UserProfile; 
             <div className="fixed bottom-0 left-0 right-0 lg:left-64 p-4 bg-white border-t border-gray-100 shadow-lg z-20">
                 <Link
                     href={orderUrl}
-                    className="flex items-center justify-between w-full max-w-3xl mx-auto bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3.5 rounded-xl transition-colors shadow-md"
+                    className="flex items-center justify-between w-full max-w-3xl mx-auto bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3.5 rounded-xl transition-colors shadow-md"
                 >
                     <span className="flex items-center gap-2">
                         <ShoppingCart size={20} /> Order Now
                     </span>
                     {cartCount > 0 && (
-                        <span className="bg-white text-orange-500 text-sm font-bold px-2.5 py-0.5 rounded-full">
+                        <span className="bg-white text-emerald-500 text-sm font-bold px-2.5 py-0.5 rounded-full">
                             {cartCount} added
                         </span>
                     )}
-                    <span className="text-orange-100 text-sm">View full cart →</span>
+                    <span className="text-emerald-100 text-sm">View full cart →</span>
                 </Link>
             </div>
         </DashboardLayout>

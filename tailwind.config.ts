@@ -34,6 +34,11 @@ const config: Config = {
         'glow': '0 0 40px rgba(46, 193, 24, 0.3)',
         'glow-lg': '0 0 60px rgba(46, 193, 24, 0.4)',
       },
+      backgroundImage: {
+        // Dark enough for white label; pairs with globals.css light-theme override if needed
+        'gradient-primary':
+          'linear-gradient(135deg, #15803d 0%, #22c55e 42%, #16a34a 100%)',
+      },
     },
   },
   plugins: [],

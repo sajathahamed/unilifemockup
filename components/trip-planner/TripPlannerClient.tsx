@@ -241,8 +241,8 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {editTripId && (
-        <div className="surface-card-sm !py-4 flex flex-wrap items-center justify-between gap-3 border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50">
-          <p className="text-sm text-indigo-950 font-medium pl-1">
+        <div className="surface-card-sm !py-4 flex flex-wrap items-center justify-between gap-3 border-emerald-100 bg-gradient-to-r from-emerald-50/90 to-green-50/50">
+          <p className="text-sm text-emerald-950 font-medium pl-1">
             Editing trip <span className="tabular-nums">#{editTripId}</span> — save to update your plan and budget.
           </p>
           <Link href="/trip-planner" className="btn-secondary !py-2 text-xs sm:text-sm shrink-0">
@@ -266,7 +266,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
                 <div
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
                     active
-                      ? 'bg-primary text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-200/50'
+                      ? 'bg-primary text-white shadow-md shadow-emerald-500/25 ring-2 ring-emerald-200/50'
                       : done
                         ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
                         : 'bg-gray-100 text-gray-500 border border-transparent'
@@ -291,7 +291,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
       {step === 'search' && (
         <div className="surface-card space-y-6">
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-primary">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-primary">
               <MapPin size={20} strokeWidth={2.25} />
             </span>
             Plan your trip

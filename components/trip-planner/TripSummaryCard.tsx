@@ -29,7 +29,7 @@ export default function TripSummaryCard({
     Number.isFinite(n) ? n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '—'
 
   return (
-    <div className="bg-gradient-to-br from-primary/10 to-indigo-50 rounded-2xl border border-primary/20 p-5">
+    <div className="bg-gradient-to-br from-primary/10 to-emerald-50 rounded-2xl border border-primary/20 p-5">
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Trip Summary</h3>
       <dl className="space-y-2 text-sm">
         <div className="flex items-start gap-2">
