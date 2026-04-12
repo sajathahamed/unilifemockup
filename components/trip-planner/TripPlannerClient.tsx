@@ -44,9 +44,10 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
     message: string
     suggestedMinBudget: number | null
     recommendedBudget: number | null
-    breakdown: { accommodation: number; food: number; transport: number; activities: number } | null
+    breakdown: { accommodation: number; food: number; transport: number; activities: number; flights?: number } | null
     tips: string[]
     canProceed: boolean
+    isInternational?: boolean
   } | null>(null)
   const [validating, setValidating] = useState(false)
 
@@ -649,7 +650,13 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
                     )}
 
                     {budgetValidation.breakdown && (
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                      <div className={`mt-4 grid gap-2 text-xs ${budgetValidation.breakdown.flights ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                        {budgetValidation.breakdown.flights && (
+                          <div className="rounded-lg bg-white/60 p-2 border border-slate-200/50 col-span-full sm:col-span-1">
+                            <p className="text-slate-500">✈️ Flights</p>
+                            <p className="font-semibold text-slate-900">Rs {budgetValidation.breakdown.flights.toLocaleString()}</p>
+                          </div>
+                        )}
                         <div className="rounded-lg bg-white/60 p-2 border border-slate-200/50">
                           <p className="text-slate-500">Accommodation</p>
                           <p className="font-semibold text-slate-900">Rs {budgetValidation.breakdown.accommodation.toLocaleString()}</p>

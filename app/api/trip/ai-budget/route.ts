@@ -29,6 +29,66 @@ const DESTINATION_MIN_DAILY_COSTS: Record<string, { min: number; recommended: nu
 
 const DEFAULT_MIN_DAILY = { min: 3500, recommended: 6000, tier: 'midrange' }
 
+// International destinations with minimum flight + daily costs from Sri Lanka (in LKR)
+const INTERNATIONAL_DESTINATIONS: Record<string, { flightMin: number; dailyMin: number; dailyReco: number; country: string }> = {
+  // North America
+  usa: { flightMin: 180000, dailyMin: 25000, dailyReco: 50000, country: 'USA' },
+  united_states: { flightMin: 180000, dailyMin: 25000, dailyReco: 50000, country: 'USA' },
+  america: { flightMin: 180000, dailyMin: 25000, dailyReco: 50000, country: 'USA' },
+  new_york: { flightMin: 200000, dailyMin: 30000, dailyReco: 60000, country: 'USA' },
+  los_angeles: { flightMin: 190000, dailyMin: 28000, dailyReco: 55000, country: 'USA' },
+  california: { flightMin: 190000, dailyMin: 28000, dailyReco: 55000, country: 'USA' },
+  canada: { flightMin: 170000, dailyMin: 22000, dailyReco: 45000, country: 'Canada' },
+  toronto: { flightMin: 175000, dailyMin: 24000, dailyReco: 48000, country: 'Canada' },
+  // Europe
+  uk: { flightMin: 120000, dailyMin: 20000, dailyReco: 40000, country: 'UK' },
+  united_kingdom: { flightMin: 120000, dailyMin: 20000, dailyReco: 40000, country: 'UK' },
+  england: { flightMin: 120000, dailyMin: 20000, dailyReco: 40000, country: 'UK' },
+  london: { flightMin: 125000, dailyMin: 25000, dailyReco: 50000, country: 'UK' },
+  france: { flightMin: 115000, dailyMin: 18000, dailyReco: 35000, country: 'France' },
+  paris: { flightMin: 120000, dailyMin: 22000, dailyReco: 45000, country: 'France' },
+  germany: { flightMin: 110000, dailyMin: 17000, dailyReco: 32000, country: 'Germany' },
+  italy: { flightMin: 105000, dailyMin: 16000, dailyReco: 30000, country: 'Italy' },
+  spain: { flightMin: 100000, dailyMin: 14000, dailyReco: 28000, country: 'Spain' },
+  switzerland: { flightMin: 130000, dailyMin: 30000, dailyReco: 55000, country: 'Switzerland' },
+  // Asia
+  japan: { flightMin: 85000, dailyMin: 15000, dailyReco: 30000, country: 'Japan' },
+  tokyo: { flightMin: 90000, dailyMin: 18000, dailyReco: 35000, country: 'Japan' },
+  china: { flightMin: 70000, dailyMin: 10000, dailyReco: 20000, country: 'China' },
+  singapore: { flightMin: 35000, dailyMin: 12000, dailyReco: 25000, country: 'Singapore' },
+  malaysia: { flightMin: 25000, dailyMin: 6000, dailyReco: 12000, country: 'Malaysia' },
+  kuala_lumpur: { flightMin: 28000, dailyMin: 7000, dailyReco: 14000, country: 'Malaysia' },
+  thailand: { flightMin: 30000, dailyMin: 5000, dailyReco: 10000, country: 'Thailand' },
+  bangkok: { flightMin: 32000, dailyMin: 6000, dailyReco: 12000, country: 'Thailand' },
+  dubai: { flightMin: 45000, dailyMin: 15000, dailyReco: 30000, country: 'UAE' },
+  uae: { flightMin: 45000, dailyMin: 15000, dailyReco: 30000, country: 'UAE' },
+  maldives: { flightMin: 25000, dailyMin: 25000, dailyReco: 60000, country: 'Maldives' },
+  india: { flightMin: 15000, dailyMin: 4000, dailyReco: 8000, country: 'India' },
+  // Oceania
+  australia: { flightMin: 95000, dailyMin: 18000, dailyReco: 35000, country: 'Australia' },
+  sydney: { flightMin: 100000, dailyMin: 20000, dailyReco: 40000, country: 'Australia' },
+  melbourne: { flightMin: 98000, dailyMin: 19000, dailyReco: 38000, country: 'Australia' },
+  new_zealand: { flightMin: 110000, dailyMin: 17000, dailyReco: 32000, country: 'New Zealand' },
+}
+
+function detectInternationalDestination(destination: string): { isInternational: boolean; costs: typeof INTERNATIONAL_DESTINATIONS[string] | null; matchedKey: string | null } {
+  const normalized = destination.toLowerCase().replace(/[^a-z]/g, '_').replace(/_+/g, '_')
+  
+  for (const [key, costs] of Object.entries(INTERNATIONAL_DESTINATIONS)) {
+    if (normalized.includes(key) || key.includes(normalized.split('_')[0])) {
+      return { isInternational: true, costs, matchedKey: key }
+    }
+  }
+  
+  // Check for common international indicators
+  const internationalKeywords = ['airport', 'international', 'overseas', 'abroad']
+  if (internationalKeywords.some(kw => normalized.includes(kw))) {
+    return { isInternational: true, costs: null, matchedKey: null }
+  }
+  
+  return { isInternational: false, costs: null, matchedKey: null }
+}
+
 function getDestinationCosts(destination: string) {
   const normalized = destination.toLowerCase().replace(/[^a-z]/g, '_').replace(/_+/g, '_')
   for (const [key, costs] of Object.entries(DESTINATION_MIN_DAILY_COSTS)) {
@@ -102,7 +162,112 @@ export async function POST(request: NextRequest) {
         }, { status: 200 })
       }
 
-      // Get destination-specific costs
+      // Check for international destination FIRST
+      const internationalCheck = detectInternationalDestination(destTrimmed)
+      if (internationalCheck.isInternational) {
+        const intlCosts = internationalCheck.costs
+        
+        if (intlCosts) {
+          const flightCostTotal = intlCosts.flightMin * numTravelers
+          const dailyCostTotal = intlCosts.dailyMin * numDays * numTravelers
+          const minTotalBudget = flightCostTotal + dailyCostTotal
+          const recommendedTotal = (intlCosts.flightMin * numTravelers) + (intlCosts.dailyReco * numDays * numTravelers)
+          
+          if (budget < minTotalBudget) {
+            const shortfall = minTotalBudget - budget
+            return NextResponse.json({
+              valid: false,
+              severity: 'error',
+              message: `Your budget of LKR ${budget.toLocaleString()} is NOT possible for traveling to ${intlCosts.country}. A round-trip flight alone costs approximately LKR ${flightCostTotal.toLocaleString()} per person. The minimum realistic budget for ${numDays} day${numDays > 1 ? 's' : ''} with ${numTravelers} traveler${numTravelers > 1 ? 's' : ''} is around LKR ${minTotalBudget.toLocaleString()}.`,
+              suggestedMinBudget: minTotalBudget,
+              recommendedBudget: recommendedTotal,
+              breakdown: {
+                flights: flightCostTotal,
+                accommodation: Math.round(intlCosts.dailyMin * 0.45) * numDays * numTravelers,
+                food: Math.round(intlCosts.dailyMin * 0.25) * numDays * numTravelers,
+                transport: Math.round(intlCosts.dailyMin * 0.15) * numDays * numTravelers,
+                activities: Math.round(intlCosts.dailyMin * 0.15) * numDays * numTravelers,
+              },
+              isInternational: true,
+              tips: [
+                `Flight to ${intlCosts.country} alone costs LKR ${intlCosts.flightMin.toLocaleString()}+ per person`,
+                'Consider traveling to nearby destinations like India, Thailand, or Malaysia for lower costs',
+                'Book flights 2-3 months in advance for better rates',
+                'Consider budget airlines for shorter international routes'
+              ],
+              canProceed: false,
+            }, { status: 200 })
+          }
+          
+          // Budget might work but is tight for international
+          if (budget < recommendedTotal) {
+            return NextResponse.json({
+              valid: false,
+              severity: 'warning',
+              message: `Your budget of LKR ${budget.toLocaleString()} is tight for ${intlCosts.country}. After flights (~LKR ${flightCostTotal.toLocaleString()}), you'll have about LKR ${Math.round((budget - flightCostTotal) / numDays / numTravelers).toLocaleString()}/day/person for everything else.`,
+              suggestedMinBudget: minTotalBudget,
+              recommendedBudget: recommendedTotal,
+              breakdown: {
+                flights: flightCostTotal,
+                accommodation: Math.round((budget - flightCostTotal) * 0.45),
+                food: Math.round((budget - flightCostTotal) * 0.25),
+                transport: Math.round((budget - flightCostTotal) * 0.15),
+                activities: Math.round((budget - flightCostTotal) * 0.15),
+              },
+              isInternational: true,
+              tips: [
+                'Stay in hostels or budget hotels to save on accommodation',
+                'Use public transport instead of taxis',
+                'Look for free attractions and walking tours',
+                'Eat at local markets and street food stalls'
+              ],
+              canProceed: true,
+            }, { status: 200 })
+          }
+          
+          // Budget is adequate for international
+          return NextResponse.json({
+            valid: true,
+            severity: 'success',
+            message: `Your budget of LKR ${budget.toLocaleString()} is adequate for ${numDays} day${numDays > 1 ? 's' : ''} in ${intlCosts.country}!`,
+            suggestedMinBudget: null,
+            recommendedBudget: null,
+            breakdown: {
+              flights: flightCostTotal,
+              accommodation: Math.round((budget - flightCostTotal) * 0.4),
+              food: Math.round((budget - flightCostTotal) * 0.25),
+              transport: Math.round((budget - flightCostTotal) * 0.15),
+              activities: Math.round((budget - flightCostTotal) * 0.2),
+            },
+            isInternational: true,
+            tips: [
+              'Book flights early for best prices',
+              'Consider travel insurance for international trips',
+              'Check visa requirements for ' + intlCosts.country
+            ],
+            canProceed: true,
+          }, { status: 200 })
+        }
+        
+        // Unknown international destination
+        return NextResponse.json({
+          valid: false,
+          severity: 'warning',
+          message: `"${destTrimmed}" appears to be an international destination. International travel from Sri Lanka typically requires a minimum budget of LKR 50,000-200,000+ depending on the destination (flights + accommodation + daily expenses).`,
+          suggestedMinBudget: 50000,
+          recommendedBudget: 150000,
+          breakdown: null,
+          isInternational: true,
+          tips: [
+            'Please specify a clearer destination (e.g., "Thailand", "Singapore", "Dubai")',
+            'International flights from Sri Lanka start around LKR 15,000 (India) to LKR 200,000+ (USA/Europe)',
+            'Consider nearby countries like India, Thailand, or Malaysia for budget-friendly international trips'
+          ],
+          canProceed: false,
+        }, { status: 200 })
+      }
+
+      // Get destination-specific costs (domestic Sri Lanka)
       const destCosts = getDestinationCosts(destTrimmed)
       const dailyBudgetPerPerson = budget / numDays / numTravelers
       const minRequiredBudget = destCosts.min * numDays * numTravelers
