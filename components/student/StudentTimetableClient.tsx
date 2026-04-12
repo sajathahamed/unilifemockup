@@ -279,7 +279,7 @@ export default function StudentTimetableClient() {
         <div className="flex items-center gap-4">
           <Link
             href="/student/dashboard"
-            className="inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-indigo-50/80 hover:border-indigo-200 active:scale-[0.98]"
+            className="inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-emerald-50/80 hover:border-emerald-200 active:scale-[0.98]"
             aria-label="Back to dashboard"
           >
             <ArrowLeft size={24} strokeWidth={2.25} />
@@ -439,7 +439,7 @@ export default function StudentTimetableClient() {
         />
       </div>
 
-      <div className="bg-gradient-to-br from-indigo-50 to-primary/5 rounded-2xl p-6 border border-primary/10">
+      <div className="bg-gradient-to-br from-emerald-50 to-primary/5 rounded-2xl p-6 border border-primary/10">
         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
           <Clock size={18} className="text-primary" /> How it works
         </h3>

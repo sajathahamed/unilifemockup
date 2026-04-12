@@ -12,6 +12,7 @@ export { default as GoogleButton } from './auth/GoogleButton'
 export { default as DashboardLayout } from './dashboard/DashboardLayout'
 
 // Admin Components
+export { AdminPageHero, AdminBackToDashboard, AdminPageStack } from './admin/AdminPageChrome'
 export { default as CreateUserForm } from './admin/CreateUserForm'
 export { default as EditUserForm } from './admin/EditUserForm'
 export { default as UserList } from './admin/UserList'

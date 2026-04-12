@@ -3,8 +3,9 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { EditUserForm } from '@/components'
 import SuperAdminPageHeader from '@/components/super-admin/SuperAdminPageHeader'
 
-export default async function SuperAdminEditUserPage({ params }: { params: { id: string } }) {
+export default async function SuperAdminEditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const userProfile = await requireRole('super_admin')
+  const { id } = await params
 
   return (
     <DashboardLayout user={userProfile}>
@@ -14,7 +15,7 @@ export default async function SuperAdminEditUserPage({ params }: { params: { id:
           subtitle="Update name, email, role, and university. Changes apply after save."
           backHref="/super-admin/users"
         />
-        <EditUserForm userId={params.id} currentUserRole="super_admin" />
+        <EditUserForm userId={id} currentUserRole="super_admin" />
       </div>
     </DashboardLayout>
   )

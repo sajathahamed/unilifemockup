@@ -233,7 +233,12 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   const filtered = products.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
     const matchCat = categoryFilter === 'all' || p.category === categoryFilter
-    return matchSearch && matchCat
+    const vid = Number(p.vendor_id)
+    const matchStall =
+      !selectedStallId ||
+      vid === selectedStallId ||
+      vid === user.id
+    return matchSearch && matchCat && matchStall
   })
 
   const openAddModal = () => {
@@ -243,6 +248,8 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
   }
 
   const openEditModal = (p: Product) => {
+    const pid = Number(p.vendor_id)
+    const stallFromProduct = stalls.some((s) => s.id === pid) ? pid : stalls[0]?.id ?? 0
     setForm((prev) => ({
       name: p.name,
       category: p.category,
@@ -250,7 +257,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
       inStock: p.inStock,
       description: (p as Product & { description?: string }).description || '',
       image_url: p.image_url || '',
-      stall_id: prev.stall_id ?? stalls[0]?.id ?? 0,
+      stall_id: stallFromProduct || prev.stall_id || stalls[0]?.id || 0,
     }))
     setEditingProduct(p)
     setFormError(null)
@@ -263,6 +270,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
     setSaving(true)
     setFormError(null)
     try {
+      const stallForItem = form.stall_id || selectedStallId || stalls[0]?.id || 0
       const res = await fetch('/api/vendor/menu-items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -272,6 +280,7 @@ export default function VendorProductsClient({ user }: VendorProductsClientProps
           price: form.price,
           is_available: form.inStock,
           image_url: form.image_url?.trim() || null,
+          food_stall_id: stallForItem,
         }),
       })
       const data = await res.json().catch(() => null)

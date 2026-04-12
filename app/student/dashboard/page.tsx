@@ -4,14 +4,40 @@ import { createClient } from '@/lib/supabase/server'
 import { 
   Clock, 
   Users, 
-  ArrowRight,
-  Calendar,
-  Bell,
-  MapPin,
-  Compass,
   User,
+  ArrowRight,
+  Bell,
+  Calendar,
+  Compass,
+  MapPin,
 } from 'lucide-react'
 import Link from 'next/link'
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+function formatTime(t: string): string {
+  const s = String(t).trim()
+  const part = s.includes('T') ? s.split('T')[1] : s
+  const [h, m] = (part || s).split(':')
+  const hour = parseInt(h, 10)
+  const min = m ? parseInt(m, 10) : 0
+  if (Number.isNaN(hour)) return t
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${String(h12).padStart(2, '0')}:${String(min).padStart(2, '0')} ${ampm}`
+}
+
+function getStatus(startTime: string, endTime: string): 'upcoming' | 'in-progress' | 'later' {
+  const now = new Date()
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const [startH, startM] = String(startTime).split(':').map(Number)
+  const [endH, endM] = String(endTime).split(':').map(Number)
+  const startMinutes = (startH || 0) * 60 + (startM || 0)
+  const endMinutes = (endH || 0) * 60 + (endM || 0)
+  if (currentMinutes < startMinutes) return 'upcoming'
+  if (currentMinutes >= endMinutes) return 'later'
+  return 'in-progress'
+}
 
 export default async function StudentDashboard() {
   const user = await requireRole('student')
@@ -61,10 +87,10 @@ export default async function StudentDashboard() {
     <DashboardLayout user={user}>
       <div className="space-y-6">
         {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-primary to-indigo-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
+        <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
           <div className="relative z-10">
             <h1 className="text-2xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
-            <p className="mt-1 text-indigo-100 italic">Your uni-life, simplified.</p>
+            <p className="mt-1 text-emerald-100 italic">Your uni-life, simplified.</p>
           </div>
           <Compass className="absolute -right-6 -bottom-6 text-white/10 w-48 h-48 rotate-12" />
         </div>
@@ -75,7 +101,7 @@ export default async function StudentDashboard() {
             icon={Calendar}
             label="Today's Classes"
             value={timetableEntries?.length ? `${timetableEntries.length} Classes` : 'No Classes'}
-            color="bg-violet-500"
+            color="bg-emerald-500"
             href="/student/timetable"
           />
           <StatCard
@@ -103,56 +129,52 @@ export default async function StudentDashboard() {
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Timetable Section */}
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Clock size={18} className="text-primary" /> Today's Schedule ({today})
-              </h2>
-              <Link 
-                href="/student/timetable" 
-                className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 font-medium"
+              <h2 className="text-lg font-semibold text-gray-900">Today&apos;s Schedule</h2>
+              <Link
+                href="/student/timetable"
+                className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
               >
                 View all <ArrowRight size={14} />
               </Link>
             </div>
             
             <div className="space-y-3">
-              {timetableEntries && timetableEntries.length > 0 ? (
-                timetableEntries.map((entry) => (
-                  <ScheduleItem
-                    key={entry.id}
-                    time={entry.start_time.slice(0, 5)}
-                    title={entry.subject}
-                    location={entry.location || 'No location set'}
-                    startTime={entry.start_time}
-                  />
-                ))
+              {timetableEntries.length === 0 ? (
+                <p className="text-gray-500 text-sm py-4">No classes scheduled for today.</p>
               ) : (
-                <div className="py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                  <p className="text-gray-500 text-sm">No classes scheduled for today.</p>
-                  <Link href="/student/timetable" className="text-primary text-xs font-semibold mt-2 inline-block">Upload Timetable →</Link>
-                </div>
+                timetableEntries.map((entry) => {
+                  const status = getStatus(entry.start_time, entry.end_time)
+                  const title = entry.course_name ? `${entry.course_code || ''} - ${entry.course_name}`.trim() : `Course #${entry.course_id}`
+                  return (
+                    <ScheduleItem
+                      key={entry.id}
+                      time={`${formatTime(entry.start_time)} - ${formatTime(entry.end_time)}`}
+                      title={title}
+                      location={entry.location || '—'}
+                      status={status}
+                    />
+                  )
+                })
               )}
             </div>
           </div>
 
-          {/* Notifications Panel */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Bell size={18} className="text-primary" /> Notifications
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-900">Announcements</h2>
+              <Bell size={18} className="text-gray-400" />
             </div>
             
             <div className="space-y-4">
               {notifications && notifications.length > 0 ? (
                 notifications.map((n) => (
-                  <NotificationItem
+                  <AnnouncementItem
                     key={n.id}
                     title={n.message || 'New reminder'}
                     time={new Date(n.notify_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    status={n.status}
+                    isNew={String(n.status).toLowerCase() === 'scheduled'}
                   />
                 ))
               ) : (
@@ -162,13 +184,16 @@ export default async function StudentDashboard() {
           </div>
         </div>
 
-        {/* Saved Trips Section */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Compass size={18} className="text-primary" /> Recent Trips
-            </h2>
-            <Link href="/trip-planner" className="text-sm text-primary hover:text-primary/80 font-medium">Plan new trip →</Link>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <QuickAction href="/student/assignments" icon="📝" label="Assignments" />
+            <QuickAction href="/student/courses" icon="📚" label="Courses" />
+            <QuickAction href="/student/timetable" icon="📅" label="Timetable" />
+            <QuickAction href="/student/study-groups" icon="👥" label="Study Groups" />
+            <QuickAction href="/student/food-order" icon="🍕" label="Order Food" />
+            <QuickAction href="/student/rides" icon="🚗" label="Book Ride" />
+            <QuickAction href="/student/marketplace" icon="🛒" label="Marketplace" />
           </div>
           {recentTrips && recentTrips.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-4">
@@ -216,77 +241,81 @@ function StatCard({
   label,
   value,
   color,
-  href,
 }: {
   icon: React.ElementType
   label: string
   value: string
   color: string
-  href?: string
 }) {
-  const content = (
-    <>
-      <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3 shadow-sm`}>
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3`}>
         <Icon size={20} className="text-white" />
       </div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-sm text-gray-500">{label}</p>
-    </>
+    </div>
   )
-  if (href) {
-    return (
-      <Link href={href} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 block hover:border-primary/30 hover:shadow-md transition-all active:scale-95">
-        {content}
-      </Link>
-    )
+}
+
+function ScheduleItem({
+  time,
+  title,
+  location,
+  status,
+}: {
+  time: string
+  title: string
+  location: string
+  status: 'upcoming' | 'in-progress' | 'later'
+}) {
+  const statusColors = {
+    upcoming: 'bg-blue-100 text-blue-700 border-blue-200',
+    'in-progress': 'bg-green-100 text-green-700 border-green-200',
+    later: 'bg-gray-100 text-gray-600 border-gray-200',
   }
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-      {content}
-    </div>
-  )
-}
-
-function ScheduleItem({ time, title, location, startTime }: {
-  time: string;
-  title: string;
-  location: string;
-  startTime: string;
-}) {
-  const now = new Date()
-  const [h, m] = startTime.split(':').map(Number)
-  const classDate = new Date()
-  classDate.setHours(h, m, 0)
-  
-  const isPast = now > classDate
-  const status = isPast ? 'bg-gray-50 text-gray-400 border-gray-100' : 'bg-primary/5 text-primary border-primary/10'
-
-  return (
-    <div className={`p-4 rounded-xl border ${status} transition-all`}>
+    <div className={`p-4 rounded-xl border ${statusColors[status]}`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wider">{time}</span>
-        {isPast && <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded uppercase">Past</span>}
+        <span className="text-sm font-medium">{time}</span>
+        {status === 'in-progress' && (
+          <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Live</span>
+        )}
       </div>
-      <h3 className="font-semibold mt-1 truncate">{title}</h3>
-      <p className="text-xs opacity-80 mt-0.5 flex items-center gap-1">
-        <MapPin size={10} /> {location}
-      </p>
+      <h3 className="font-medium mt-1">{title}</h3>
+      <p className="text-sm opacity-75 mt-0.5">{location}</p>
     </div>
   )
 }
 
-function NotificationItem({ title, time, status }: {
-  title: string;
-  time: string;
-  status: string;
+function AnnouncementItem({
+  title,
+  time,
+  isNew,
+}: {
+  title: string
+  time: string
+  isNew?: boolean
 }) {
   return (
-    <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${status === 'sent' ? 'bg-green-500' : 'bg-primary animate-pulse'}`} />
-      <div>
-        <p className="text-sm font-medium text-gray-900 leading-tight">{title}</p>
-        <p className="text-[11px] text-gray-400 mt-0.5">{time} · <span className="capitalize">{status}</span></p>
+    <div className="flex items-start gap-3">
+      {isNew && <span className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />}
+      <div className={isNew ? '' : 'ml-5'}>
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        <p className="text-xs text-gray-500">{time}</p>
       </div>
     </div>
+  )
+}
+
+function QuickAction({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+    >
+      <span className="text-2xl">{icon}</span>
+      <span className="text-sm font-medium text-gray-700">{label}</span>
+    </Link>
   )
 }

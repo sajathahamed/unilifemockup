@@ -34,16 +34,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             type={isPassword ? (showPassword ? 'text' : 'password') : type}
             suppressHydrationWarning={true}
             className={`
-              w-full px-4 py-3 rounded-xl border bg-white
-              transition-all duration-200 outline-none
+              w-full px-4 py-3 rounded-xl border bg-white border-gray-200
+              transition-all duration-200 outline-none text-gray-900 caret-gray-900
               ${Icon ? 'pl-10' : ''}
               ${isPassword ? 'pr-10' : ''}
               ${error
-                ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-                : 'border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20'
+                ? 'border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
+                : 'focus:border-primary focus:ring-2 focus:ring-primary/20'
               }
               placeholder:text-gray-400
-              disabled:bg-gray-50 disabled:cursor-not-allowed
+              disabled:opacity-50 disabled:cursor-not-allowed
+              hover:border-gray-300
               ${className}
             `}
             {...props}
@@ -52,7 +53,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -62,7 +63,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <motion.p
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-1.5 text-sm text-red-500"
+            className="mt-1.5 text-sm text-red-400"
           >
             {error}
           </motion.p>

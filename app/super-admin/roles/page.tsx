@@ -104,7 +104,7 @@ export default async function SuperAdminRolesPage() {
 function getRoleBadgeClass(role: UserRole): string {
   switch (role) {
     case 'super_admin':
-      return 'bg-purple-100 text-purple-800'
+      return 'bg-stone-200 text-stone-900'
     case 'admin':
       return 'bg-blue-100 text-blue-800'
     case 'vendor-food':
@@ -112,9 +112,9 @@ function getRoleBadgeClass(role: UserRole): string {
     case 'vendor-laundry':
       return 'bg-teal-100 text-teal-800'
     case 'delivery':
-      return 'bg-orange-100 text-orange-800'
+      return 'bg-green-100 text-green-800'
     case 'lecturer':
-      return 'bg-indigo-100 text-indigo-800'
+      return 'bg-lime-100 text-lime-900'
     case 'student':
       return 'bg-sky-100 text-sky-800'
     default:

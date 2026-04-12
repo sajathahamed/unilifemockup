@@ -48,6 +48,40 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ message: error.message }, { status: 400 })
+
+    // Send in-app notifications based on audience
+    try {
+      let query = client.from('users').select('id')
+      if (data.target_audience) {
+        // Handle specific target audience
+        query = query.eq('role', data.target_audience)
+      }
+      
+      const { data: usersData, error: usersError } = await query
+      
+      if (!usersError && usersData && usersData.length > 0) {
+        const notificationsToInsert = usersData.map(u => ({
+          id: crypto.randomUUID(),
+          user_id: u.id,
+          title: `Announcement: ${data.title}`,
+          message: data.body || 'You have a new announcement.',
+          is_read: false,
+          created_at: new Date().toISOString()
+        }))
+
+        // Insert notifications in bulk
+        const { error: insertError } = await client
+          .from('notifications')
+          .insert(notificationsToInsert)
+
+        if (insertError) {
+          console.error('Failed to insert notifications:', insertError)
+        }
+      }
+    } catch (notifErr) {
+      console.error('Error in notification sending logic:', notifErr)
+    }
+
     return NextResponse.json(data)
   } catch (e) {
     console.error('Admin announcements POST error:', e)

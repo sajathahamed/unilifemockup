@@ -128,7 +128,7 @@ export default function SavedTripDetailClient({ tripId }: { tripId: number }) {
 
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-indigo-500/30">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-emerald-500/30">
               <MapPin size={28} strokeWidth={2.25} />
             </span>
             <div className="min-w-0">

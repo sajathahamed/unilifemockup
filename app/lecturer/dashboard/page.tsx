@@ -241,9 +241,9 @@ export default async function LecturerDashboard() {
     <DashboardLayout user={user}>
       <div className="space-y-6">
         {/* Welcome Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-8 text-white">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 p-8 text-white">
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-60 h-60 bg-indigo-400/10 rounded-full -ml-30 -mb-30 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-400/10 rounded-full -ml-30 -mb-30 blur-3xl" />
           
           <div className="relative z-10">
             <div className="flex items-start justify-between mb-4">
@@ -289,7 +289,7 @@ export default async function LecturerDashboard() {
             icon={FileText} 
             label="Pending Grades" 
             value="23" 
-            color="from-orange-500 to-orange-600"
+            color="from-emerald-500 to-green-600"
             trend={-5}
             subtitle="ready to review"
           />
@@ -297,7 +297,7 @@ export default async function LecturerDashboard() {
             icon={Award} 
             label="Avg. Grade Rate" 
             value="94%" 
-            color="from-purple-500 to-purple-600"
+            color="from-emerald-500 to-green-600"
             trend={3}
             subtitle="submission rate"
           />
@@ -363,18 +363,18 @@ export default async function LecturerDashboard() {
                 icon={FileText}
                 title="Grade Assignment"
                 desc="Start grading pending submissions"
-                color="bg-gradient-to-br from-orange-500 to-red-500"
+                color="bg-gradient-to-br from-emerald-600 to-green-700"
               />
             </div>
           </div>
 
           {/* Pending Tasks Sidebar */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-700 px-6 py-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <AlertCircle size={20} /> Pending Tasks
               </h2>
-              <p className="text-amber-100 text-sm mt-1">4 tasks waiting</p>
+              <p className="text-emerald-100 text-sm mt-1">4 tasks waiting</p>
             </div>
             <div className="divide-y divide-gray-100 flex-1">
               <TaskItem title="Grade Assignment 3" course="CS 101" dueIn="Today" urgent />
@@ -448,16 +448,16 @@ export default async function LecturerDashboard() {
 
           {/* Class Performance */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4">
+            <div className="bg-gradient-to-r from-emerald-600 to-green-700 px-6 py-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <BarChart3 size={20} /> Class Performance
               </h2>
-              <p className="text-indigo-100 text-sm mt-1">This week's statistics</p>
+              <p className="text-emerald-100 text-sm mt-1">This week's statistics</p>
             </div>
             <div className="p-6 space-y-4">
               <MetricBar label="CS 101" value={92} maxValue={100} color="bg-blue-500" />
               <MetricBar label="CS 201" value={88} maxValue={100} color="bg-green-500" />
-              <MetricBar label="CS 301" value={85} maxValue={100} color="bg-purple-500" />
+              <MetricBar label="CS 301" value={85} maxValue={100} color="bg-emerald-500" />
             </div>
           </div>
         </div>

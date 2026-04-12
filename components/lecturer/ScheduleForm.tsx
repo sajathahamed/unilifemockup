@@ -39,9 +39,9 @@ interface FormValues {
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const COLORS = [
   'bg-blue-500',
-  'bg-purple-500',
+  'bg-emerald-600',
   'bg-green-500',
-  'bg-orange-500',
+  'bg-emerald-500',
   'bg-red-500',
   'bg-pink-500',
   'bg-cyan-500',

@@ -68,14 +68,18 @@ export default function ReportsClient() {
 
   if (loading) {
     return (
-      <div className="text-center py-8 text-gray-500">Loading report data...</div>
+      <div className="rounded-2xl border border-gray-200 bg-white px-6 py-12 text-center text-gray-500 shadow-sm">
+        Loading report data…
+      </div>
     )
   }
   if (error) {
     return (
-      <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-700">
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800 shadow-sm">
         {error}
-        <button type="button" onClick={fetchStats} className="ml-2 underline">Retry</button>
+        <button type="button" onClick={fetchStats} className="ml-3 text-sm font-medium text-red-700 underline">
+          Retry
+        </button>
       </div>
     )
   }

@@ -22,7 +22,7 @@ export default async function SuperAdminUsersPage() {
             <div className="space-y-6">
                 <SuperAdminPageHeader
                     title="All Users"
-                    subtitle="Create and manage system-wide accounts. Edit roles and delete users."
+                    subtitle="Create and manage system-wide accounts. Edit roles and activate or deactivate users."
                     icon={Users}
                     badge={<><span className="font-semibold text-lg">{users.length}</span><span className="text-sm">Total</span></>}
                 />
@@ -57,7 +57,7 @@ export default async function SuperAdminUsersPage() {
 
                 <div className="grid lg:grid-cols-3 gap-6">
                     {/* Create User Form */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-6 min-w-0">
                         <CreateUserForm currentUserRole="super_admin" />
 
                         <SuperAdminUsersListSection users={users} title="System-wide User Directory" />
@@ -77,7 +77,7 @@ export default async function SuperAdminUsersPage() {
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-6 text-white">
+                        <div className="bg-gradient-to-br from-emerald-600 to-green-700 rounded-2xl p-6 text-white">
                             <h3 className="font-semibold mb-2">Automated Onboarding</h3>
                             <p className="text-sm text-blue-100 mb-4">
                                 Newly created users will receive an invitation email with their temporary credentials.
@@ -109,7 +109,7 @@ function formatRoleLabel(role: string): string {
 function getRoleCardClass(role: UserRole): string {
     switch (role) {
         case 'super_admin':
-            return 'bg-purple-50 text-purple-800 border-purple-200'
+            return 'bg-stone-100 text-stone-800 border-stone-200'
         case 'admin':
             return 'bg-blue-50 text-blue-800 border-blue-200'
         case 'vendor-food':
@@ -117,9 +117,9 @@ function getRoleCardClass(role: UserRole): string {
         case 'vendor-laundry':
             return 'bg-teal-50 text-teal-800 border-teal-200'
         case 'delivery':
-            return 'bg-orange-50 text-orange-800 border-orange-200'
+            return 'bg-green-50 text-green-800 border-green-200'
         case 'lecturer':
-            return 'bg-indigo-50 text-indigo-800 border-indigo-200'
+            return 'bg-lime-50 text-lime-900 border-lime-200'
         case 'student':
             return 'bg-sky-50 text-sky-800 border-sky-200'
         default:

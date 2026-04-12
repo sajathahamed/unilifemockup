@@ -2,6 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { apiErrorMessage } from '@/lib/admin/form-feedback'
+import {
+  digitsOnlyPhone,
+  isValidEmail,
+  minLen10IfPresent,
+  requireMinLen10,
+  validatePhone10Required,
+  validatePositiveNumber,
+} from '@/lib/admin/validation'
 import { Utensils, Loader2, Save, Plus, Trash2, MapPin, Edit2 } from 'lucide-react'
 
 type FoodStallRow = { id: number; shop_name: string; owner_name: string; owner_email: string; phone?: string; address?: string }
@@ -12,8 +20,8 @@ const CATEGORIES = ['Street Food', 'Fast Food', 'Snacks', 'Beverages', 'Bakery',
 const MENU_CATEGORIES = ['Main', 'Snacks', 'Sides', 'Drinks', 'Desserts']
 
 const SECTION_STYLE = 'border-b border-gray-200 pb-6 last:border-0'
-const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1'
-const INPUT_STYLE = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary'
+const LABEL_STYLE = 'block text-sm font-medium text-gray-700 mb-1.5'
+const INPUT_STYLE = 'w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white text-gray-900 placeholder:text-gray-400'
 const SELECT_STYLE = `${INPUT_STYLE} bg-white cursor-pointer`
 
 const feedbackBoxClass = (type: 'success' | 'error') =>
@@ -21,10 +29,7 @@ const feedbackBoxClass = (type: 'success' | 'error') =>
     ? 'bg-green-50 text-green-900 border border-green-200'
     : 'bg-red-50 text-red-900 border border-red-200'
 
-type MenuItem = { name: string; price: string; food_category: string; image_url: string }
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_RE = /^[+\d][\d\s-]{6,19}$/
+type MenuItem = { name: string; price: string; food_category: string }
 
 function isValidUrl(value: string): boolean {
   try {
@@ -51,9 +56,6 @@ const emptyForm = () => ({
   closing_time: '',
   days_open: [] as string[],
   category: '',
-  logo: '',
-  banner: '',
-  gallery: [] as string[],
 })
 
 export default function AdminFoodStallAddForm() {
@@ -63,7 +65,7 @@ export default function AdminFoodStallAddForm() {
   const [loadingList, setLoadingList] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm())
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([{ name: '', price: '', food_category: '', image_url: '' }])
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([{ name: '', price: '', food_category: '' }])
   const [vendors, setVendors] = useState<VendorAccount[]>([])
   const [loadingVendors, setLoadingVendors] = useState(true)
   const feedbackRef = useRef<HTMLDivElement>(null)
@@ -113,7 +115,7 @@ export default function AdminFoodStallAddForm() {
 
   const resetForm = () => {
     setForm(emptyForm())
-    setMenuItems([{ name: '', price: '', food_category: '', image_url: '' }])
+    setMenuItems([{ name: '', price: '', food_category: '' }])
     setEditingId(null)
   }
 
@@ -124,7 +126,7 @@ export default function AdminFoodStallAddForm() {
     }))
   }
 
-  const addMenuItem = () => setMenuItems((p) => [...p, { name: '', price: '', food_category: '', image_url: '' }])
+  const addMenuItem = () => setMenuItems((p) => [...p, { name: '', price: '', food_category: '' }])
   const updateMenuItem = (i: number, k: keyof MenuItem, v: string) => {
     setMenuItems((p) => p.map((m, ix) => (ix === i ? { ...m, [k]: v } : m)))
   }
@@ -161,12 +163,9 @@ export default function AdminFoodStallAddForm() {
         closing_time: ct ? (typeof ct === 'string' ? ct.slice(0, 5) : '') : '',
         days_open: Array.isArray(stall.days_open) ? stall.days_open : [],
         category: stall.category || '',
-        logo: stall.logo || '',
-        banner: stall.banner || '',
-        gallery: Array.isArray(stall.gallery) ? stall.gallery : [],
       })
       const items = stall.menu_items ?? []
-      setMenuItems(items.length > 0 ? items.map((m: { name: string; price: number; food_category?: string; image_url?: string }) => ({ name: m.name || '', price: String(m.price ?? ''), food_category: m.food_category || '', image_url: m.image_url || '' })) : [{ name: '', price: '', food_category: '', image_url: '' }])
+      setMenuItems(items.length > 0 ? items.map((m: { name: string; price: number; food_category?: string }) => ({ name: m.name || '', price: String(m.price ?? ''), food_category: m.food_category || '' })) : [{ name: '', price: '', food_category: '' }])
       setEditingId(row.owner_email)
       setMessage(null)
     } catch (e) {
@@ -204,12 +203,24 @@ export default function AdminFoodStallAddForm() {
     const opening = form.opening_time.trim()
     const closing = form.closing_time.trim()
 
-    if (!shopName || shopName.length < 2) return setMessage({ type: 'error', text: 'Shop name must be at least 2 characters.' })
-    if (!ownerName || ownerName.length < 2) return setMessage({ type: 'error', text: 'Owner name must be at least 2 characters.' })
+    const e1 = requireMinLen10(shopName, 'Shop name')
+    if (e1) return setMessage({ type: 'error', text: e1 })
+    const e2 = requireMinLen10(ownerName, 'Owner name')
+    if (e2) return setMessage({ type: 'error', text: e2 })
     if (!ownerEmail) return setMessage({ type: 'error', text: 'Select a food vendor account from the list.' })
-    if (!EMAIL_RE.test(ownerEmail)) return setMessage({ type: 'error', text: 'Owner email format is invalid.' })
-    if (phone && !PHONE_RE.test(phone)) return setMessage({ type: 'error', text: 'Phone number format is invalid.' })
-    if (whatsapp && !PHONE_RE.test(whatsapp)) return setMessage({ type: 'error', text: 'WhatsApp number format is invalid.' })
+    if (!isValidEmail(ownerEmail)) return setMessage({ type: 'error', text: 'Owner email format is invalid.' })
+    const ePh = validatePhone10Required(phone, 'Phone number')
+    if (ePh) return setMessage({ type: 'error', text: ePh })
+    const eWa = validatePhone10Required(whatsapp, 'WhatsApp number')
+    if (eWa) return setMessage({ type: 'error', text: eWa })
+    const eAddr = requireMinLen10(form.address, 'Address')
+    if (eAddr) return setMessage({ type: 'error', text: eAddr })
+    const eCity = minLen10IfPresent(form.city, 'City')
+    if (eCity) return setMessage({ type: 'error', text: eCity })
+    const eArea = minLen10IfPresent(form.area, 'Area')
+    if (eArea) return setMessage({ type: 'error', text: eArea })
+    const eDesc = requireMinLen10(form.description, 'Shop description')
+    if (eDesc) return setMessage({ type: 'error', text: eDesc })
     if ((latStr && !lngStr) || (!latStr && lngStr)) return setMessage({ type: 'error', text: 'Provide both latitude and longitude together.' })
     if (latStr) {
       const latNum = Number(latStr)
@@ -219,21 +230,13 @@ export default function AdminFoodStallAddForm() {
     }
     if ((opening && !closing) || (!opening && closing)) return setMessage({ type: 'error', text: 'Provide both opening and closing time together.' })
     if (opening && closing && opening >= closing) return setMessage({ type: 'error', text: 'Closing time must be after opening time.' })
-    if (form.logo.trim() && !isValidUrl(form.logo.trim())) return setMessage({ type: 'error', text: 'Logo URL is invalid.' })
-    if (form.banner.trim() && !isValidUrl(form.banner.trim())) return setMessage({ type: 'error', text: 'Banner URL is invalid.' })
-    if (form.gallery.some((g) => g?.trim() && !isValidUrl(String(g).trim()))) {
-      return setMessage({ type: 'error', text: 'One or more gallery URLs are invalid.' })
-    }
     for (const [i, m] of menuItems.entries()) {
-      const hasAny = m.name.trim() || m.price.trim() || m.food_category.trim() || m.image_url.trim()
+      const hasAny = m.name.trim() || m.price.trim() || m.food_category.trim()
       if (!hasAny) continue
-      if (!m.name.trim()) return setMessage({ type: 'error', text: `Menu item #${i + 1}: name is required.` })
-      if (m.price.trim() === '' || Number.isNaN(Number(m.price)) || Number(m.price) < 0) {
-        return setMessage({ type: 'error', text: `Menu item #${i + 1}: price must be a valid non-negative number.` })
-      }
-      if (m.image_url.trim() && !isValidUrl(m.image_url.trim())) {
-        return setMessage({ type: 'error', text: `Menu item #${i + 1}: image URL is invalid.` })
-      }
+      const nmErr = requireMinLen10(m.name, `Menu item #${i + 1} name`)
+      if (nmErr) return setMessage({ type: 'error', text: nmErr })
+      const prErr = validatePositiveNumber(m.price, `Menu item #${i + 1} price`, true)
+      if (prErr) return setMessage({ type: 'error', text: prErr })
     }
 
     setSaving(true)
@@ -243,15 +246,14 @@ export default function AdminFoodStallAddForm() {
         shop_name: shopName,
         owner_name: ownerName,
         owner_email: ownerEmail,
-        phone: phone || '',
-        whatsapp: whatsapp || '',
+        phone: digitsOnlyPhone(phone, 10),
+        whatsapp: digitsOnlyPhone(whatsapp, 10),
         lat: latStr ? parseFloat(latStr) : null,
         lng: lngStr ? parseFloat(lngStr) : null,
         menu_items: menuItems.filter((m) => m.name.trim()).map((m) => ({
           name: m.name.trim(),
           price: m.price ? parseFloat(m.price) : 0,
           food_category: m.food_category.trim() || null,
-          image_url: m.image_url.trim() || null,
         })),
       }
       const url = editingId ? `/api/admin/food-stalls/${encodeURIComponent(editingId)}` : '/api/admin/food-stalls'
@@ -282,15 +284,15 @@ export default function AdminFoodStallAddForm() {
 
   return (
     <>
-    <form noValidate onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-4">
+    <form noValidate onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100">
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/90">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <Utensils size={24} className="text-white" />
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Utensils size={22} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Food Stall Registration</h2>
-            <p className="text-amber-100 text-sm">Owner email: choose a food vendor account created in Super Admin.</p>
+            <h2 className="text-lg font-semibold text-gray-900">Food stall registration</h2>
+            <p className="text-sm text-gray-500">Assign to a food vendor from Super Admin. Phones are 10 digits. Descriptions and names need at least 10 characters.</p>
           </div>
         </div>
       </div>
@@ -310,11 +312,11 @@ export default function AdminFoodStallAddForm() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className={LABEL_STYLE}>Shop Name *</label>
+              <label className={LABEL_STYLE}>Shop name * (min 10 characters)</label>
               <input type="text" value={form.shop_name} onChange={(e) => setForm((p) => ({ ...p, shop_name: e.target.value }))} placeholder="e.g. Campus Grill" className={INPUT_STYLE} />
             </div>
             <div>
-              <label className={LABEL_STYLE}>Owner Name *</label>
+              <label className={LABEL_STYLE}>Owner name * (min 10 characters)</label>
               <input type="text" value={form.owner_name} onChange={(e) => setForm((p) => ({ ...p, owner_name: e.target.value }))} placeholder="Full name" className={INPUT_STYLE} />
             </div>
             <div>
@@ -342,12 +344,28 @@ export default function AdminFoodStallAddForm() {
               )}
             </div>
             <div>
-              <label className={LABEL_STYLE}>Phone Number</label>
-              <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="+94..." className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>Phone * (10 digits)</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.phone}
+                onChange={(e) => setForm((p) => ({ ...p, phone: digitsOnlyPhone(e.target.value) }))}
+                placeholder="0771234567"
+                maxLength={10}
+                className={INPUT_STYLE}
+              />
             </div>
             <div>
-              <label className={LABEL_STYLE}>WhatsApp Number</label>
-              <input type="tel" value={form.whatsapp} onChange={(e) => setForm((p) => ({ ...p, whatsapp: e.target.value }))} placeholder="+94..." className={INPUT_STYLE} />
+              <label className={LABEL_STYLE}>WhatsApp * (10 digits)</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={form.whatsapp}
+                onChange={(e) => setForm((p) => ({ ...p, whatsapp: digitsOnlyPhone(e.target.value) }))}
+                placeholder="0771234567"
+                maxLength={10}
+                className={INPUT_STYLE}
+              />
             </div>
           </div>
         </section>
@@ -358,7 +376,7 @@ export default function AdminFoodStallAddForm() {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className={LABEL_STYLE}>Address</label>
+              <label className={LABEL_STYLE}>Address * (min 10 characters)</label>
               <input type="text" value={form.address} onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} placeholder="Street, building, floor" className={INPUT_STYLE} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -388,7 +406,7 @@ export default function AdminFoodStallAddForm() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Business Details</h3>
           <div className="space-y-4">
             <div>
-              <label className={LABEL_STYLE}>Shop Description</label>
+              <label className={LABEL_STYLE}>Shop description * (min 10 characters)</label>
               <textarea rows={3} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="About your food stall..." className={INPUT_STYLE} />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -435,7 +453,7 @@ export default function AdminFoodStallAddForm() {
                 </div>
                 <div className="w-24">
                   <label className={LABEL_STYLE}>Price</label>
-                  <input type="number" step="0.01" min="0" value={m.price} onChange={(e) => updateMenuItem(i, 'price', e.target.value)} placeholder="0" className={INPUT_STYLE} />
+                  <input type="number" step="0.01" min="0.01" value={m.price} onChange={(e) => updateMenuItem(i, 'price', e.target.value)} placeholder="0" className={INPUT_STYLE} />
                 </div>
                 <div className="flex-1 min-w-[120px]">
                   <label className={LABEL_STYLE}>Category</label>
@@ -450,31 +468,12 @@ export default function AdminFoodStallAddForm() {
                     ))}
                   </select>
                 </div>
-                <div className="flex-1 min-w-[180px]">
-                  <label className={LABEL_STYLE}>Image URL</label>
-                  <input type="url" value={m.image_url} onChange={(e) => updateMenuItem(i, 'image_url', e.target.value)} placeholder="https://..." className={INPUT_STYLE} />
-                </div>
                 <button type="button" onClick={() => removeMenuItem(i)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Remove"><Trash2 size={18} /></button>
               </div>
             ))}
             <button type="button" onClick={addMenuItem} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-gray-300 text-gray-600 hover:bg-gray-50">
               <Plus size={18} /> Add Menu Item
             </button>
-          </div>
-        </section>
-
-        <section className={SECTION_STYLE}>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Media URLs</h3>
-          <p className="text-sm text-gray-500 mb-3">Enter image URLs (upload to your storage first).</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={LABEL_STYLE}>Shop Logo URL</label>
-              <input type="url" value={form.logo} onChange={(e) => setForm((p) => ({ ...p, logo: e.target.value }))} placeholder="https://..." className={INPUT_STYLE} />
-            </div>
-            <div>
-              <label className={LABEL_STYLE}>Shop Banner URL</label>
-              <input type="url" value={form.banner} onChange={(e) => setForm((p) => ({ ...p, banner: e.target.value }))} placeholder="https://..." className={INPUT_STYLE} />
-            </div>
           </div>
         </section>
 

@@ -9,7 +9,7 @@ import { getAdminClient } from '@/lib/supabase/admin'
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await verifyRole('admin')
+    const user = await verifyRole('super_admin')
     if (!user) return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()

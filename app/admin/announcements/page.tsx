@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
-import Link from 'next/link'
+import { AdminPageHero, AdminPageStack, AdminBackToDashboard } from '@/components'
 import AnnouncementsClient from './AnnouncementsClient'
 
 export default async function AdminAnnouncementsPage() {
@@ -8,20 +8,14 @@ export default async function AdminAnnouncementsPage() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white">
-          <h1 className="text-2xl font-bold">Announcements</h1>
-          <p className="mt-1 text-orange-100">Campus-wide notices and updates.</p>
-        </div>
-
+      <AdminPageStack>
+        <AdminPageHero
+          title="Announcements"
+          subtitle="Campus-wide notices and updates for students and staff."
+        />
         <AnnouncementsClient />
-
-        <div className="flex justify-center">
-          <Link href="/admin/dashboard" className="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50">
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
+        <AdminBackToDashboard />
+      </AdminPageStack>
     </DashboardLayout>
   )
 }

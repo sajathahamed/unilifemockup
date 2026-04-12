@@ -82,12 +82,12 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
           onClick={(e) => e.stopPropagation()}
           className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
         >
-          <div className="sticky top-0 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 px-6 py-5 flex items-start justify-between border-b border-purple-400/20 shadow-lg z-10">
+          <div className="sticky top-0 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-800 px-6 py-5 flex items-start justify-between border-b border-emerald-400/20 shadow-lg z-10">
             <div className="flex items-center gap-3">
               <FileText size={24} className="text-white" />
               <div>
                 <h2 className="text-xl font-bold text-white">Create Assignment</h2>
-                <p className="text-purple-100 text-sm">Add a new assignment for your course</p>
+                <p className="text-emerald-100 text-sm">Add a new assignment for your course</p>
               </div>
             </div>
             <button
@@ -143,7 +143,7 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Instructions and requirements..."
                 rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all resize-y min-h-[100px]"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-y min-h-[100px]"
               />
             </div>
 
@@ -159,7 +159,7 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
                   if (errors.course_id) setErrors((p) => ({ ...p, course_id: '' }))
                 }}
                 className={`w-full px-4 py-3 rounded-xl border transition-all bg-white ${
-                  errors.course_id ? 'border-red-300 focus:ring-red-500/20' : 'border-gray-200 focus:ring-violet-500/20 focus:border-violet-500'
+                  errors.course_id ? 'border-red-300 focus:ring-red-500/20' : 'border-gray-200 focus:ring-emerald-500/20 focus:border-emerald-500'
                 }`}
               >
                 <option value="">Select course</option>
@@ -179,7 +179,7 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
               <select
                 value={academicYear ?? ''}
                 onChange={(e) => setAcademicYear(e.target.value ? parseInt(e.target.value, 10) : null)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all bg-white"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all bg-white"
               >
                 <option value="">Optional</option>
                 {ACADEMIC_YEARS.map((y) => (
@@ -199,7 +199,7 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
                 name="due_date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
               />
             </div>
 

@@ -27,10 +27,10 @@ async function getVendorUser() {
 }
 
 async function isOwnedFoodItem(client: Awaited<ReturnType<typeof createClient>>, vendorUserId: number, vendorEmail: string | undefined, itemVendorId: number) {
-  // Current schema mapping: food_items.vendor_id = users.id
+  // Legacy rows: food_items.vendor_id = users.id
   if (itemVendorId === vendorUserId) return true
 
-  // Back-compat mapping seen in old data: food_items.vendor_id = food_stalls.id
+  // Preferred: food_items.vendor_id = food_stalls.id
   const email = String(vendorEmail || '').toLowerCase()
   if (!email) return false
   const { data: stalls } = await client

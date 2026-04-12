@@ -43,7 +43,7 @@ const sampleSchedules: Schedule[] = [
     endTime: '11:30',
     location: 'Lab 2',
     capacity: 30,
-    color: 'bg-purple-500',
+    color: 'bg-emerald-600',
     lecturer: 'Dr. Smith',
   },
   {
@@ -67,7 +67,7 @@ const sampleSchedules: Schedule[] = [
     endTime: '10:30',
     location: 'Hall B',
     capacity: 45,
-    color: 'bg-orange-500',
+    color: 'bg-emerald-500',
     lecturer: 'Dr. Smith',
   },
   {
@@ -133,7 +133,7 @@ export default function SchedulePage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-primary/80 to-purple-600 px-6 py-5 shadow-lg mb-8 mt-4"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-emerald-600 to-green-700 px-6 py-5 shadow-lg mb-8 mt-4"
       >
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-24" />

@@ -1,7 +1,8 @@
 import { requireRole } from '@/lib/auth.server'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
+import { AdminPageStack } from '@/components/admin/AdminPageChrome'
 import { createClient } from '@/lib/supabase/server'
-import { Bell, MapPin, Truck, TrendingUp, Users, Utensils, UserPlus, FileText } from 'lucide-react'
+import { Bell, MapPin, Truck, TrendingUp, Users, Utensils, FileText } from 'lucide-react'
 import Link from 'next/link'
 
 type Role = 'student' | 'lecturer' | 'admin' | 'vendor-food' | 'vendor-laundry' | 'delivery' | 'super_admin'
@@ -44,17 +45,17 @@ export default async function AdminDashboard() {
 
   return (
     <DashboardLayout user={user}>
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white">
+      <AdminPageStack>
+        <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white shadow-sm">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <p className="mt-1 text-orange-100">Live stats from the database.</p>
+          <p className="mt-1 text-emerald-100">Live stats from the database.</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon={Users} label="Total Users" value={usersCount.toString()} color="bg-blue-500" />
           <StatCard icon={Utensils} label="Food Stalls" value={foodStallsCount.toString()} color="bg-amber-500" />
           <StatCard icon={Truck} label="Laundry Shops" value={laundryShopsCount.toString()} color="bg-cyan-500" />
-          <StatCard icon={Bell} label="Announcements" value={announcementsCount.toString()} color="bg-purple-500" />
+          <StatCard icon={Bell} label="Announcements" value={announcementsCount.toString()} color="bg-emerald-500" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -73,7 +74,6 @@ export default async function AdminDashboard() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <ActionButton href="/admin/users/new" label="Add New User" icon={UserPlus} />
               <ActionButton href="/admin/food-stalls/add" label="Register Food Stall" icon={Utensils} />
               <ActionButton href="/admin/laundry/add" label="Register Laundry Shop" icon={Truck} />
               <ActionButton href="/admin/trips/add" label="Add Trip Location" icon={MapPin} />
@@ -90,14 +90,14 @@ export default async function AdminDashboard() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <RoleCard role="Students" count={byRole.student || 0} color="bg-blue-500" />
-            <RoleCard role="Lecturers" count={byRole.lecturer || 0} color="bg-purple-500" />
+            <RoleCard role="Lecturers" count={byRole.lecturer || 0} color="bg-lime-500" />
             <RoleCard role="Vendors" count={(byRole['vendor-food'] || 0) + (byRole['vendor-laundry'] || 0)} color="bg-green-500" />
             <RoleCard role="Delivery" count={byRole.delivery || 0} color="bg-yellow-500" />
             <RoleCard role="Admins" count={byRole.admin || 0} color="bg-red-500" />
             <RoleCard role="Super Admin" count={byRole.super_admin || 0} color="bg-gray-700" />
           </div>
         </div>
-      </div>
+      </AdminPageStack>
     </DashboardLayout>
   )
 }

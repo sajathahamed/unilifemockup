@@ -3,8 +3,6 @@
 import { motion } from 'framer-motion'
 import { GraduationCap, BookOpen, Users, UtensilsCrossed, CarFront } from 'lucide-react'
 
-// ... (keep the rest unchanged inside AuthLayout, except updating the features array below)
-
 interface AuthLayoutProps {
   children: React.ReactNode
   title: string
@@ -68,7 +66,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
                   transition={{ delay: 0.4 + i * 0.1, duration: 0.5 }}
                   className="flex items-center gap-4 group"
                 >
-                  <div className={`w-12 h-12 flex items-center justify-center rounded-xl \${feature.color} group-hover:scale-110 transition-transform duration-300 shadow-md border border-white/60 backdrop-blur-sm`}>
+                  <div className={`w-12 h-12 flex items-center justify-center rounded-xl ${feature.color} group-hover:scale-110 transition-transform duration-300 shadow-md border border-white/60 backdrop-blur-sm`}>
                     {feature.icon}
                   </div>
                   <span className="text-sm font-bold text-slate-700">{feature.label}</span>

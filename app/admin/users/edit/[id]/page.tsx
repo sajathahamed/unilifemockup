@@ -4,8 +4,9 @@ import { EditUserForm } from '@/components'
 import { ArrowLeft, UserCog } from 'lucide-react'
 import Link from 'next/link'
 
-export default async function AdminEditUserPage({ params }: { params: { id: string } }) {
+export default async function AdminEditUserPage({ params }: { params: Promise<{ id: string }> }) {
     const userProfile = await requireRole('admin')
+    const { id } = await params
 
     return (
         <DashboardLayout user={userProfile}>
@@ -25,7 +26,7 @@ export default async function AdminEditUserPage({ params }: { params: { id: stri
                 </div>
 
                 {/* Edit Form */}
-                <EditUserForm userId={params.id} currentUserRole="admin" />
+                <EditUserForm userId={id} currentUserRole="admin" />
             </div>
         </DashboardLayout>
     )

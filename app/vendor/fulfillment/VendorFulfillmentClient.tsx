@@ -22,7 +22,7 @@ const statusConfig: Record<FulfillmentStatus, { label: string; color: string; bg
   pending: { label: 'Pending', color: 'text-gray-600', bg: 'bg-gray-100' },
   washing: { label: 'Washing', color: 'text-blue-600', bg: 'bg-blue-100' },
   ironing: { label: 'Ironing', color: 'text-amber-600', bg: 'bg-amber-100' },
-  ready: { label: 'Ready', color: 'text-purple-600', bg: 'bg-purple-100' },
+  ready: { label: 'Ready', color: 'text-emerald-600', bg: 'bg-emerald-100' },
   completed: { label: 'Completed', color: 'text-green-600', bg: 'bg-green-100' },
   cancelled: { label: 'Cancelled', color: 'text-red-700', bg: 'bg-red-100' },
 }

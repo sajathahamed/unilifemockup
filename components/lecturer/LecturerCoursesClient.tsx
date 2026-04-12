@@ -42,7 +42,7 @@ export default function LecturerCoursesClient({ initialCourses = [] }: LecturerC
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 px-8 py-8 shadow-lg mb-8 mt-4"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-8 py-8 shadow-lg mb-8 mt-4"
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-24 blur-3xl" />
         <div className="relative">
@@ -66,7 +66,7 @@ export default function LecturerCoursesClient({ initialCourses = [] }: LecturerC
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm">
           <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500">No courses assigned yet.</p>
-          <Link href="/lecturer/schedule" className="inline-flex items-center gap-2 mt-4 text-violet-600 hover:text-violet-700 font-medium">
+          <Link href="/lecturer/schedule" className="inline-flex items-center gap-2 mt-4 text-emerald-600 hover:text-emerald-700 font-medium">
             Go to Schedule <ArrowRight size={16} />
           </Link>
         </div>
@@ -82,13 +82,13 @@ export default function LecturerCoursesClient({ initialCourses = [] }: LecturerC
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className={`w-10 h-10 rounded-lg mb-3 ${c.colour || 'bg-violet-500'} opacity-90`} />
+                  <div className={`w-10 h-10 rounded-lg mb-3 ${c.colour || 'bg-emerald-600'} opacity-90`} />
                   <p className="font-semibold text-gray-900">{c.course_name}</p>
                   <p className="text-sm text-gray-500 mt-0.5">{c.course_code}</p>
                 </div>
                 <Link
                   href="/lecturer/assignments"
-                  className="text-sm text-violet-600 hover:text-violet-700 font-medium shrink-0 flex items-center gap-1"
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium shrink-0 flex items-center gap-1"
                 >
                   Assignments <ArrowRight size={14} />
                 </Link>

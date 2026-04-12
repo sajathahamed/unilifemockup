@@ -163,13 +163,13 @@ export default async function SuperAdminDashboard() {
               role="Lecturers"
               count={roleCounts.lecturer ?? 0}
               percentage={userCount ? Math.round(((roleCounts.lecturer ?? 0) / userCount) * 100) : 0}
-              color="bg-purple-500"
+              color="bg-emerald-500"
             />
             <RoleStatCard
               role="Admins"
               count={roleCounts.admin ?? 0}
               percentage={userCount ? Math.round(((roleCounts.admin ?? 0) / userCount) * 100) : 0}
-              color="bg-orange-500"
+              color="bg-emerald-500"
             />
             <RoleStatCard
               role="Vendors"

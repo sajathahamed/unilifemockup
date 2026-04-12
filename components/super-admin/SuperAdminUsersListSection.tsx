@@ -10,6 +10,7 @@ interface UserRow {
   role: string
   uni_id: number | null
   created_at: string
+  is_active?: boolean | null
 }
 
 interface SuperAdminUsersListSectionProps {
@@ -18,5 +19,5 @@ interface SuperAdminUsersListSectionProps {
 }
 
 export default function SuperAdminUsersListSection({ users, title = 'System-wide User Directory' }: SuperAdminUsersListSectionProps) {
-  return <UserList users={users} title={title} showActions={true} enableDelete={true} />
+  return <UserList users={users} title={title} showActions={true} />
 }

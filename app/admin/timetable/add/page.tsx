@@ -9,9 +9,9 @@ export default async function AdminTimetableAddPage() {
   return (
     <DashboardLayout user={user}>
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-6 text-white">
+        <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white">
           <h1 className="text-2xl font-bold">Add Timetable</h1>
-          <p className="mt-1 text-orange-100">Create timetable entries. Same data as student timetable view.</p>
+          <p className="mt-1 text-emerald-100">Create timetable entries. Same data as student timetable view.</p>
         </div>
         <AdminTimetableAddForm />
         <div className="flex justify-center">
