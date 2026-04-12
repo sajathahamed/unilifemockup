@@ -1,13 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from '@ai-sdk/google'
-import { generateObject } from 'ai'
+import { generateObject, generateText } from 'ai'
 import { z } from 'zod'
+
+// Sri Lanka real-world minimum daily costs by destination tier (in LKR)
+const DESTINATION_MIN_DAILY_COSTS: Record<string, { min: number; recommended: number; tier: string }> = {
+  // Premium destinations
+  colombo: { min: 5000, recommended: 8000, tier: 'premium' },
+  galle: { min: 5500, recommended: 9000, tier: 'premium' },
+  mirissa: { min: 6000, recommended: 10000, tier: 'premium' },
+  unawatuna: { min: 5500, recommended: 9000, tier: 'premium' },
+  bentota: { min: 5000, recommended: 8500, tier: 'premium' },
+  hikkaduwa: { min: 5000, recommended: 8000, tier: 'premium' },
+  negombo: { min: 4500, recommended: 7500, tier: 'premium' },
+  // Mid-range destinations
+  kandy: { min: 4000, recommended: 7000, tier: 'midrange' },
+  nuwara_eliya: { min: 4500, recommended: 7500, tier: 'midrange' },
+  ella: { min: 4500, recommended: 8000, tier: 'midrange' },
+  sigiriya: { min: 5000, recommended: 8000, tier: 'midrange' },
+  dambulla: { min: 4000, recommended: 6500, tier: 'midrange' },
+  // Budget destinations
+  anuradhapura: { min: 3000, recommended: 5000, tier: 'budget' },
+  polonnaruwa: { min: 3000, recommended: 5000, tier: 'budget' },
+  trincomalee: { min: 3500, recommended: 5500, tier: 'budget' },
+  jaffna: { min: 3000, recommended: 5000, tier: 'budget' },
+  batticaloa: { min: 2500, recommended: 4500, tier: 'budget' },
+}
+
+const DEFAULT_MIN_DAILY = { min: 3500, recommended: 6000, tier: 'midrange' }
+
+function getDestinationCosts(destination: string) {
+  const normalized = destination.toLowerCase().replace(/[^a-z]/g, '_').replace(/_+/g, '_')
+  for (const [key, costs] of Object.entries(DESTINATION_MIN_DAILY_COSTS)) {
+    if (normalized.includes(key) || key.includes(normalized.split('_')[0])) {
+      return { ...costs, matched: key }
+    }
+  }
+  return { ...DEFAULT_MIN_DAILY, matched: null }
+}
+
+function getGeminiApiKey(): string {
+  return (
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
+    process.env.EXPO_PUBLIC_GOOGLE_GENERATIVE_AI_API_KEY ??
+    process.env.GEMINI_API_KEY ??
+    ''
+  )
+}
 
 /**
  * POST /api/trip/ai-budget
- * Two modes:
+ * Three modes:
  *  1. mode="estimate" – smart LKR estimator for hotel/food based on destination
- *  2. mode="plan"    – given total budget, split into stay/travel/eat + full plan
+ *  2. mode="validate" – AI-powered budget validation with realistic assessment
+ *  3. mode="plan"    – given total budget, split into stay/travel/eat + full plan
  */
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +62,136 @@ export async function POST(request: NextRequest) {
 
     if (!destination) {
       return NextResponse.json({ message: 'Destination is required' }, { status: 400 })
+    }
+
+    // Validate destination format
+    const destTrimmed = String(destination).trim()
+    if (!/^[a-zA-Z\s,.-]+$/.test(destTrimmed) || destTrimmed.length < 2) {
+      return NextResponse.json({ message: 'Please enter a valid destination name (letters only)' }, { status: 400 })
+    }
+
+    // MODE: VALIDATE - AI-powered budget validation
+    if (mode === 'validate') {
+      const budget = Number(totalBudget)
+      const numDays = Math.max(1, Math.round(Number(days)))
+      const numTravelers = Math.max(1, Math.round(Number(travelers)))
+
+      // Basic validation
+      if (!Number.isFinite(budget) || budget < 500) {
+        return NextResponse.json({
+          valid: false,
+          severity: 'error',
+          message: 'Minimum budget is LKR 500',
+          suggestedMinBudget: 500,
+        }, { status: 200 })
+      }
+      if (budget > 1000000) {
+        return NextResponse.json({
+          valid: false,
+          severity: 'error',
+          message: 'Maximum budget is LKR 1,000,000',
+          suggestedMinBudget: null,
+        }, { status: 200 })
+      }
+      if (numDays > 30) {
+        return NextResponse.json({
+          valid: false,
+          severity: 'error',
+          message: 'Maximum trip duration is 30 days',
+          suggestedMinBudget: null,
+        }, { status: 200 })
+      }
+
+      // Get destination-specific costs
+      const destCosts = getDestinationCosts(destTrimmed)
+      const dailyBudgetPerPerson = budget / numDays / numTravelers
+      const minRequiredBudget = destCosts.min * numDays * numTravelers
+      const recommendedBudget = destCosts.recommended * numDays * numTravelers
+
+      // Rule-based quick check first
+      if (dailyBudgetPerPerson < destCosts.min * 0.5) {
+        // Extremely low - don't even call AI
+        return NextResponse.json({
+          valid: false,
+          severity: 'error',
+          message: `Your budget of LKR ${budget.toLocaleString()} is far too low for a ${numDays}-day trip to ${destTrimmed} with ${numTravelers} traveler${numTravelers > 1 ? 's' : ''}. The minimum realistic budget is around LKR ${minRequiredBudget.toLocaleString()}.`,
+          suggestedMinBudget: minRequiredBudget,
+          recommendedBudget,
+          breakdown: {
+            accommodation: Math.round(destCosts.min * 0.4) * numDays * numTravelers,
+            food: Math.round(destCosts.min * 0.25) * numDays * numTravelers,
+            transport: Math.round(destCosts.min * 0.2) * numDays * numTravelers,
+            activities: Math.round(destCosts.min * 0.15) * numDays * numTravelers,
+          },
+          tips: [
+            'Consider reducing the number of days',
+            'Look for budget hostels or guesthouses',
+            'Use public transport instead of taxis',
+            'Eat at local restaurants for authentic, affordable food'
+          ]
+        }, { status: 200 })
+      }
+
+      // Use Gemini for intelligent assessment
+      const apiKey = getGeminiApiKey()
+      if (apiKey) {
+        try {
+          const validationResult = await generateAIBudgetValidation({
+            destination: destTrimmed,
+            days: numDays,
+            travelers: numTravelers,
+            budget,
+            places: places as string[],
+            destCosts,
+          })
+          return NextResponse.json(validationResult, { status: 200 })
+        } catch (aiError) {
+          console.warn('AI validation failed, using rule-based:', aiError)
+        }
+      }
+
+      // Fallback: rule-based validation
+      if (dailyBudgetPerPerson < destCosts.min) {
+        return NextResponse.json({
+          valid: false,
+          severity: 'warning',
+          message: `Your budget may be tight for ${destTrimmed}. For ${numDays} day${numDays > 1 ? 's' : ''} with ${numTravelers} traveler${numTravelers > 1 ? 's' : ''}, we recommend at least LKR ${minRequiredBudget.toLocaleString()}.`,
+          suggestedMinBudget: minRequiredBudget,
+          recommendedBudget,
+          breakdown: {
+            accommodation: Math.round(budget * 0.4),
+            food: Math.round(budget * 0.25),
+            transport: Math.round(budget * 0.2),
+            activities: Math.round(budget * 0.15),
+          },
+          tips: [
+            'Book accommodation in advance for better rates',
+            'Try local "rice and curry" for affordable, authentic meals',
+            'Use tuk-tuks for short distances, buses for longer routes'
+          ],
+          canProceed: true,
+        }, { status: 200 })
+      }
+
+      // Budget is adequate
+      return NextResponse.json({
+        valid: true,
+        severity: 'success',
+        message: `Your budget of LKR ${budget.toLocaleString()} is ${dailyBudgetPerPerson >= destCosts.recommended ? 'excellent' : 'adequate'} for this trip!`,
+        suggestedMinBudget: null,
+        recommendedBudget: null,
+        breakdown: {
+          accommodation: Math.round(budget * 0.35),
+          food: Math.round(budget * 0.25),
+          transport: Math.round(budget * 0.2),
+          activities: Math.round(budget * 0.15),
+          emergency: Math.round(budget * 0.05),
+        },
+        tips: dailyBudgetPerPerson >= destCosts.recommended
+          ? ['You have room for premium experiences', 'Consider booking a safari or cultural tour']
+          : ['Stick to the budget breakdown for best results'],
+        canProceed: true,
+      }, { status: 200 })
     }
 
     if (mode === 'plan') {
@@ -54,6 +230,83 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Zod Schema for budget validation response
+const budgetValidationSchema = z.object({
+  valid: z.boolean().describe('Whether the budget is realistic for the trip'),
+  severity: z.enum(['success', 'warning', 'error']).describe('How severe the budget issue is'),
+  message: z.string().describe('Human-readable explanation of the budget assessment'),
+  suggestedMinBudget: z.number().nullable().describe('Minimum recommended budget in LKR, or null if budget is adequate'),
+  recommendedBudget: z.number().nullable().describe('Recommended comfortable budget in LKR'),
+  breakdown: z.object({
+    accommodation: z.number().describe('Estimated cost for accommodation in LKR'),
+    food: z.number().describe('Estimated cost for all meals in LKR'),
+    transport: z.number().describe('Estimated cost for local transport in LKR'),
+    activities: z.number().describe('Estimated cost for activities and entrance fees in LKR'),
+  }),
+  tips: z.array(z.string()).describe('Budget-saving tips for the traveler'),
+  canProceed: z.boolean().describe('Whether the user can proceed with planning despite warnings'),
+})
+
+interface ValidationInput {
+  destination: string
+  days: number
+  travelers: number
+  budget: number
+  places: string[]
+  destCosts: { min: number; recommended: number; tier: string }
+}
+
+async function generateAIBudgetValidation(input: ValidationInput) {
+  const { destination, days, travelers, budget, places, destCosts } = input
+  const dailyPerPerson = budget / days / travelers
+
+  const prompt = `You are a Sri Lanka travel budget expert. Analyze this trip budget STRICTLY and REALISTICALLY.
+
+TRIP DETAILS:
+- Destination: ${destination}
+- Duration: ${days} day${days > 1 ? 's' : ''}
+- Travelers: ${travelers}
+- Total Budget: LKR ${budget.toLocaleString()}
+- Daily budget per person: LKR ${Math.round(dailyPerPerson).toLocaleString()}
+- Selected places: ${places.length > 0 ? places.join(', ') : 'Not specified yet'}
+
+REAL SRI LANKA COSTS (2024):
+- Budget hotel/guesthouse: LKR 2,000-5,000/night
+- Mid-range hotel: LKR 5,000-12,000/night
+- Local meal (rice & curry): LKR 300-600
+- Restaurant meal: LKR 800-2,000
+- Tuk-tuk (short): LKR 200-500
+- Bus ticket: LKR 50-300
+- Train ticket: LKR 100-1,500
+- Temple/museum entry: LKR 200-2,500 (higher for foreigners)
+- Safari: LKR 5,000-15,000
+
+DESTINATION TIER: ${destCosts.tier} (min LKR ${destCosts.min}/day/person, recommended LKR ${destCosts.recommended}/day/person)
+
+TASK:
+1. Assess if LKR ${budget.toLocaleString()} is realistic for ${days} day(s) in ${destination} with ${travelers} traveler(s)
+2. If budget is TOO LOW:
+   - Set valid=false
+   - severity="error" if extremely low, "warning" if tight but possible
+   - Explain clearly WHY it's not enough
+   - Suggest minimum and recommended budgets
+3. If budget is ADEQUATE:
+   - Set valid=true
+   - severity="success"
+   - Provide realistic cost breakdown
+4. Always provide 2-4 practical budget tips
+
+Be STRICT - don't allow unrealistic budgets. A 1-day trip to Colombo cannot work with LKR 1,000.`
+
+  const { object } = await generateObject({
+    model: google('gemini-1.5-flash'),
+    schema: budgetValidationSchema,
+    prompt,
+  })
+
+  return object
 }
 
 // Zod Schema matching TripPlan interface

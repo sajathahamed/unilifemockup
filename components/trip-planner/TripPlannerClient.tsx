@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { MapPin, Search, Loader2, Wallet, ChevronRight, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { MapPin, Search, Loader2, Wallet, ChevronRight, Sparkles, CheckCircle2, AlertTriangle, XCircle, Info, TrendingUp } from 'lucide-react'
 import AttractionList, { type Place } from './AttractionList'
 import ItineraryList, { type ItineraryPlace } from './ItineraryList'
 import LocationAutocompleteInput from './LocationAutocompleteInput'
@@ -36,6 +36,19 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
     editTripId != null ? editTripId : null
   )
   const [origin, setOrigin] = useState('')
+
+  // Budget validation state
+  const [budgetValidation, setBudgetValidation] = useState<{
+    valid: boolean
+    severity: 'success' | 'warning' | 'error'
+    message: string
+    suggestedMinBudget: number | null
+    recommendedBudget: number | null
+    breakdown: { accommodation: number; food: number; transport: number; activities: number } | null
+    tips: string[]
+    canProceed: boolean
+  } | null>(null)
+  const [validating, setValidating] = useState(false)
 
   const addedIds = new Set<string | null>(itinerary.map(p => p.id ?? p._key ?? null))
 
@@ -150,9 +163,90 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
     setItinerary(prev => prev.filter(p => (p._key ?? p.id) !== (place._key ?? place.id)))
   }, [])
 
-  const generatePlan = useCallback(async () => {
+  // Client-side validation
+  const validateInputs = useCallback((): string | null => {
+    const destTrimmed = destination.trim()
+    if (!destTrimmed) return 'Please enter a destination'
+    if (!/^[a-zA-Z\s,.-]+$/.test(destTrimmed) || destTrimmed.length < 2) {
+      return 'Destination must contain only letters (no numbers or symbols)'
+    }
+    if (days < 1 || days > 30) return 'Trip duration must be between 1 and 30 days'
+    if (travelers < 1 || travelers > 20) return 'Number of travelers must be between 1 and 20'
+    
     const budget = Number(totalBudget)
-    if (!budget || budget <= 0) { setError('Enter a valid budget amount'); return }
+    if (!totalBudget || !Number.isFinite(budget)) return 'Please enter a valid budget amount'
+    if (budget < 500) return 'Minimum budget is LKR 500'
+    if (budget > 1000000) return 'Maximum budget is LKR 1,000,000'
+    
+    return null
+  }, [destination, days, travelers, totalBudget])
+
+  // Budget validation with AI
+  const validateBudget = useCallback(async () => {
+    const inputError = validateInputs()
+    if (inputError) {
+      setError(inputError)
+      return false
+    }
+
+    setError(null)
+    setValidating(true)
+    setBudgetValidation(null)
+
+    try {
+      const res = await fetch('/api/trip/ai-budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'validate',
+          destination: destination.trim(),
+          travelers,
+          totalBudget: Number(totalBudget),
+          days,
+          places: itinerary.map(p => p.name),
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.message || 'Validation failed')
+        return false
+      }
+
+      setBudgetValidation(data)
+      return data.valid || data.canProceed
+    } catch (e) {
+      setError('Something went wrong. Please try again.')
+      return false
+    } finally {
+      setValidating(false)
+    }
+  }, [destination, travelers, totalBudget, days, itinerary, validateInputs])
+
+  // Clear validation when inputs change
+  useEffect(() => {
+    setBudgetValidation(null)
+  }, [totalBudget, days, travelers, destination])
+
+  const generatePlan = useCallback(async () => {
+    // First validate inputs
+    const inputError = validateInputs()
+    if (inputError) {
+      setError(inputError)
+      return
+    }
+
+    // If not validated yet, validate first
+    if (!budgetValidation) {
+      const canProceed = await validateBudget()
+      if (!canProceed) return
+    } else if (!budgetValidation.valid && !budgetValidation.canProceed) {
+      setError('Please adjust your budget before generating a plan')
+      return
+    }
+
+    const budget = Number(totalBudget)
     setError(null)
     setPlanLoading(true)
     try {
@@ -179,7 +273,7 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
     } finally {
       setPlanLoading(false)
     }
-  }, [totalBudget, destination, travelers, days, distanceKm, itinerary])
+  }, [totalBudget, destination, travelers, days, distanceKm, itinerary, startLocation, validateInputs, validateBudget, budgetValidation])
 
   const saveTrip = useCallback(async () => {
     if (!tripPlan) return
@@ -504,15 +598,114 @@ export default function TripPlannerClient({ editTripId }: { editTripId?: number 
               ))}
             </div>
 
+            {/* Budget Validation Results */}
+            {budgetValidation && (
+              <div className={`rounded-2xl border p-5 mb-6 ${
+                budgetValidation.severity === 'error'
+                  ? 'border-red-200 bg-red-50'
+                  : budgetValidation.severity === 'warning'
+                    ? 'border-amber-200 bg-amber-50'
+                    : 'border-emerald-200 bg-emerald-50'
+              }`}>
+                <div className="flex items-start gap-3">
+                  {budgetValidation.severity === 'error' && <XCircle className="shrink-0 mt-0.5 text-red-600" size={20} />}
+                  {budgetValidation.severity === 'warning' && <AlertTriangle className="shrink-0 mt-0.5 text-amber-600" size={20} />}
+                  {budgetValidation.severity === 'success' && <CheckCircle2 className="shrink-0 mt-0.5 text-emerald-600" size={20} />}
+                  <div className="flex-1">
+                    <p className={`font-semibold ${
+                      budgetValidation.severity === 'error' ? 'text-red-900' : 
+                      budgetValidation.severity === 'warning' ? 'text-amber-900' : 'text-emerald-900'
+                    }`}>
+                      {budgetValidation.severity === 'error' ? 'Budget Too Low' : 
+                       budgetValidation.severity === 'warning' ? 'Budget Warning' : 'Budget Approved'}
+                    </p>
+                    <p className={`mt-1 text-sm ${
+                      budgetValidation.severity === 'error' ? 'text-red-700' : 
+                      budgetValidation.severity === 'warning' ? 'text-amber-700' : 'text-emerald-700'
+                    }`}>
+                      {budgetValidation.message}
+                    </p>
+
+                    {budgetValidation.suggestedMinBudget && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTotalBudget(String(budgetValidation.suggestedMinBudget))}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                        >
+                          <TrendingUp size={14} />
+                          Use minimum: Rs {budgetValidation.suggestedMinBudget.toLocaleString()}
+                        </button>
+                        {budgetValidation.recommendedBudget && (
+                          <button
+                            type="button"
+                            onClick={() => setTotalBudget(String(budgetValidation.recommendedBudget))}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary border border-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-600"
+                          >
+                            Use recommended: Rs {budgetValidation.recommendedBudget.toLocaleString()}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {budgetValidation.breakdown && (
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-lg bg-white/60 p-2 border border-slate-200/50">
+                          <p className="text-slate-500">Accommodation</p>
+                          <p className="font-semibold text-slate-900">Rs {budgetValidation.breakdown.accommodation.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-lg bg-white/60 p-2 border border-slate-200/50">
+                          <p className="text-slate-500">Food</p>
+                          <p className="font-semibold text-slate-900">Rs {budgetValidation.breakdown.food.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-lg bg-white/60 p-2 border border-slate-200/50">
+                          <p className="text-slate-500">Transport</p>
+                          <p className="font-semibold text-slate-900">Rs {budgetValidation.breakdown.transport.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-lg bg-white/60 p-2 border border-slate-200/50">
+                          <p className="text-slate-500">Activities</p>
+                          <p className="font-semibold text-slate-900">Rs {budgetValidation.breakdown.activities.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {budgetValidation.tips && budgetValidation.tips.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1">
+                          <Info size={12} /> Tips
+                        </p>
+                        <ul className="space-y-1">
+                          {budgetValidation.tips.map((tip, i) => (
+                            <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                              <span className="text-slate-400">•</span> {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 sm:flex-row">
               <button type="button" onClick={() => setStep('attractions')} className="btn-secondary w-full rounded-2xl px-5 py-3 text-sm">
                 ← Back
               </button>
               <button
                 type="button"
+                onClick={validateBudget}
+                disabled={validating || !totalBudget}
+                className="btn-secondary w-full rounded-2xl px-5 py-3 text-sm border-primary/30 text-primary hover:bg-primary/5 disabled:cursor-not-allowed"
+              >
+                {validating ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                {validating ? 'Checking...' : 'Check Budget'}
+              </button>
+              <button
+                type="button"
                 onClick={generatePlan}
-                disabled={planLoading || !totalBudget}
-                className="btn-primary-lg w-full sm:w-auto disabled:cursor-not-allowed"
+                disabled={planLoading || !totalBudget || !!(budgetValidation && !budgetValidation.valid && !budgetValidation.canProceed)}
+                className="btn-primary-lg w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {planLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
                 Generate plan
