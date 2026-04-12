@@ -38,6 +38,7 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
+    role: '',
     university: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -384,38 +385,37 @@ export default function SignupPage() {
                   disabled={isLoading}
                 />
 
-          <Input
-            label="Confirm password"
-            type="password"
-            placeholder="Confirm password"
-            icon={Lock}
-            value={formData.confirmPassword}
-            onChange={(e) => updateField('confirmPassword', e.target.value)}
-            error={errors.confirmPassword}
-            disabled={isLoading}
-            autoComplete="new-password"
-          />
-        </div>
-
-        <Select
-          label="I am a..."
-          options={roleOptions}
-          placeholder="Select your role"
-          value={formData.role}
-          onChange={(e) => updateField('role', e.target.value)}
-          error={errors.role}
-          disabled={isLoading}
-        />
-
-                <Select
-                  label="University (Optional)"
-                  options={universityOptions}
-                  icon={Building2}
-                  value={formData.university}
-                  onChange={(e) => updateField('university', e.target.value)}
+                <Input
+                  label="Confirm password"
+                  type="password"
+                  placeholder="Confirm password"
+                  icon={Lock}
+                  value={formData.confirmPassword}
+                  onChange={(e) => updateField('confirmPassword', e.target.value)}
+                  error={errors.confirmPassword}
                   disabled={isLoading}
+                  autoComplete="new-password"
                 />
               </div>
+
+              <Select
+                label="I am a..."
+                options={roleOptions}
+                placeholder="Select your role"
+                value={formData.role}
+                onChange={(e) => updateField('role', e.target.value)}
+                error={errors.role}
+                disabled={isLoading}
+              />
+
+              <Select
+                label="University (Optional)"
+                options={universityOptions}
+                icon={Building2}
+                value={formData.university}
+                onChange={(e) => updateField('university', e.target.value)}
+                disabled={isLoading}
+              />
 
               <div className="pt-2">
                 <label className="flex items-start gap-3 cursor-pointer group">

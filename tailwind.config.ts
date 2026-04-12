@@ -9,10 +9,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: '#2ec118',
-        primaryDark: '#25a015',
-        primaryLight: '#5dd842',
-        secondary: '#22C55E',
+        primary: '#4f46e5',
+        primaryDark: '#4338ca',
+        primaryLight: '#818cf8',
+        secondary: '#6366f1',
         background: '#0a0a0f',
         card: '#12121a',
         'text-primary': '#f8fafc',
@@ -31,13 +31,12 @@ const config: Config = {
       boxShadow: {
         'card': '0 8px 32px rgba(0, 0, 0, 0.3)',
         'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-        'glow': '0 0 40px rgba(46, 193, 24, 0.3)',
-        'glow-lg': '0 0 60px rgba(46, 193, 24, 0.4)',
+        'glow': '0 0 40px rgba(79, 70, 229, 0.3)',
+        'glow-lg': '0 0 60px rgba(79, 70, 229, 0.4)',
       },
       backgroundImage: {
-        // Dark enough for white label; pairs with globals.css light-theme override if needed
         'gradient-primary':
-          'linear-gradient(135deg, #15803d 0%, #22c55e 42%, #16a34a 100%)',
+          'linear-gradient(135deg, #4338ca 0%, #6366f1 42%, #4f46e5 100%)',
       },
     },
   },

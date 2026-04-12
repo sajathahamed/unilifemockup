@@ -297,7 +297,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         placeholder="Search customer, order ref, address, rider…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-card border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
                     />
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -310,7 +310,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                             className={`px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                                 typeFilter === t
                                     ? 'bg-[#5f6db8] text-white border-[#5f6db8]'
-                                    : 'bg-card text-gray-600 border-stone-200 hover:border-stone-300'
+                                    : 'bg-white text-gray-600 border-stone-200 hover:border-stone-300'
                             }`}
                         >
                             {typeLabels[t]}
@@ -328,7 +328,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         className={`flex-shrink-0 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                             tabFilter === tab.key
                                 ? 'bg-[#5f6db8] text-white border-[#5f6db8]'
-                                : 'bg-card text-gray-600 border-stone-200 hover:border-stone-300'
+                                : 'bg-white text-gray-600 border-stone-200 hover:border-stone-300'
                         }`}
                     >
                         {tab.label}
@@ -359,7 +359,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                         />
                     ))
                 ) : (
-                    <div className="bg-card rounded-2xl p-12 text-center border border-dashed border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.05)]">
+                    <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.05)]">
                         <Package className="mx-auto text-gray-300 mb-4" size={40} />
                         <p className="text-gray-700 font-medium">No orders match</p>
                         <p className="text-gray-500 text-sm mt-1">Change filters or search.</p>
@@ -375,7 +375,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                     aria-labelledby="assign-modal-title"
                 >
                     <div
-                        className="bg-card rounded-2xl p-6 max-w-lg w-full shadow-[0_8px_30px_rgba(15,23,42,0.16)] border border-stone-200"
+                        className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-[0_8px_30px_rgba(15,23,42,0.16)] border border-stone-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-4">
@@ -438,7 +438,7 @@ export default function DeliveryOrdersClient({ user }: { user: UserProfile }) {
                                             className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                                                 selectedRider === rider.id
                                                     ? 'border-[#5f6db8] bg-[#eef0fb] ring-2 ring-[#d5daf5]'
-                                                    : 'border-stone-200 hover:border-stone-300 bg-card'
+                                                    : 'border-stone-200 hover:border-stone-300 bg-white'
                                             }`}
                                         >
                                             <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold bg-emerald-100 text-emerald-800">
@@ -504,7 +504,7 @@ function StatCard({
     radius: string;
 }) {
     return (
-        <div className={`flex-1 ${minWidth} ${radius} bg-card p-5 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
+        <div className={`flex-1 ${minWidth} ${radius} bg-white p-5 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
             <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center mb-3`}>
                 <Icon size={18} />
             </div>
@@ -534,7 +534,7 @@ function OrderCard({
     const TypeIcon = isFood ? Utensils : ShoppingBag
 
     return (
-        <div className={`bg-card rounded-2xl border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition border-l-4 ${statusCfg.accent}`}>
+        <div className={`bg-white rounded-2xl border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition border-l-4 ${statusCfg.accent}`}>
             <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">

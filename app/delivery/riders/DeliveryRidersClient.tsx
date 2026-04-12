@@ -207,7 +207,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
             showCancelButton: true,
             confirmButtonText: newStatus ? 'Activate' : 'Deactivate',
             cancelButtonText: 'Cancel',
-            confirmButtonColor: newStatus ? '#16a34a' : '#dc2626',
+            confirmButtonColor: newStatus ? '#4f46e5' : '#dc2626',
         })
         if (!confirmed.isConfirmed) return
 
@@ -270,21 +270,21 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
             </div>
 
             <div className="flex flex-wrap gap-5">
-                <div className="flex-1 min-w-[170px] bg-card rounded-xl p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition">
+                <div className="flex-1 min-w-[170px] bg-white rounded-xl p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition">
                     <div className="w-10 h-10 bg-gray-100 text-gray-600 rounded-lg flex items-center justify-center mb-3">
                         <Users size={20} />
                     </div>
                     <p className="text-2xl font-semibold text-gray-900">{riders.length}</p>
                     <p className="text-sm text-gray-500">Total riders</p>
                 </div>
-                <div className="bg-card rounded-2xl p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)]">
+                <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)]">
                     <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-lg flex items-center justify-center mb-3">
                         <CheckCircle2 size={20} />
                     </div>
                     <p className="text-2xl font-semibold text-gray-900">{active}</p>
                     <p className="text-sm text-gray-500">Active</p>
                 </div>
-                <div className="flex-1 min-w-[170px] bg-card rounded-lg p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition">
+                <div className="flex-1 min-w-[170px] bg-white rounded-lg p-4 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition">
                     <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3">
                         <Clock size={20} />
                     </div>
@@ -315,7 +315,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                     placeholder="Search by name or email…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-card border border-stone-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#5f6db8]/30 focus:border-[#5f6db8]"
                 />
             </div>
 
@@ -324,7 +324,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                     {filtered.map(rider => (
                         <div
                             key={rider.id}
-                            className={`bg-card rounded-2xl border shadow-[0_2px_12px_rgba(30,41,59,0.07)] p-5 hover:-translate-y-0.5 hover:shadow-md transition ${
+                            className={`bg-white rounded-2xl border shadow-[0_2px_12px_rgba(30,41,59,0.07)] p-5 hover:-translate-y-0.5 hover:shadow-md transition ${
                                 rider.is_available ? 'border-stone-200' : 'border-gray-200 opacity-75'
                             }`}
                         >
@@ -401,7 +401,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
                     ))}
                 </div>
             ) : (
-                <div className="bg-card rounded-2xl p-12 text-center border border-dashed border-stone-200">
+                <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-stone-200">
                     <Users className="mx-auto text-gray-300 mb-4" size={40} />
                     <p className="text-gray-700 font-medium">No riders found</p>
                     <p className="text-gray-500 text-sm mt-1">Add a rider or adjust search.</p>
@@ -411,7 +411,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
             {showCreate && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
                     <div
-                        className="bg-card rounded-2xl p-6 max-w-md w-full shadow-[0_2px_12px_rgba(30,41,59,0.07)] border border-stone-200"
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-[0_2px_12px_rgba(30,41,59,0.07)] border border-stone-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-4">
@@ -491,7 +491,7 @@ export default function DeliveryRidersClient({ user }: { user: UserProfile }) {
             {editingRider && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
                     <div
-                        className="bg-card rounded-2xl p-6 max-w-md w-full shadow-[0_2px_12px_rgba(30,41,59,0.07)] border border-stone-200"
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-[0_2px_12px_rgba(30,41,59,0.07)] border border-stone-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-4">

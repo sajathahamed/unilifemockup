@@ -90,7 +90,7 @@ function MetricCard({
 }) {
   return (
     <article
-      className={`flex-1 ${minWidth} ${radius} bg-card border border-stone-200 p-5 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}
+      className={`flex-1 ${minWidth} ${radius} bg-white border border-stone-200 p-5 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}
     >
       <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${iconClass}`}>
         <Icon size={18} />

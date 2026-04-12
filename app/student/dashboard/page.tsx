@@ -241,19 +241,33 @@ function StatCard({
   label,
   value,
   color,
+  href,
 }: {
   icon: React.ElementType
   label: string
   value: string
   color: string
+  href?: string
 }) {
-  return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-      <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3`}>
+  const content = (
+    <>
+      <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center mb-3 shadow-sm`}>
         <Icon size={20} className="text-white" />
       </div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-sm text-gray-500">{label}</p>
+    </>
+  )
+  if (href) {
+    return (
+      <Link href={href} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 block hover:border-primary/30 hover:shadow-md transition-all active:scale-95">
+        {content}
+      </Link>
+    )
+  }
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      {content}
     </div>
   )
 }

@@ -112,7 +112,7 @@ export default function DeliveryLaundryClient({ user }: { user: UserProfile }) {
                         Collect laundry, record weight, and confirm pickup details.
                     </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 bg-card px-3 py-2 rounded-xl border border-stone-200 shadow-[0_2px_10px_rgba(30,41,59,0.06)]">
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white px-3 py-2 rounded-xl border border-stone-200 shadow-[0_2px_10px_rgba(30,41,59,0.06)]">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full shrink-0" aria-hidden />
                     Coordinator view
                 </div>
@@ -130,7 +130,7 @@ export default function DeliveryLaundryClient({ user }: { user: UserProfile }) {
                             <JobCard key={job.id} job={job} onAction={() => setSelectedJob(job)} />
                         ))
                     ) : (
-                        <div className="bg-card rounded-2xl p-10 text-center border border-dashed border-stone-200">
+                        <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-200">
                             <Truck className="mx-auto text-gray-300 mb-3" size={36} />
                             <p className="text-gray-600 text-sm">No assigned laundry jobs.</p>
                         </div>
@@ -145,7 +145,7 @@ export default function DeliveryLaundryClient({ user }: { user: UserProfile }) {
                             {confirmed.map(job => (
                                 <div
                                     key={job.id}
-                                    className="bg-card p-4 rounded-xl border border-stone-200 shadow-[0_2px_10px_rgba(30,41,59,0.06)] flex items-center justify-between gap-4"
+                                    className="bg-white p-4 rounded-xl border border-stone-200 shadow-[0_2px_10px_rgba(30,41,59,0.06)] flex items-center justify-between gap-4"
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
                                         <CheckCircle2 size={22} className="text-emerald-600 shrink-0" />
@@ -169,7 +169,7 @@ export default function DeliveryLaundryClient({ user }: { user: UserProfile }) {
                 <div className="lg:col-span-1">
                     <div className="lg:sticky lg:top-24">
                         {selectedJob ? (
-                            <div className="bg-card rounded-2xl p-6 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.08)] hover:-translate-y-0.5 hover:shadow-md transition space-y-5">
+                            <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.08)] hover:-translate-y-0.5 hover:shadow-md transition space-y-5">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-lg font-semibold text-gray-900">Confirm pickup</h3>
                                     <button
@@ -255,7 +255,7 @@ export default function DeliveryLaundryClient({ user }: { user: UserProfile }) {
 
             {showSuccess && confirmedDetails && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-                    <div className="bg-card rounded-2xl p-6 max-w-md w-full shadow-[0_8px_30px_rgba(15,23,42,0.16)] border border-stone-200">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-[0_8px_30px_rgba(15,23,42,0.16)] border border-stone-200">
                         <div className="text-center space-y-4">
                             <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
                                 <CheckCircle2 size={28} />
@@ -293,7 +293,7 @@ export default function DeliveryLaundryClient({ user }: { user: UserProfile }) {
 
 function JobCard({ job, onAction }: { job: LaundryJob; onAction: () => void }) {
     return (
-        <div className="bg-card rounded-xl border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] p-5 hover:-translate-y-0.5 hover:shadow-md transition">
+        <div className="bg-white rounded-xl border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] p-5 hover:-translate-y-0.5 hover:shadow-md transition">
             <div className="flex flex-col md:flex-row gap-5">
                 <div className="flex-1 space-y-4">
                     <div className="flex items-center justify-between gap-3">

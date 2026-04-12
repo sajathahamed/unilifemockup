@@ -36,7 +36,7 @@ export default async function DeliveryDashboard() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-card rounded-2xl p-6 shadow-[0_2px_12px_rgba(36,45,72,0.08)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
+          <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-[0_2px_12px_rgba(36,45,72,0.08)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display text-[1.08rem] font-semibold tracking-[-0.01em] text-gray-900">Sample active deliveries</h2>
               <Link href="/delivery/orders" className="text-sm text-[#4a5497] hover:text-[#3e4678] flex items-center gap-1.5 font-medium">
@@ -78,7 +78,7 @@ export default async function DeliveryDashboard() {
           <div className="space-y-6">
             <DeliveryStatusCard />
 
-            <div className="bg-card rounded-2xl p-6 shadow-[0_2px_12px_rgba(36,45,72,0.08)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
+            <div className="bg-white rounded-2xl p-6 shadow-[0_2px_12px_rgba(36,45,72,0.08)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
               <h2 className="font-display text-[1.04rem] font-semibold tracking-[-0.01em] text-gray-900 mb-4">Today</h2>
               <div className="space-y-3">
                 <SummaryItem label="Completed" value="8 deliveries" />
@@ -100,7 +100,7 @@ export default async function DeliveryDashboard() {
           </div>
         </div>
 
-        <div className="bg-card rounded-xl p-6 shadow-[0_2px_12px_rgba(24,34,56,0.07)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
+        <div className="bg-white rounded-xl p-6 shadow-[0_2px_12px_rgba(24,34,56,0.07)] border border-stone-200 hover:-translate-y-0.5 hover:shadow-md transition">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display text-[1.02rem] font-semibold tracking-[-0.012em] text-gray-900">Recent deliveries</h2>
             <Link href="/delivery/orders" className="text-sm text-[#4a5497] hover:text-[#3e4678] flex items-center gap-1.5 font-medium">
@@ -141,7 +141,7 @@ function StatCard({ icon: Icon, label, value, color, minWidth, radius }: {
   radius: string;
 }) {
   return (
-    <div className={`flex-1 ${minWidth} ${radius} bg-card p-5 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
+    <div className={`flex-1 ${minWidth} ${radius} bg-white p-5 border border-stone-200 shadow-[0_2px_12px_rgba(30,41,59,0.07)] hover:-translate-y-0.5 hover:shadow-md transition`}>
       <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center mb-3`}>
         <Icon size={18} />
       </div>

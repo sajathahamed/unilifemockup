@@ -50,23 +50,23 @@ body.light-mode {
   color: #000000 !important;
 }
 
-/* Focus - green glow, no color change */
+/* Focus - blue glow, no color change */
 .light-mode input:focus, .light-mode textarea:focus, .light-mode select:focus {
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 8px #4f46e5;
   border: 1px solid #000000 !important;
   outline: none;
 }
 
 /* Buttons */
 .light-mode .btn-primary, .light-mode button[type="submit"] {
-  background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%) !important;
-  color: #000000 !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%) !important;
+  color: #ffffff !important;
   border: none !important;
   border-radius: 8px;
 }
 
 .light-mode button:hover {
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 8px #4f46e5;
   border: 1px solid #000000;
 }
 

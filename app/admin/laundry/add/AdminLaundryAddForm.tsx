@@ -53,6 +53,9 @@ const emptyForm = () => ({
   delivery_radius: '',
   opening_time: '',
   closing_time: '',
+  logo: '',
+  banner: '',
+  gallery: [] as string[],
 })
 
 export default function AdminLaundryAddForm() {

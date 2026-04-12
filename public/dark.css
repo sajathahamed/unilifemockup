@@ -50,23 +50,23 @@ body.dark-mode {
   color: #ffffff !important;
 }
 
-/* Focus - green glow, no color change */
+/* Focus - blue glow, no color change */
 .dark-mode input:focus, .dark-mode textarea:focus, .dark-mode select:focus {
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 8px #4f46e5;
   border: 1px solid #ffffff !important;
   outline: none;
 }
 
 /* Buttons */
 .dark-mode .btn-primary, .dark-mode button[type="submit"] {
-  background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%) !important;
-  color: #000000 !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%) !important;
+  color: #ffffff !important;
   border: none !important;
   border-radius: 8px;
 }
 
 .dark-mode button:hover {
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 8px #4f46e5;
   border: 1px solid #ffffff;
 }
 
