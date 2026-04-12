@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, MoreVertical, X, Edit2, UserCog, Shield, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
-import { ROLES } from '@/lib/pages/registry'
+const ROLES = ['student', 'admin', 'vendor', 'vendor_food', 'vendor_laundry', 'delivery', 'super_admin']
 
 interface User {
     id: number
