@@ -49,6 +49,19 @@ function tryParseJson<T>(text: string): T | null {
   }
 }
 
+function jsonSuggestions(
+  suggestions: AutocompleteSuggestion[],
+  source: string,
+  detail?: string
+) {
+  const res = NextResponse.json(suggestions, { status: 200 })
+  res.headers.set('X-Trip-Autocomplete-Source', source)
+  if (detail) {
+    res.headers.set('X-Trip-Autocomplete-Detail', detail.slice(0, 180))
+  }
+  return res
+}
+
 /**
  * GET /api/trip/autocomplete?input=...
  * Returns place suggestions (cities/places) for Trip Planner inputs.
@@ -61,12 +74,12 @@ export async function GET(request: NextRequest) {
   const apiKey = getPlacesApiKey()
   if (!apiKey) {
     const input = request.nextUrl.searchParams.get('input')?.trim() ?? ''
-    return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
+    return jsonSuggestions(localFallbackSuggestions(input), 'local-fallback', 'no-api-key')
   }
 
   const input = request.nextUrl.searchParams.get('input')?.trim() ?? ''
   if (input.length < 2) {
-    return NextResponse.json([], { status: 200 })
+    return jsonSuggestions([], 'empty-query')
   }
 
   try {
@@ -101,7 +114,7 @@ export async function GET(request: NextRequest) {
 
       if (!data) {
         console.error('Places (New) autocomplete returned invalid JSON')
-        return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
+        return jsonSuggestions(localFallbackSuggestions(input), 'local-fallback', 'new-api-invalid-json')
       }
 
       const suggestions: AutocompleteSuggestion[] = (data.suggestions ?? [])
@@ -112,7 +125,7 @@ export async function GET(request: NextRequest) {
         .filter((s) => s.placeId && s.description)
         .slice(0, 8)
 
-      return NextResponse.json(suggestions, { status: 200 })
+      return jsonSuggestions(suggestions, 'google-new')
     }
 
     console.error('Places (New) autocomplete error:', newRes.status, newJsonText)
@@ -130,7 +143,7 @@ export async function GET(request: NextRequest) {
     const legacyText = await legacyRes.text()
     if (!legacyRes.ok) {
       console.error('Places legacy autocomplete error:', legacyRes.status, legacyText)
-      return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
+      return jsonSuggestions(localFallbackSuggestions(input), 'local-fallback', `new:${newRes.status},legacy-http:${legacyRes.status}`)
     }
 
     const legacyData = tryParseJson<{
@@ -141,12 +154,16 @@ export async function GET(request: NextRequest) {
 
     if (!legacyData) {
       console.error('Places legacy autocomplete returned invalid JSON')
-      return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
+      return jsonSuggestions(localFallbackSuggestions(input), 'local-fallback', `new:${newRes.status},legacy-invalid-json`)
     }
 
     if (legacyData.status !== 'OK' && legacyData.status !== 'ZERO_RESULTS') {
       console.error('Places legacy autocomplete non-OK status:', legacyData.status, legacyData.error_message)
-      return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
+      return jsonSuggestions(
+        localFallbackSuggestions(input),
+        'local-fallback',
+        `new:${newRes.status},legacy:${legacyData.status ?? 'unknown'}`
+      )
     }
 
     const suggestions: AutocompleteSuggestion[] = (legacyData.predictions ?? [])
@@ -154,12 +171,13 @@ export async function GET(request: NextRequest) {
       .filter((s) => s.placeId && s.description)
       .slice(0, 8)
 
-    return NextResponse.json(suggestions, { status: 200 })
+    return jsonSuggestions(suggestions, 'google-legacy')
   } catch (e) {
     console.error('Trip autocomplete error:', e)
-    return NextResponse.json(
-      { message: e instanceof Error ? e.message : 'Failed to fetch autocomplete suggestions' },
-      { status: 500 }
+    return jsonSuggestions(
+      localFallbackSuggestions(input),
+      'local-fallback',
+      `exception:${e instanceof Error ? e.name : 'unknown'}`
     )
   }
 }
