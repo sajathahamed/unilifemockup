@@ -5,6 +5,50 @@ type AutocompleteSuggestion = {
   description: string
 }
 
+const SRI_LANKA_PLACE_FALLBACKS = [
+  'Colombo, Sri Lanka',
+  'Kandy, Sri Lanka',
+  'Galle, Sri Lanka',
+  'Jaffna, Sri Lanka',
+  'Negombo, Sri Lanka',
+  'Nuwara Eliya, Sri Lanka',
+  'Ella, Sri Lanka',
+  'Anuradhapura, Sri Lanka',
+  'Trincomalee, Sri Lanka',
+  'Batticaloa, Sri Lanka',
+]
+
+function getPlacesApiKey(): string {
+  return (
+    process.env.GOOGLE_MAPS_API_KEY ??
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ??
+    process.env.EXPO_PUBLIC_GOOGLE_API_KEY ??
+    ''
+  )
+}
+
+function localFallbackSuggestions(input: string): AutocompleteSuggestion[] {
+  const q = input.trim().toLowerCase()
+  if (!q) return []
+
+  return SRI_LANKA_PLACE_FALLBACKS
+    .filter((p) => p.toLowerCase().includes(q))
+    .slice(0, 8)
+    .map((description) => ({
+      placeId: `local-${description.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      description,
+    }))
+}
+
+function tryParseJson<T>(text: string): T | null {
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    return null
+  }
+}
+
 /**
  * GET /api/trip/autocomplete?input=...
  * Returns place suggestions (cities/places) for Trip Planner inputs.
@@ -14,9 +58,10 @@ type AutocompleteSuggestion = {
  * Key remains server-side (GOOGLE_MAPS_API_KEY).
  */
 export async function GET(request: NextRequest) {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
+  const apiKey = getPlacesApiKey()
   if (!apiKey) {
-    return NextResponse.json({ message: 'GOOGLE_MAPS_API_KEY is not configured' }, { status: 503 })
+    const input = request.nextUrl.searchParams.get('input')?.trim() ?? ''
+    return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
   }
 
   const input = request.nextUrl.searchParams.get('input')?.trim() ?? ''
@@ -45,13 +90,18 @@ export async function GET(request: NextRequest) {
 
     const newJsonText = await newRes.text()
     if (newRes.ok) {
-      const data = JSON.parse(newJsonText) as {
+      const data = tryParseJson<{
         suggestions?: Array<{
           placePrediction?: {
             placeId?: string
             text?: { text?: string }
           }
         }>
+      }>(newJsonText)
+
+      if (!data) {
+        console.error('Places (New) autocomplete returned invalid JSON')
+        return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
       }
 
       const suggestions: AutocompleteSuggestion[] = (data.suggestions ?? [])
@@ -80,24 +130,23 @@ export async function GET(request: NextRequest) {
     const legacyText = await legacyRes.text()
     if (!legacyRes.ok) {
       console.error('Places legacy autocomplete error:', legacyRes.status, legacyText)
-      return NextResponse.json(
-        {
-          message: `Autocomplete API error: ${newRes.status} (new), ${legacyRes.status} (legacy). Check Places API + Billing + key restrictions.`,
-        },
-        { status: 502 }
-      )
+      return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
     }
 
-    const legacyData = JSON.parse(legacyText) as {
+    const legacyData = tryParseJson<{
       status?: string
       error_message?: string
       predictions?: Array<{ place_id?: string; description?: string }>
+    }>(legacyText)
+
+    if (!legacyData) {
+      console.error('Places legacy autocomplete returned invalid JSON')
+      return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
     }
+
     if (legacyData.status !== 'OK' && legacyData.status !== 'ZERO_RESULTS') {
-      return NextResponse.json(
-        { message: legacyData.error_message || `Places autocomplete error: ${legacyData.status}` },
-        { status: 502 }
-      )
+      console.error('Places legacy autocomplete non-OK status:', legacyData.status, legacyData.error_message)
+      return NextResponse.json(localFallbackSuggestions(input), { status: 200 })
     }
 
     const suggestions: AutocompleteSuggestion[] = (legacyData.predictions ?? [])
