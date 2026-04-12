@@ -115,7 +115,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-8 py-8 shadow-lg mb-8 mt-4"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-indigo-600 to-purple-700 px-8 py-8 shadow-lg mb-8 mt-4"
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-24 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4 flex-wrap">
@@ -184,7 +184,7 @@ export default function LecturerAssignmentsClient({ initialCourses = [] }: Lectu
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-semibold text-gray-900">{a.title}</h2>
                     {a.academic_year != null && (
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-xs font-medium">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">
                         Year {a.academic_year}
                       </span>
                     )}

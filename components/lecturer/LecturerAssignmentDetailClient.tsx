@@ -72,7 +72,7 @@ export default function LecturerAssignmentDetailClient({ assignmentId }: Lecture
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-8 py-6 shadow-lg"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-indigo-600 to-purple-700 px-8 py-6 shadow-lg"
       >
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <FileText size={28} /> {assignment.title}

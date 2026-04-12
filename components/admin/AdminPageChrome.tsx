@@ -3,9 +3,9 @@ import Link from 'next/link'
 /** Same hero treatment as admin dashboard for consistent admin UX. */
 export function AdminPageHero({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white shadow-sm">
+    <div className="bg-gradient-to-r from-primary via-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-sm">
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      <p className="mt-1.5 text-sm text-emerald-50/95 max-w-2xl leading-relaxed">{subtitle}</p>
+      <p className="mt-1.5 text-sm text-indigo-50/95 max-w-2xl leading-relaxed">{subtitle}</p>
     </div>
   )
 }

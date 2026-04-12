@@ -145,7 +145,7 @@ export default function SchedulePageClient() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-8 py-8 shadow-lg mb-8 mt-4"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-indigo-600 to-purple-700 px-8 py-8 shadow-lg mb-8 mt-4"
       >
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-24 blur-3xl" />

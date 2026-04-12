@@ -159,7 +159,7 @@ export default function StudentProfileClient({ user, initialMobile }: { user: an
             {loading ? 'Saving...' : saved ? 'Saved Successfully!' : 'Save Phone Number'}
           </button>
 
-          {saved && <p className="text-sm text-emerald-800 text-center font-medium">Phone number saved! SMS reminders will be sent to this number.</p>}
+          {saved && <p className="text-sm text-blue-800 text-center font-medium">Phone number saved! SMS reminders will be sent to this number.</p>}
           {error && <p className="text-sm text-red-600 text-center whitespace-pre-wrap">{error}</p>}
         </div>
       </div>

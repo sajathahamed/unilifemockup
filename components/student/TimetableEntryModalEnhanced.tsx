@@ -575,7 +575,7 @@ export default function TimetableEntryModal({
           {submitSuccess && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
               <CheckCircle2 size={18} className="text-emerald-600" />
-              <p className="text-sm text-emerald-800 font-medium">
+              <p className="text-sm text-blue-800 font-medium">
                 {mode === 'add' ? 'Entry added! Reminder scheduled.' : 'Entry updated! Reminder rescheduled.'}
               </p>
             </div>

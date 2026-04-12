@@ -96,7 +96,7 @@ export default function StudentAssignmentSubmitClient({ assignmentId }: StudentA
       {assignment && (
         <>
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-green-700 px-6 py-5 text-white">
+            <div className="bg-gradient-to-r from-primary via-indigo-600 to-purple-700 px-6 py-5 text-white">
               <h1 className="text-2xl font-bold">{assignment.title}</h1>
               <div className="flex flex-wrap items-center gap-4 mt-2 text-white/90 text-sm">
                 <span className="flex items-center gap-1.5">

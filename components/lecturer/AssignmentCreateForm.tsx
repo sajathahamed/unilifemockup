@@ -82,7 +82,7 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
           onClick={(e) => e.stopPropagation()}
           className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
         >
-          <div className="sticky top-0 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-800 px-6 py-5 flex items-start justify-between border-b border-emerald-400/20 shadow-lg z-10">
+          <div className="sticky top-0 bg-gradient-to-r from-primary via-indigo-600 to-purple-700 px-6 py-5 flex items-start justify-between border-b border-primary/20 shadow-lg z-10">
             <div className="flex items-center gap-3">
               <FileText size={24} className="text-white" />
               <div>
@@ -106,9 +106,9 @@ export default function AssignmentCreateForm({ courses, onSubmit, onClose }: Ass
                 initial={{ y: -10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="bg-green-50 border-b border-green-200 px-6 py-3 flex items-center gap-3 text-green-700 text-sm"
+                className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center gap-3 text-blue-700 text-sm"
               >
-                <Check size={20} className="text-green-600" />
+                <Check size={20} className="text-blue-600" />
                 <span className="font-medium">Assignment created successfully!</span>
               </motion.div>
             )}

@@ -87,10 +87,10 @@ export default async function StudentDashboard() {
     <DashboardLayout user={user}>
       <div className="space-y-6">
         {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
+        <div className="bg-gradient-to-r from-primary via-indigo-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
           <div className="relative z-10">
             <h1 className="text-2xl font-bold">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
-            <p className="mt-1 text-emerald-100 italic">Your uni-life, simplified.</p>
+            <p className="mt-1 text-indigo-100 italic">Your uni-life, simplified.</p>
           </div>
           <Compass className="absolute -right-6 -bottom-6 text-white/10 w-48 h-48 rotate-12" />
         </div>
@@ -101,7 +101,7 @@ export default async function StudentDashboard() {
             icon={Calendar}
             label="Today's Classes"
             value={timetableEntries?.length ? `${timetableEntries.length} Classes` : 'No Classes'}
-            color="bg-emerald-500"
+            color="bg-primary"
             href="/student/timetable"
           />
           <StatCard
@@ -122,7 +122,7 @@ export default async function StudentDashboard() {
             icon={Users}
             label="Study Groups"
             value="Active"
-            color="bg-green-500"
+            color="bg-primary"
             href="/student/study-groups"
           />
         </div>
@@ -134,7 +134,7 @@ export default async function StudentDashboard() {
               <h2 className="text-lg font-semibold text-gray-900">Today&apos;s Schedule</h2>
               <Link
                 href="/student/timetable"
-                className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                className="text-sm text-emerald-700 hover:text-emerald-700/80 flex items-center gap-1"
               >
                 View all <ArrowRight size={14} />
               </Link>
@@ -200,11 +200,11 @@ export default async function StudentDashboard() {
               {recentTrips.map((trip) => (
                 <div
                   key={trip.id}
-                  className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:border-primary/20 transition-all flex flex-col gap-2"
+                  className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:border-emerald-300 transition-all flex flex-col gap-2"
                 >
                   <p className="font-bold text-gray-900 truncate">{trip.destination}</p>
                   <p className="text-xs text-gray-500">{trip.days} Days · {trip.travelers} Travelers</p>
-                  <p className="text-xs font-semibold text-primary">
+                  <p className="text-xs font-semibold text-emerald-700">
                     Budget: Rs {Math.round(trip.total_budget || trip.budget).toLocaleString()}
                   </p>
                   <div className="flex flex-wrap gap-2 mt-auto pt-1">
@@ -217,7 +217,7 @@ export default async function StudentDashboard() {
                     <span className="text-gray-300">·</span>
                     <Link
                       href={`/trip-planner/${trip.id}/edit`}
-                      className="text-xs font-semibold text-gray-600 hover:text-primary hover:underline"
+                      className="text-xs font-semibold text-gray-600 hover:text-emerald-700 hover:underline"
                     >
                       Edit
                     </Link>
@@ -293,7 +293,7 @@ function ScheduleItem({
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{time}</span>
         {status === 'in-progress' && (
-          <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Live</span>
+          <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full">Live</span>
         )}
       </div>
       <h3 className="font-medium mt-1">{title}</h3>

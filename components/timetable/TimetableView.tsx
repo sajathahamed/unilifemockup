@@ -152,7 +152,7 @@ export default function TimetableView({
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden ring-1 ring-black/5">
-      <div className="bg-gradient-to-br from-emerald-600 via-green-600 to-emerald-800 px-6 py-5 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-primary via-indigo-600 to-purple-700 px-6 py-5 relative overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_40%,rgba(255,255,255,0.06)_100%)]" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -168,7 +168,7 @@ export default function TimetableView({
             <button
               type="button"
               onClick={onAddSlot}
-              className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-emerald-800 font-bold text-sm shadow-md hover:bg-white/95 active:scale-[0.98] transition-all border border-white/40"
+              className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-primary font-bold text-sm shadow-md hover:bg-white/95 active:scale-[0.98] transition-all border border-white/40"
             >
               <Plus size={18} strokeWidth={2.5} />
               Add slot
@@ -192,12 +192,12 @@ export default function TimetableView({
                     key={day}
                     className={`px-4 py-3.5 text-left text-sm font-bold min-w-[130px] border-l border-gray-100 ${
                       isToday
-                        ? 'bg-emerald-50/80 text-emerald-900 border-emerald-200/60'
+                        ? 'bg-primary/5 text-primary border-primary/60'
                         : 'bg-white text-gray-800'
                     }`}
                   >
                     <div className="flex flex-col gap-0.5">
-                      <span className={isToday ? 'text-emerald-800' : ''}>{day}</span>
+                      <span className={isToday ? 'text-primary' : ''}>{day}</span>
                       <span className={`text-xs font-normal ${isToday ? 'text-emerald-600' : 'text-gray-500'}`}>
                         {date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
@@ -226,7 +226,7 @@ export default function TimetableView({
                     <td
                       key={`${day}-${time}`}
                       className={`px-3 py-2 relative min-w-[130px] align-top border-l border-gray-100 ${
-                        isToday ? 'bg-emerald-50/30' : ''
+                        isToday ? 'bg-primary/5' : ''
                       }`}
                     >
                       {daySchedules.map((schedule) => {
@@ -235,7 +235,7 @@ export default function TimetableView({
                           ? 'border-l-4 border-rose-500 bg-rose-50/20' 
                           : schedule.color
                             ? schedule.color.replace(/^bg-/, 'border-l-4 border-')
-                            : 'border-l-4 border-emerald-500 bg-emerald-50/20'
+                            : 'border-l-4 border-primary bg-primary/5'
 
                         return (
                           <motion.div

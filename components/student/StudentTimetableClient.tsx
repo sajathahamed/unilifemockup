@@ -279,7 +279,7 @@ export default function StudentTimetableClient() {
         <div className="flex items-center gap-4">
           <Link
             href="/student/dashboard"
-            className="inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-emerald-50/80 hover:border-emerald-200 active:scale-[0.98]"
+            className="inline-flex items-center justify-center p-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 shadow-sm transition-all hover:bg-blue-50/80 hover:border-blue-200 active:scale-[0.98]"
             aria-label="Back to dashboard"
           >
             <ArrowLeft size={24} strokeWidth={2.25} />
@@ -372,7 +372,7 @@ export default function StudentTimetableClient() {
       {(error || success) && (
         <div
           className={`p-4 rounded-xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
-            error ? 'bg-red-50 border-red-100 text-red-700' : 'bg-green-50 border-green-100 text-green-700'
+            error ? 'bg-red-50 border-red-100 text-red-700' : 'bg-blue-50 border-blue-100 text-blue-700'
           }`}
         >
           {error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
@@ -439,7 +439,7 @@ export default function StudentTimetableClient() {
         />
       </div>
 
-      <div className="bg-gradient-to-br from-emerald-50 to-primary/5 rounded-2xl p-6 border border-primary/10">
+      <div className="bg-gradient-to-br from-primary/5 to-indigo-50 rounded-2xl p-6 border border-primary/10">
         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
           <Clock size={18} className="text-primary" /> How it works
         </h3>
